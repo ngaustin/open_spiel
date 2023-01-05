@@ -16,13 +16,81 @@
 
 import random
 import numpy as np
+# import matplotlib.pyplot as plt
 
 from open_spiel.python.algorithms import get_all_states
 from open_spiel.python.algorithms import policy_aggregator
 from open_spiel.python.algorithms import policy_aggregator_joint
-from open_spiel.python.egt import alpharank
-from open_spiel.python.egt import utils as alpharank_utils
+# from open_spiel.python.egt import alpharank
+# from open_spiel.python.egt import utils as alpharank_utils
 
+
+def display_meta_game(meta_game):
+  """ Good way of visualizing meta games """
+  num_players = len(meta_game)
+
+  num_policies = meta_game[0].shape[0]
+  form = '    {:5.2f}      ' * num_policies
+  top_form = '    {:5}      ' * num_policies
+  print('\n Metagame display:')
+  for i in range(num_players):
+    print("Player {} Payoff matrix: \n".format(i))
+    curr_player_utilities = meta_game[i]
+    assert curr_player_utilities.shape[0] == curr_player_utilities.shape[1]
+    print('   ' + top_form.format(*range(num_policies)))
+    for j, row in enumerate(curr_player_utilities):
+      print('{:5}'.format(j) + form.format(*row))
+    print("\n \n")
+
+  welfare = np.zeros(meta_game[0].shape)
+  for i in range(num_players):
+    welfare = welfare + meta_game[i]
+
+  print("Social Welfare Sum Matrix: \n")
+  print('   ' + top_form.format(*range(num_policies)))
+  for j, row in enumerate(welfare):
+    print('{:5}'.format(j) + form.format(*row))
+  print("\n \n")
+  return
+
+def create_U_heat_map(U):
+  """ Creates a heatmap representing the U matrix. Assumes it is a 2-d matrix"""
+  assert U.shape[0] == U.shape[1]
+  num_players = len(U)
+  for i in range(num_players):
+    title = "Utility Matrix for Player {}".format(i)
+    num_policies = U.shape[0]
+    row_names = ["Player 1 Policy {}".format(i+1) for i in range(num_policies)]
+    column_names = ["Player 2 Policy {}".format(i+1) for i in range(num_policies)]
+
+    display_heat_map(row_names, column_names, U[i], title)
+
+def create_meta_game_heat_map(meta_probabilities):
+
+  return
+
+def display_heat_map(row_names, column_names, array, title):
+  """ Creates a heatmap of the 2d numpy array with row and column names"""
+  fig, ax = plt.subplots()
+  im = ax.imshow(array)
+
+  ax.set_xticks(np.arange(len(row_names)), labels=row_names)
+  ax.set_yticks(np.arange(len(column_names)), labels=column_names)
+
+  plt.setp(ax.get_xticklabels(), rotation=-30, ha="right",
+           rotation_mode="anchor")
+
+  ax.tick_params(top=True, bottom=False, labeltop=True, labelbottom=False)
+
+  for i in range(len(column_names)):
+    for j in range(len(row_names)):
+      text = ax.text(j, i, array[i, j],
+                     ha="center", va="center", color="w")
+
+  ax.set_title(title)
+  fig.tight_layout()
+  plt.show()
+  return
 
 def empty_list_generator(number_dimensions):
   result = []

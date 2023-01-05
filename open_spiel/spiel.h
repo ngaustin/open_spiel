@@ -775,6 +775,10 @@ class Game : public std::enable_shared_from_this<Game> {
   // populations, which is equal to the number of players).
   virtual std::vector<std::unique_ptr<State>> NewInitialStates() const;
 
+  virtual void DisplayPoliciesInContext() const {
+    SpielFatalError("DisplayPoliciesInContext not implemented for this game.")
+  }
+
   // Maximum number of distinct chance outcomes for chance nodes in the game.
   virtual int MaxChanceOutcomes() const { return 0; }
 

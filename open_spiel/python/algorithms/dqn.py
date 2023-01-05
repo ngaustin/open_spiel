@@ -80,6 +80,7 @@ class DQN(rl_agent.AbstractAgent):
     self._epsilon_start = epsilon_start
     self._epsilon_end = epsilon_end
     self._epsilon_decay_duration = epsilon_decay_duration
+    self.trained_at_least_once = False
 
     # TODO(author6) Allow for optional replay buffer config.
     if not isinstance(replay_buffer_capacity, int):
@@ -191,7 +192,8 @@ class DQN(rl_agent.AbstractAgent):
       info_state = time_step.observations["info_state"][self.player_id]
       legal_actions = time_step.observations["legal_actions"][self.player_id]
       epsilon = self._get_epsilon(is_evaluation)
-      action, probs = self._epsilon_greedy(info_state, legal_actions, epsilon)
+      action, probs = self._epsilon_greedy(info_state, legal_actions, epsilon, is_evaluation)
+      # print('IN DQN: ', info_state, legal_actions, epsilon, action, probs)
     else:
       action = None
       probs = []
@@ -201,6 +203,7 @@ class DQN(rl_agent.AbstractAgent):
       self._step_counter += 1
 
       if self._step_counter % self._learn_every == 0:
+        self.trained_at_least_once = True
         self._last_loss_value = self.learn()
 
       if self._step_counter % self._update_target_network_every == 0:
@@ -266,7 +269,7 @@ class DQN(rl_agent.AbstractAgent):
         for (target_v, v) in zip(self._target_variables, self._variables)
     ])
 
-  def _epsilon_greedy(self, info_state, legal_actions, epsilon):
+  def _epsilon_greedy(self, info_state, legal_actions, epsilon, is_evaluation):
     """Returns a valid epsilon-greedy action and valid action probs.
 
     Action probabilities are given by a softmax over legal q-values.
@@ -280,6 +283,7 @@ class DQN(rl_agent.AbstractAgent):
       A valid epsilon-greedy action and valid action probabilities.
     """
     probs = np.zeros(self._num_actions)
+    # TODO: I changed this to be probabilistic instead of epsilon greedy!
     if np.random.rand() < epsilon:
       action = np.random.choice(legal_actions)
       probs[legal_actions] = 1.0 / len(legal_actions)
@@ -288,8 +292,23 @@ class DQN(rl_agent.AbstractAgent):
       q_values = self._session.run(
           self._q_values, feed_dict={self._info_state_ph: info_state})[0]
       legal_q_values = q_values[legal_actions]
+      """
+      if not is_evaluation:
+          boltzmann = 3
+          exps = np.exp(boltzmann * legal_q_values)
+          probs = exps / np.sum(exps)
+          action = legal_actions[np.random.choice(len(legal_actions), 1, p=probs)[0]]
+      else:
+      """
+      # Original code:
       action = legal_actions[np.argmax(legal_q_values)]
       probs[action] = 1.0
+
+      # if self.trained_at_least_once:
+      #   print("Q values: ", legal_q_values)
+    if not self.trained_at_least_once:  # If this is a newly initialized policy, enforce that it is a uniform
+      action = np.random.choice(len(legal_actions))
+      probs = np.ones(len(legal_actions)) / (float(len(legal_actions)))
     return action, probs
 
   def _get_epsilon(self, is_evaluation, power=1.0):
@@ -429,7 +448,7 @@ class DQN(rl_agent.AbstractAgent):
     variables.append(self._session.run(self._target_q_network.variables))
     return variables
 
-  def copy_with_noise(self, sigma=0.0, copy_weights=True):
+  def copy_with_noise(self, sigma=0.0, copy_weights=False):
     """Copies the object and perturbates it with noise.
 
     Args:

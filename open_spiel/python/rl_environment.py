@@ -88,6 +88,8 @@ class TimeStep(
   def last(self):
     return self.step_type == StepType.LAST
 
+  # TODO: Add something about DONE here...instead of last
+
   def is_simultaneous_move(self):
     return self.observations["current_player"] == SIMULTANEOUS_PLAYER_ID
 
@@ -238,7 +240,8 @@ class Environment(object):
     }
     rewards = []
     step_type = StepType.LAST if self._state.is_terminal() else StepType.MID
-    self._should_reset = step_type == StepType.LAST
+    # TODO: Insert a different reset condition that separates between DONE and iteration DONE
+    self._should_reset = (step_type == StepType.LAST) # or self._state.reached_max_iterations())
 
     cur_rewards = self._state.rewards()
     for player_id in range(self.num_players):
@@ -247,9 +250,13 @@ class Environment(object):
           self._state.observation_tensor(player_id) if self._use_observation
           else self._state.information_state_tensor(player_id))
 
+      # print("Player {}".format(player_id), self._state.observation_tensor(player_id))
+
       observations["legal_actions"].append(self._state.legal_actions(player_id))
     observations["current_player"] = self._state.current_player()
     discounts = self._discounts
+
+    # TODO: This is the discount factor. But just make sure that we separate between DONE and iteration DONE
     if step_type == StepType.LAST:
       # When the game is in a terminal state set the discount to 0.
       discounts = [0. for _ in discounts]
@@ -388,6 +395,8 @@ class Environment(object):
     Returns:
       A specification dict describing the observation fields and shapes.
     """
+    # fself._use_observation, self._game.observation_tensor_size(), self._game.information_state_tensor_size())
+    # print(self._game.observation_tensor_shape())
     return dict(
         info_state=tuple([
             self._game.observation_tensor_size() if self._use_observation else

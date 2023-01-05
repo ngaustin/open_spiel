@@ -21,6 +21,9 @@ import numpy as np
 
 from open_spiel.python.algorithms.psro_v2 import optimization_oracle
 from open_spiel.python.algorithms.psro_v2 import utils
+from open_spiel.python.algorithms import imitation
+from open_spiel.python.algorithms import imitation_q_learn
+from open_spiel.python.algorithms import tabular_qlearner
 
 
 def update_episodes_per_oracles(episodes_per_oracle, played_policies_indexes):
@@ -227,7 +230,8 @@ class RLOracle(optimization_oracle.AbstractOracle):
       new_pols = []
       for param in player_parameters:
         current_pol = param["policy"]
-        if isinstance(current_pol, self._best_response_class):
+        if isinstance(current_pol, self._best_response_class) and not isinstance(current_pol._policy, imitation.Imitation)\
+                and not isinstance(current_pol._policy, imitation_q_learn.Imitation) and not isinstance(current_pol._policy, tabular_qlearner.QLearner):
           new_pol = current_pol.copy_with_noise(self._kwargs.get("sigma", 0.0))
         else:
           new_pol = self._best_response_class(self._env, player,

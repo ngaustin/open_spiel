@@ -74,7 +74,11 @@ def sample_episode(state, policies):
       state_policy = policies[player](state, player)
       outcomes, probs = zip(*state_policy.items())
       actions[player] = utils.random_choice(outcomes, probs)
+    # print("Observation before", state.observation_tensor(0), state.observation_tensor(1))
+    # print("Action before: ", actions)
     state.apply_actions(actions)
+    # print("Observation after", state.observation_tensor(0), state.observation_tensor(1))
+    # print("Actions: ", actions)
     return sample_episode(state, policies)
 
   if state.is_chance_node():
@@ -156,15 +160,15 @@ class AbstractMetaTrainer(object):
 
     self._number_policies_selected = number_policies_selected
 
+    print("Using {} as strategy method.".format(meta_strategy_method))
     meta_strategy_method = _process_string_or_callable(
         meta_strategy_method, meta_strategies.META_STRATEGY_METHODS)
-    print("Using {} as strategy method.".format(meta_strategy_method))
 
+    print("Using {} as training strategy selector.".format(
+        training_strategy_selector))
     self._training_strategy_selector = _process_string_or_callable(
         training_strategy_selector,
         strategy_selectors.TRAINING_STRATEGY_SELECTORS)
-    print("Using {} as training strategy selector.".format(
-        self._training_strategy_selector))
 
     self._meta_strategy_method = meta_strategy_method
     self._kwargs = kwargs
@@ -188,8 +192,26 @@ class AbstractMetaTrainer(object):
       seed: Seed for random BR noise generation.
     """
     self._iterations += 1
+    print('Approximating Best Response')
     self.update_agents()  # Generate new, Best Response agents via oracle.
+    print('Updating Empirical Game')
+    from open_spiel.python.algorithms import imitation_q_learn
+    for agent_index, policy_set in enumerate(self._policies):
+      for policy_index, p in enumerate(policy_set):
+        if isinstance(p._policy, imitation_q_learn.Imitation):
+          p._policy.running_not_seen_steps = 0
+          p._policy.running_steps = 0
+
     self.update_empirical_gamestate(seed=seed)  # Update gamestate matrix.
+
+    # TODO: Get rid of this because for testing
+    for agent_index, policy_set in enumerate(self._policies):
+      for policy_index, p in enumerate(policy_set):
+        if isinstance(p._policy, imitation_q_learn.Imitation):
+          print("Proportion of not seen observations for agent_index {} policy index {}".format(agent_index, policy_index),
+                float(p._policy.running_not_seen_steps) / p._policy.running_steps)
+
+    print('Computing meta_strategies')
     self.update_meta_strategies()  # Compute meta strategy (e.g. Nash)
 
   def update_meta_strategies(self):

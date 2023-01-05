@@ -199,3 +199,54 @@ def projected_replicator_dynamics(payoff_tensors,
       meta_strategy_window.append(new_strategies)
   average_new_strategies = np.mean(meta_strategy_window, axis=0)
   return average_new_strategies
+
+def regularized_replicator_dynamics(payoff_tensors,
+                                  regret_lambda=.05,
+                                  prd_initial_strategies=None,
+                                  prd_iterations=int(1e5),
+                                  prd_dt=1e-3,
+                                  prd_gamma=1e-6,
+                                  average_over_last_n_strategies=None,
+                                  use_approx=False,
+                                  **unused_kwargs):
+  number_players = len(payoff_tensors)
+  # Number of actions available to each player.
+  action_space_shapes = payoff_tensors[0].shape
+
+  # If no initial starting position is given, start with uniform probabilities.
+  new_strategies = prd_initial_strategies or [
+      np.ones(action_space_shapes[k]) / action_space_shapes[k]
+      for k in range(number_players)
+  ]
+
+  average_over_last_n_strategies = average_over_last_n_strategies or prd_iterations
+
+  meta_strategy_window = []
+  for i in range(prd_iterations):
+    new_strategies = _projected_replicator_dynamics_step(
+      payoff_tensors, new_strategies, prd_dt, prd_gamma, use_approx)
+    # if i >= prd_iterations - average_over_last_n_strategies:
+      # meta_strategy_window.append(new_strategies)
+    total_regret = np.sum([get_regret(payoff_tensors, new_strategies, i) for i in range(number_players)])
+    assert total_regret == total_regret  # nan value check
+    print("RRD ITERATION NUMBER {} WITH NORMALIZED REGRET {} AND LAMBDA {}".format(i, total_regret, regret_lambda))
+    if total_regret < regret_lambda:
+      print("GETTING OUT: ", total_regret, regret_lambda)
+      break
+
+  # average_new_strategies = np.mean(meta_strategy_window, axis=0)
+  return new_strategies
+
+def get_regret(payoff_tensors, strategies, agent_index):
+  payoff = payoff_tensors[agent_index].copy()
+  agent_strategy = strategies[agent_index]
+
+  # TODO: Normalize the payoff so that regret threshold is more consistent
+  if np.std(payoff) != 0:
+    payoff = (payoff - np.mean(payoff)) / np.std(payoff)
+
+  vector_of_expected_payoff = _partial_multi_dot(payoff, strategies, agent_index)
+  expected_payoff = np.dot(agent_strategy, vector_of_expected_payoff)
+  max_expected_payoff = np.max(vector_of_expected_payoff)
+
+  return  max_expected_payoff - expected_payoff

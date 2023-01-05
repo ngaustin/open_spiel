@@ -23,6 +23,7 @@ from open_spiel.python import policy
 from open_spiel.python import rl_environment
 from open_spiel.python.algorithms import dqn
 from open_spiel.python.algorithms import policy_gradient
+from open_spiel.python.algorithms import tabular_qlearner
 
 
 def rl_policy_factory(rl_class):
@@ -67,19 +68,23 @@ def rl_policy_factory(rl_class):
 
     def action_probabilities(self, state, player_id=None):
       cur_player = state.current_player()
+      cur_player = player_id if player_id >= 0 else cur_player
       legal_actions = state.legal_actions(cur_player)
 
       step_type = rl_environment.StepType.LAST if state.is_terminal(
       ) else rl_environment.StepType.MID
 
+      # print(state.information_state_tensor(cur_player))
       self._obs["current_player"] = cur_player
-      self._obs["info_state"][cur_player] = (
+      # TODO: This is still wrong. This makes the calculations for the U matrix only account for a single state. No transitions in observations
+      self._obs["info_state"][cur_player] = state.observation_tensor(cur_player) if not state.get_game().get_type().provides_information_state_tensor else (
           state.information_state_tensor(cur_player))
       self._obs["legal_actions"][cur_player] = legal_actions
 
+      # print(self._obs["info_state"][cur_player])
       # pylint: disable=protected-access
       rewards = state.rewards()
-      if rewards:
+      if rewards is not None:
         time_step = rl_environment.TimeStep(
             observations=self._obs, rewards=rewards,
             discounts=self._env._discounts, step_type=step_type)
@@ -147,4 +152,5 @@ def rl_policy_factory(rl_class):
 # pylint: disable=invalid-name
 PGPolicy = rl_policy_factory(policy_gradient.PolicyGradient)
 DQNPolicy = rl_policy_factory(dqn.DQN)
+TabularQPolicy = rl_policy_factory(tabular_qlearner.QLearner)
 # pylint: enable=invalid-name

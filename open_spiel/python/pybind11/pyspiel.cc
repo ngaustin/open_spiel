@@ -214,7 +214,7 @@ PYBIND11_MODULE(pyspiel, m) {
       .value("REWARDS", GameType::RewardModel::kRewards)
       .value("TERMINAL", GameType::RewardModel::kTerminal);
 
-  py::enum_<open_spiel::PlayerId>(m, "PlayerId")
+  py::enum_<open_spiel:: >(m, "PlayerId")
       .value("DEFAULT_PLAYER_ID", open_spiel::kDefaultPlayerId)
       .value("INVALID", open_spiel::kInvalidPlayer)
       .value("TERMINAL", open_spiel::kTerminalPlayerId)

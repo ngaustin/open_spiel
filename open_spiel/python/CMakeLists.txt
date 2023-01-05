@@ -220,6 +220,9 @@ set(PYTHON_TESTS ${PYTHON_TESTS}
   games/dynamic_routing_test.py
   games/dynamic_routing_utils_test.py
   games/tic_tac_toe_test.py
+  games/simple_box_pushing_test.py
+  games/simple_iterated_game_test.py
+  games/simple_fire_extinguisher_test.py
   mfg/algorithms/best_response_value_test.py
   mfg/algorithms/mirror_descent_test.py
   mfg/algorithms/greedy_policy_test.py

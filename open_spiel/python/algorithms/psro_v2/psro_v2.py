@@ -79,6 +79,7 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
                n_noisy_copies=0,
                alpha_noise=0.0,
                beta_noise=0.0,
+               regret_lambda=1,
                **kwargs):
     """Initialize the PSRO solver.
 
@@ -148,6 +149,8 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
     self._alpha_noise = alpha_noise
     self._beta_noise = beta_noise
 
+    self.regret_lambda = regret_lambda
+
     self._policies = []  # A list of size `num_players` of lists containing the
     # strategies of each player.
     self._new_policies = []
@@ -213,12 +216,24 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
     if self.symmetric_game:
       self._policies = self._policies * self._game_num_players
 
-    self._meta_strategy_probabilities, self._non_marginalized_probabilities = (
-        self._meta_strategy_method(solver=self, return_joint=True))
+    # self._meta_strategy_probabilities, self._non_marginalized_probabilities = (
+    #    self._meta_strategy_method(solver=self, return_joint=True))
+
+    if self._meta_strategy_method.__name__ == "prd_collab_strategy":
+        self._meta_strategy_probabilities = (self._meta_strategy_method(solver=self, regret_lambda=self.regret_lambda, return_joint=False))
+    else:
+        self._meta_strategy_probabilities = (self._meta_strategy_method(solver=self, return_joint=False))
 
     if self.symmetric_game:
       self._policies = [self._policies[0]]
       self._meta_strategy_probabilities = [self._meta_strategy_probabilities[0]]
+
+  def update_regret_threshold(self, decrease_by_factor):
+      self.regret_lambda *= decrease_by_factor
+      print("NEW LAMBDA", self.regret_lambda)
+
+  def get_consensus_returns(self):
+      return self._oracle.get_trajectory_returns()
 
   def get_policies_and_strategies(self):
     """Returns current policy sampler, policies and meta-strategies of the game.
@@ -443,6 +458,7 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
           else:
             utility_estimates = self.sample_episodes(estimated_policies,
                                                      self._sims_per_entry)
+            # print('Utility estimates: ', utility_estimates)
             for k in range(self._num_players):
               meta_games[k][tuple(used_index)] = utility_estimates[k]
 
