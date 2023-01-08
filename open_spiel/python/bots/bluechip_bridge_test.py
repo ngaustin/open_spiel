@@ -95,7 +95,7 @@ class BluechipBridgeWrapperTest(absltest.TestCase):
                 "EAST ready for WEST's bid",
                 "EAST ready for NORTH's bid",
                 "EAST ready for SOUTH's card to trick 1",
-                'EAST ready for dummy',
+                'EAST ready for one_player_action_conditioned_simple_game',
                 'WEST plays 3s',
                 "EAST ready for NORTH's card to trick 1",
                 'EAST plays 9s',

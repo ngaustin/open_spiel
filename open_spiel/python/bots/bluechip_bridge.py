@@ -63,7 +63,7 @@ _PLAYER_ACTION = ("(?P<seat>NORTH|SOUTH|EAST|WEST) "
                   "(?P<alert> Alert.)?")
 _READY_FOR_OTHER = ("{seat} ready for "
                     "(((?P<other>[^']*)'s ((bid)|(card to trick \\d+)))"
-                    "|(?P<dummy>dummy))")
+                    "|(?P<one_player_action_conditioned_simple_game>one_player_action_conditioned_simple_game))")
 
 # Templates for fixed messages we receive
 _READY_FOR_TEAMS = "{seat} ready for teams"
@@ -279,7 +279,7 @@ class BlueChipBridgeBot(pyspiel.Bot):
               action=_action_to_string(other_player_action)))
     self._num_actions = len(actions)
 
-    # If the opening lead has just been made, give the dummy.
+    # If the opening lead has just been made, give the one_player_action_conditioned_simple_game.
     if self.is_play_phase and self.cards_played == 1:
       self.dummy = self._state.current_player() ^ 2
       if self._player_id != self.dummy:

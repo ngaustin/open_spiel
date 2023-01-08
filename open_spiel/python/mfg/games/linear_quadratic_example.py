@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Generate a dummy trajectory and compute the distribution of a policy."""
+"""Generate a one_player_action_conditioned_simple_game trajectory and compute the distribution of a policy."""
 # pylint: disable=unused-import
 from typing import Sequence
 

@@ -425,6 +425,7 @@ class UniformRandomPolicy(Policy):
     legal_actions = (
         state.legal_actions()
         if player_id is None else state.legal_actions(player_id))
+    # print('Legal actions: ', legal_actions, player_id)
     if not legal_actions:
       return {0: 1.0}
     probability = 1 / len(legal_actions)

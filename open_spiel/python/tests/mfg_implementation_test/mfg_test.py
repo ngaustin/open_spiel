@@ -64,7 +64,7 @@ def _get_next_states(state, next_states, to_string):
     support = state.distribution_support()
     next_state = state.clone()
     support_length = len(support)
-    # update with a dummy distribution
+    # update with a one_player_action_conditioned_simple_game distribution
     next_state.update_distribution(
         [1.0 / support_length for _ in range(support_length)])
     state_str = to_string(next_state)

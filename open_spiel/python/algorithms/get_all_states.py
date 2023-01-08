@@ -57,7 +57,7 @@ def _get_subgames_states(state, all_states, depth_limit, depth,
     support = state.distribution_support()
     state_for_search = state.clone()
     support_length = len(support)
-    # update with a dummy distribution
+    # update with a one_player_action_conditioned_simple_game distribution
     state_for_search.update_distribution(
         [1.0 / support_length for _ in range(support_length)])
     _get_subgames_states(state_for_search, all_states, depth_limit, depth + 1,
