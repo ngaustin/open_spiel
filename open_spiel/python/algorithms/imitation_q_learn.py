@@ -125,9 +125,9 @@ class Imitation(rl_agent.AbstractAgent):
                     action = max(action_to_max_over_other_actions, key=action_to_max_over_other_actions.get)
                 else:
                     action = max(q_values, key=q_values.get)
-                # probs = []
-                # for a in legal_actions:
-                #     probs.append(1 if a == action else 0)
+                probs = []
+                for a in legal_actions:
+                    probs.append(1 if a == action else 0)
 
             else:
                 # TODO: Get rid of this because for testing
