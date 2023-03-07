@@ -80,6 +80,8 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
                alpha_noise=0.0,
                beta_noise=0.0,
                regret_lambda=1,
+               explore_mss=.5, 
+               consensus_imitation=True,
                **kwargs):
     """Initialize the PSRO solver.
 
@@ -150,6 +152,8 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
     self._beta_noise = beta_noise
 
     self.regret_lambda = regret_lambda
+    self.mss_explore = explore_mss
+    self.consensus_imitation = consensus_imitation
 
     self._policies = []  # A list of size `num_players` of lists containing the
     # strategies of each player.
@@ -219,8 +223,26 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
     # self._meta_strategy_probabilities, self._non_marginalized_probabilities = (
     #    self._meta_strategy_method(solver=self, return_joint=True))
 
+    # TODO: Allow input to distinguish whether we are using consensus policies 
+    # TODO: If using consensus policies, allow to input the indices of consensus strategies 
+    # TODO: Allow input exploration epsilon and decay
+    if self.consensus_imitation:
+      index_explore = [i for i in range(len(self._policies[0])) if i != 0 and i % 2 == 0]
+    else:
+      index_explore = []
+
     if self._meta_strategy_method.__name__ == "prd_collab_strategy":
-        self._meta_strategy_probabilities = (self._meta_strategy_method(solver=self, regret_lambda=self.regret_lambda, return_joint=False))
+        proportion_explore = len(index_explore) / float(len(self._policies[0]))
+        if proportion_explore < self.mss_explore: 
+          init_strategies = [] 
+          action_space_shapes = len(self._policies[0])
+          for k in range(len(self._policies)):
+            strategy = np.zeros(action_space_shapes)
+            strategy[-1] = 1
+            init_strategies.append(strategy)
+        else:
+          init_strategies = None 
+        self._meta_strategy_probabilities = (self._meta_strategy_method(solver=self, regret_lambda=self.regret_lambda, init_strategies=init_strategies, explore_min=self.mss_explore, index_explore=index_explore, return_joint=False))
     else:
         self._meta_strategy_probabilities = (self._meta_strategy_method(solver=self, return_joint=False))
 
@@ -228,9 +250,21 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
       self._policies = [self._policies[0]]
       self._meta_strategy_probabilities = [self._meta_strategy_probabilities[0]]
 
-  def update_regret_threshold(self, decrease_by_factor):
-      self.regret_lambda *= decrease_by_factor
+  def update_regret_threshold(self, final_regret, iterations_left):
+    if iterations_left > 0:
+      delta = self.regret_lambda - final_regret 
+      delta_now = delta / iterations_left 
+
+      self.regret_lambda -= delta_now
       print("NEW LAMBDA", self.regret_lambda)
+  
+  def update_explore_threshold(self, final_explore, iterations_left):
+    if iterations_left > 0:
+      delta = self.mss_explore - final_explore 
+      delta_now = delta / iterations_left 
+
+      self.mss_explore -= delta_now 
+      print("New explore mss minimum: ", self.mss_explore)
 
   def get_consensus_returns(self):
       return self._oracle.get_trajectory_returns()
@@ -456,8 +490,11 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
                 meta_games[player][used_tuple] += utility_estimates[
                     permutation[player]] / len(player_permutations)
           else:
+            import time
+            prev = time.time()
             utility_estimates = self.sample_episodes(estimated_policies,
                                                      self._sims_per_entry)
+            print("Current player {} and current index {} took {} seconds to finish estimate".format(current_player, current_index, round(time.time() - prev, 2)))
             # print('Utility estimates: ', utility_estimates)
             for k in range(self._num_players):
               meta_games[k][tuple(used_index)] = utility_estimates[k]

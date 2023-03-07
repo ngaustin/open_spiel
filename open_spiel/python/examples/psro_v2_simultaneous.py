@@ -34,6 +34,7 @@ import numpy as np
 # pylint: disable=g-bad-import-order
 import pyspiel
 import tensorflow.compat.v1 as tf
+import sys
 # pylint: enable=g-bad-import-order
 
 from open_spiel.python import policy
@@ -62,7 +63,7 @@ flags.DEFINE_string("meta_strategy_method", "alpharank",
                     "Name of meta strategy computation method.")
 flags.DEFINE_integer("number_policies_selected", 1,  # CHANGED THIS from 5
                      "Number of new strategies trained at each PSRO iteration.")
-flags.DEFINE_integer("sims_per_entry", 100, # 1000,  # CHANGED THIS from 1000
+flags.DEFINE_integer("sims_per_entry", 1000, # 1000,  # CHANGED THIS from 1000
                      ("Number of simulations to run to estimate each element"
                       "of the game outcome matrix."))
 
@@ -71,17 +72,40 @@ flags.DEFINE_integer("gpsro_iterations", 100,
 flags.DEFINE_bool("symmetric_game", False, "Whether to consider the current "
                   "game as a symmetric game.")
 
-""" THIS IS THE COOPERATIVE NEW STUFF """
+# General Cooperative Consensus Policy Stuff 
 flags.DEFINE_bool("consensus_imitation", False, "Whether to use consensus oracle as well.")
-flags.DEFINE_string("consensus_oracle", "optimistic_q", "Choice of oracle for exploration policy. "
-                                                      "Choices are trajectory, q_learn, optimistic_q")
-flags.DEFINE_bool("q_learn_joint", True, "Whether to train in joint state space when fitting exploration Q learning")
+flags.DEFINE_string("consensus_oracle", "q_learn", "Choice of oracle for exploration policy. "
+                                                      "Choices are trajectory, trajectory_deep, q_learn")
+flags.DEFINE_bool("q_learn_joint", False, "Whether to train in joint state space when fitting exploration Q learning")
 flags.DEFINE_string("trajectory_mode", "prob_reward", "How to fit to a trajectory. Options are prob_reward and prob_action")
 flags.DEFINE_integer("n_top_trajectories", 1, "Number of trajectories to take from each of the BR simulations")
 flags.DEFINE_integer("past_simulations", 3, "Number of BR simulations to look in the past")
+flags.DEFINE_float("proportion_uniform_trajectories", 0, "Proportion of taken trajectories that will be uniformly sampled across non-high return ones")
 
+# Reward Fitting 
+flags.DEFINE_float("boltzmann", 1.0, "Boltzmann constant for softmax when reward trajectory fitting in DQN")
+
+# Deep Trajectory Fitting
+flags.DEFINE_float("consensus_deep_network_lr", 3e-4, "Learning Rate when training network for trajectory/joint q learning")
+flags.DEFINE_float("consensus_deep_policy_network_lr", 3e-4, "Separate learning rate for policy network in CQL ")
+flags.DEFINE_integer("consensus_update_target_every", 1000, "Update target network")
+flags.DEFINE_integer("consensus_batch_size", 128, "Batch size when training consensus network offline")
+flags.DEFINE_integer("consensus_hidden_layer_size", 128, "Hidden layer size for consensus network")
+flags.DEFINE_integer("consensus_n_hidden_layers", 3, "Number of hidden layers in consensus network")
+flags.DEFINE_integer("consensus_training_epochs", 40, "Number of training epochs for offline training")
+flags.DEFINE_float("consensus_minimum_entropy", .8, "Entropy of policy required to stop or until epochs run out")
+
+# Deep CQL
+flags.DEFINE_float("alpha", 5.0, "Hyperparameter for q value minimization")
+
+# RRD and MSS 
 flags.DEFINE_float("regret_lambda_init", .7, "Lambda threshold for RRD initially")
-flags.DEFINE_float("regret_lambda_decay", .6, "Lambda threshold decay every iteration")
+flags.DEFINE_float("regret_lambda_final", 0, "Lambda threshold decay every iteration")
+flags.DEFINE_float("minimum_exploration_init", .8, "Minimum amount of profile weight on exploration policies")
+flags.DEFINE_float("final_exploration", 0, "After annealing, the minimum amount of profile weight on exploration policies")
+
+# Saving Data Path
+flags.DEFINE_string("save_folder_path",  "../examples/data/simple_box_pushing", "Where to save iteration data. Will save one file for each iteration in the given folder")
 
 """ THIS IS TABULAR Q LEARN STUFF"""
 flags.DEFINE_float("step_size", 1e-3, "Learning rate in tabular q learning")
@@ -104,10 +128,10 @@ flags.DEFINE_string("training_strategy_selector", "probabilistic",
                     "probability strategy available to each player.")
 
 # General (RL) agent parameters
-flags.DEFINE_string("oracle_type", "BR", "Choices are DQN, PG (Policy "
+flags.DEFINE_string("oracle_type", "BR", "Choices are DQN, A2C (LSTM implementation of Advantage Actor-Critic), PG (Policy "
                     "Gradient) TAB_Q (tabular q learning) or BR (exact Best Response)")
-flags.DEFINE_integer("number_training_episodes", int(2e4), "Number training "  # CHANGED THIS from 1e4
-                     "episodes per RL policy. Used for PG and DQN")
+flags.DEFINE_integer("number_training_steps", int(1e6), "Number of environment " 
+                     "steps per RL policy. Used for PG, DQN, and Tabular Q")
 flags.DEFINE_float("self_play_proportion", 0.0, "Self play proportion")
 flags.DEFINE_integer("hidden_layer_size", 32, "Hidden layer size")  # CHANGED THIS
 flags.DEFINE_integer("batch_size", 32, "Batch size")  # CHANGED FROM 32
@@ -127,6 +151,10 @@ flags.DEFINE_float("dqn_learning_rate", 1e-2, "DQN learning rate.")  # CHAGNED F
 flags.DEFINE_integer("update_target_network_every", 1000, "Update target "  # CHANGED FROM 1000
                      "network every [X] steps")
 flags.DEFINE_integer("learn_every", 10, "Learn every [X] steps.")  # CHANGED FROM 10
+flags.DEFINE_integer("min_buffer_size_to_learn", 1000, "Learn after getting certain number of transitions")
+flags.DEFINE_integer("max_buffer_size", int(1e4), "Buffer Size")
+flags.DEFINE_integer("epsilon_decay_duration", 1000, "Number of steps for epsilon from 1 to .1")
+flags.DEFINE_float("dqn_boltzmann", 2.0, "DQN probabilistic boltzmann")
 
 # General
 flags.DEFINE_integer("seed", 1, "Seed.")
@@ -159,7 +187,7 @@ def init_pg_responder(sess, env):
       env,
       agent_class,
       agent_kwargs,
-      number_training_episodes=FLAGS.number_training_episodes,
+      number_training_steps=FLAGS.number_training_steps,
       self_play_proportion=FLAGS.self_play_proportion,
       sigma=FLAGS.sigma)
 
@@ -200,15 +228,41 @@ def init_dqn_responder(sess, env):
       "learning_rate": FLAGS.dqn_learning_rate,
       "update_target_network_every": FLAGS.update_target_network_every,
       "learn_every": FLAGS.learn_every,
-      "optimizer_str": FLAGS.optimizer_str
+      "optimizer_str": FLAGS.optimizer_str,
+      "min_buffer_size_to_learn": FLAGS.min_buffer_size_to_learn,
+      "replay_buffer_capacity": FLAGS.max_buffer_size,
+      "epsilon_decay_duration": FLAGS.epsilon_decay_duration, 
+      "boltzmann": FLAGS.dqn_boltzmann
   }
+
+  consensus_kwargs={
+    "session": sess,
+    "alpha": FLAGS.alpha,
+    "consensus_oracle":FLAGS.consensus_oracle,
+    "imitation_mode":FLAGS.trajectory_mode, 
+    "num_simulations_fit":FLAGS.n_top_trajectories,
+    "num_iterations_fit":FLAGS.past_simulations,
+    "proportion_uniform_trajectories":FLAGS.proportion_uniform_trajectories,
+    "joint": FLAGS.q_learn_joint,
+    "boltzmann": FLAGS.boltzmann, 
+    "training_epochs": FLAGS.consensus_training_epochs,
+    "update_target_every": FLAGS.consensus_update_target_every,
+    "minimum_entropy":FLAGS.consensus_minimum_entropy,
+    "deep_network_lr": FLAGS.consensus_deep_network_lr,
+    "deep_policy_network_lr": FLAGS.consensus_deep_policy_network_lr,
+    "batch_size": FLAGS.consensus_batch_size,
+    "hidden_layer_size": FLAGS.consensus_hidden_layer_size,
+    "n_hidden_layers": FLAGS.consensus_n_hidden_layers,
+    "num_players": FLAGS.n_players,
+  }
+
   if FLAGS.consensus_imitation:
       oracle = rl_oracle_cooperative.RLOracleCooperative(
           env,
           agent_class,
-          FLAGS.consensus_oracle,
           agent_kwargs,
-          number_training_episodes=FLAGS.number_training_episodes,
+          consensus_kwargs=consensus_kwargs,
+          number_training_steps=FLAGS.number_training_steps,
           self_play_proportion=FLAGS.self_play_proportion,
           sigma=FLAGS.sigma)
   else:
@@ -216,7 +270,7 @@ def init_dqn_responder(sess, env):
           env,
           agent_class,
           agent_kwargs,
-          number_training_episodes=FLAGS.number_training_episodes,
+          number_training_steps=FLAGS.number_training_steps,
           self_play_proportion=FLAGS.self_play_proportion,
           sigma=FLAGS.sigma)
 
@@ -231,38 +285,56 @@ def init_dqn_responder(sess, env):
     agent.freeze()
   return oracle, agents
 
-def init_tabular_q_responder(env):
+def init_tabular_q_responder(sess, env):
   """Initializes the Policy Gradient-based responder and agents."""
   # state_representation_size = env.observation_spec()["info_state"][0]
   # print("Rep size: ", state_representation_size)
   num_actions = env.action_spec()["num_actions"]
+  state_representation_size = env.observation_spec()["info_state"][0]  # TODO: CHECK THIS IS NON-ZERO
 
   agent_class = rl_policy.TabularQPolicy
   agent_kwargs = {
       "num_actions": num_actions,
       "step_size": FLAGS.step_size,
       "discount_factor": FLAGS.discount_factor,
+      "state_representation_size": state_representation_size,
   }
+  consensus_kwargs={
+    "session": sess,
+    "alpha": FLAGS.alpha,
+    "consensus_oracle":FLAGS.consensus_oracle,
+    "imitation_mode":FLAGS.trajectory_mode, 
+    "num_simulations_fit":FLAGS.n_top_trajectories,
+    "num_iterations_fit":FLAGS.past_simulations,
+    "proportion_uniform_trajectories":FLAGS.proportion_uniform_trajectories,
+    "joint": FLAGS.q_learn_joint,
+    "boltzmann": FLAGS.boltzmann, 
+    "training_epochs": FLAGS.consensus_training_epochs,
+    "update_target_every": FLAGS.consensus_update_target_every,
+    "minimum_entropy":FLAGS.consensus_minimum_entropy,
+    "deep_network_lr": FLAGS.consensus_deep_network_lr,
+    "deep_policy_network_lr": FLAGS.consensus_deep_policy_network_lr,
+    "batch_size": FLAGS.consensus_batch_size,
+    "hidden_layer_size": FLAGS.consensus_hidden_layer_size,
+    "n_hidden_layers": FLAGS.consensus_n_hidden_layers,
+    "num_players": FLAGS.n_players
+  }
+
   if FLAGS.consensus_imitation:
-      # TODO: Add the number of simulations to take/look at here
       oracle = rl_oracle_cooperative.RLOracleCooperative(
           env,
           agent_class,
-          FLAGS.consensus_oracle,
           agent_kwargs,
-          number_training_episodes=FLAGS.number_training_episodes,
+          consensus_kwargs=consensus_kwargs,
+          number_training_steps=FLAGS.number_training_steps,
           self_play_proportion=FLAGS.self_play_proportion,
-          imitation_mode=FLAGS.trajectory_mode,
-          num_simulations_fit=FLAGS.n_top_trajectories,
-          num_iterations_fit=FLAGS.past_simulations,
-          joint=FLAGS.q_learn_joint,
           sigma=FLAGS.sigma)
   else:
       oracle = rl_oracle.RLOracle(
           env,
           agent_class,
           agent_kwargs,
-          number_training_episodes=FLAGS.number_training_episodes,
+          number_training_steps=FLAGS.number_training_steps,
           self_play_proportion=FLAGS.self_play_proportion,
           sigma=FLAGS.sigma)
 
@@ -335,6 +407,8 @@ def gpsro_looper(env, oracle, agents):
       prd_gamma=1e-2,  # TODO: CHANGED THIS
       sample_from_marginals=sample_from_marginals,
       regret_lambda=FLAGS.regret_lambda_init,
+      explore_mss=FLAGS.minimum_exploration_init,
+      consensus_imitation=FLAGS.consensus_imitation,
       symmetric_game=FLAGS.symmetric_game)
 
   start_time = time.time()
@@ -350,7 +424,9 @@ def gpsro_looper(env, oracle, agents):
     meta_game = g_psro_solver.get_meta_game()
     meta_probabilities = g_psro_solver.get_meta_strategies()
     policies = g_psro_solver.get_policies()
-    g_psro_solver.update_regret_threshold(FLAGS.regret_lambda_decay)
+
+    g_psro_solver.update_regret_threshold(FLAGS.regret_lambda_final, FLAGS.gpsro_iterations - gpsro_iteration - 1)
+    g_psro_solver.update_explore_threshold(FLAGS.final_exploration, FLAGS.gpsro_iterations - gpsro_iteration - 1)
 
     if FLAGS.verbose:
       print("\n### NOTE ### : Max welfare for this game is {}\n".format(env.game.max_welfare_for_trajectory()))
@@ -360,7 +436,9 @@ def gpsro_looper(env, oracle, agents):
           line = [str(np.round(prob, 2)) + "  " for prob in arr]
           print("Player #{}: ".format(i) + ''.join(line))
       env.game.display_policies_in_context(policies)
-      env.game.save_iteration_data(gpsro_iteration, meta_probabilities, meta_game, policies)
+
+      save_folder_path = FLAGS.save_folder_path if FLAGS.save_folder_path[-1] == "/" else FLAGS.save_folder_path + "/"
+      env.game.save_iteration_data(gpsro_iteration, meta_probabilities, meta_game, policies, save_folder_path)
 
     # The following lines only work for sequential games for the moment.
     if env.game.get_type().dynamics == pyspiel.GameType.Dynamics.SEQUENTIAL:
@@ -383,6 +461,8 @@ def main(argv):
 
   np.random.seed(FLAGS.seed)
 
+  sys.setrecursionlimit(1500)
+
   game = pyspiel.load_game(FLAGS.game_name)  # The iterated prisoners dilemma does not have "players" info type
 
   env = rl_environment.Environment(game)
@@ -390,13 +470,13 @@ def main(argv):
   # Initialize oracle and agents
   with tf.Session() as sess:
     if FLAGS.oracle_type == "DQN":
-      oracle, agents = init_dqn_responder(sess, env)
+      oracle, agents = init_dqn_responder(sess, env)   
     elif FLAGS.oracle_type == "PG":
       oracle, agents = init_pg_responder(sess, env)
     elif FLAGS.oracle_type == "BR":
       oracle, agents = init_br_responder(env)
     elif FLAGS.oracle_type == "TAB_Q":
-      oracle, agents = init_tabular_q_responder(env)
+      oracle, agents = init_tabular_q_responder(sess, env)
     sess.run(tf.global_variables_initializer())
     gpsro_looper(env, oracle, agents)
 

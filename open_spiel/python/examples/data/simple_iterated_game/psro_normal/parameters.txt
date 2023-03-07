@@ -1,0 +1,43 @@
+Command Run: 
+python3 -u psro_v2_simultaneous.py --game_name=simple_iterated_game --save_folder_path="../examples/data/simple_iterated_game" --meta_strategy_method=prd --oracle_type=TAB_Q  --gpsro_iterations=20 --consensus_imitation=False
+
+
+###############################
+GENERAL PSRO PARAMETERS
+###############################
+Meta-Strategy: PRD 
+Number of Policies per Iteration: 1
+Simulations per Entry: 1000 
+PSRO Iterations: 20 
+Num Players: 2
+
+###############################
+ORACLE PARAMETERS 
+###############################
+Oracle Type: Tabular Q Learning 
+Tabular Q Step Size: 1e-3
+Discount Factor: .99 
+Number of Training Episodes: 2e4
+Self Play Proportion: 0.0
+Sigma: 0.0 
+DQN Learning Rate: N/A 
+Update Target Network Every: N/A 
+Learn Every Steps: N/A 
+Hidden Layer Size: N/A 
+Batch Size: N/A 
+Optimizer: N/A 
+
+
+###############################
+EXPLORATION POLICY PARAMETERS
+###############################
+Consensus Imitation: False 
+Consensus Oracle: N/A 
+Q-Learn Joint: N/A 
+Epochs for Q-Learning: N/A 
+Trajectory Mode: N/A 
+Number of Top Trajectories: N/A 
+From Number of Past Simulations: N/A 
+Regret Lambda Init for RRD: N/A 
+Regret Lambda Decay for RRD: N/A 
+

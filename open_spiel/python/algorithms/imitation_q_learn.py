@@ -42,7 +42,7 @@ class Imitation(rl_agent.AbstractAgent):
 
     def __init__(self,
                  player_id,
-                 joint,
+                 consensus_kwargs,
                  num_actions):
         """Initialize the DQN agent."""
 
@@ -52,6 +52,7 @@ class Imitation(rl_agent.AbstractAgent):
 
         self.player_id = player_id
         self._num_actions = num_actions
+        self._epochs = consensus_kwargs["training_epochs"]
 
         self.observations = []  # list of observations
         self.q_values = []  # for each obs, we have a dictionary that maps each action to a DICTIONARY of q values.
@@ -59,8 +60,8 @@ class Imitation(rl_agent.AbstractAgent):
         self.trajectory = []  # list of tuples. Each tuple is (prev observation, prev action, reward, observation, done)
 
         self.action_conditioned = True
-        self.joint = joint
-        self.lr = 2e-2
+        self.joint = consensus_kwargs["joint"]
+        self.lr = 1e-2
         self.discount_factor = .99
 
         self.running_steps = 0
@@ -102,12 +103,31 @@ class Imitation(rl_agent.AbstractAgent):
                 if self.action_conditioned:
                     action_to_max_over_other_actions = {a: max(q_set.values()) for a, q_set in q_values.items()}
 
+                    # Making it stochastic
+                    """
+                    actions = []
+                    probs_subset = []
+                    for a, q in action_to_max_over_other_actions.items():
+                        actions.append(a)
+                        probs_subset.append(10 * np.exp(q))
+                    
+                    probs_subset = np.array(probs_subset) / sum(probs_subset)
+                    action_index = np.random.choice(len(probs_subset), p=probs_subset)
+                    action = actions[action_index]
+
+                    probs = []
+                    for a in legal_actions:
+                        if a in actions:
+                            probs.append(probs_subset[actions.index(a)])
+                        else:
+                            probs.append(0)
+                    """
                     action = max(action_to_max_over_other_actions, key=action_to_max_over_other_actions.get)
                 else:
                     action = max(q_values, key=q_values.get)
-                probs = []
-                for a in legal_actions:
-                    probs.append(1 if a == action else 0)
+                # probs = []
+                # for a in legal_actions:
+                #     probs.append(1 if a == action else 0)
 
             else:
                 # TODO: Get rid of this because for testing
@@ -121,7 +141,7 @@ class Imitation(rl_agent.AbstractAgent):
 
         return rl_agent.StepOutput(action=action, probs=probs)
 
-    def add_transition(self, prev_time_step, prev_action, time_step):
+    def add_transition(self, prev_time_step, prev_action, time_step, ret):
         """Adds the new transition using `time_step` to the replay buffer.
 
         Adds the transition from `self._prev_timestep` to `time_step` by
@@ -184,7 +204,8 @@ class Imitation(rl_agent.AbstractAgent):
           The average loss obtained on this batch of transitions or `None`.
         """
         # Iterate randomly through each element in trajectory
-        self.q_values, epochs = self.do_learning_for_steps(self.q_values, 10)
+        print("Number of distinct observations for consensus policy: {}".format(len(self.observations)))
+        self.q_values, epochs = self.do_learning_for_steps(self.q_values, self._epochs)
         print("Trained consensus for {} epochs".format(epochs))
 
     def do_learning_for_steps(self, q_values, epochs):
@@ -237,13 +258,14 @@ class Imitation(rl_agent.AbstractAgent):
                     q_values[index_obs][player_a] = new_q_value
 
             epoch_loss = loss / len(training_order)
-            # print("Epoch {} loss: ".format(k), epoch_loss)
+            print("Training Q learn offline...epoch {} loss: ".format(k), epoch_loss)
+            # print("Q values for first observation: ", q_values[0])
             # TODO: Change this eventually
-            if epoch_loss < .05:
-                return q_values, k
-            if epoch_loss < min_loss:
-                min_loss = epoch_loss
-                min_loss_epoch = k+1
+            # if epoch_loss < .05:
+            #     return q_values, k
+            # if epoch_loss < min_loss:
+            #     min_loss = epoch_loss
+            #     min_loss_epoch = k+1
         """
         for i in training_order:
             transition = self.trajectory[i]

@@ -46,13 +46,14 @@ class DQN(rl_agent.AbstractAgent):
                state_representation_size,
                num_actions,
                hidden_layers_sizes=128,
-               replay_buffer_capacity=10000,
+               replay_buffer_capacity=int(1.5e6),
                batch_size=128,
                replay_buffer_class=ReplayBuffer,
                learning_rate=0.01,
                update_target_network_every=1000,
+               boltzmann=1.0,
                learn_every=10,
-               discount_factor=1.0,
+               discount_factor=.99,
                min_buffer_size_to_learn=1000,
                epsilon_start=1.0,
                epsilon_end=0.1,
@@ -76,6 +77,7 @@ class DQN(rl_agent.AbstractAgent):
     self._learn_every = learn_every
     self._min_buffer_size_to_learn = min_buffer_size_to_learn
     self._discount_factor = discount_factor
+    self._boltzmann = boltzmann
 
     self._epsilon_start = epsilon_start
     self._epsilon_end = epsilon_end
@@ -94,6 +96,7 @@ class DQN(rl_agent.AbstractAgent):
 
     # Keep track of the last training loss achieved in an update step.
     self._last_loss_value = None
+    self._loss_values_over_steps = []
 
     # Create required TensorFlow placeholders to perform the Q-network updates.
     self._info_state_ph = tf.placeholder(
@@ -134,16 +137,28 @@ class DQN(rl_agent.AbstractAgent):
     # max. This prevents illegal action values from being considered as target.
     illegal_actions = 1 - self._legal_actions_mask_ph
     illegal_logits = illegal_actions * ILLEGAL_ACTION_LOGITS_PENALTY
-    max_next_q = tf.reduce_max(
-        tf.math.add(tf.stop_gradient(self._target_q_values), illegal_logits),
-        axis=-1)
+
+    # TODO: Modify the following line for DDQN update as opposed to DQN 
+    next_q_double = self._q_network(self._next_info_state_ph)
+    max_next_a = tf.math.argmax((tf.math.add(tf.stop_gradient(next_q_double), illegal_logits)), axis=-1)
+    max_next_q = tf.gather(self._target_q_values, max_next_a, axis=1, batch_dims=1)
+    # print("shapes ", next_q_double.shape, max_next_a.shape, max_next_q.shape)
+
+    # max_next_q = tf.reduce_max(
+    #     tf.math.add(tf.stop_gradient(self._target_q_values), illegal_logits),
+    #     axis=-1)
+
+
     target = (
         self._reward_ph +
         (1 - self._is_final_step_ph) * self._discount_factor * max_next_q)
+    # print("target shape: ", target.shape)
 
     action_indices = tf.stack(
         [tf.range(tf.shape(self._q_values)[0]), self._action_ph], axis=-1)
     predictions = tf.gather_nd(self._q_values, action_indices)
+
+    # print("shape predictions: ", predictions.shape)
 
     self._savers = [("q_network", tf.train.Saver(self._q_network.variables)),
                     ("target_q_network",
@@ -205,6 +220,16 @@ class DQN(rl_agent.AbstractAgent):
       if self._step_counter % self._learn_every == 0:
         self.trained_at_least_once = True
         self._last_loss_value = self.learn()
+
+        if self._last_loss_value != None:
+          self._loss_values_over_steps.append(self._last_loss_value)
+        if len(self._loss_values_over_steps) > 50000:
+          self._loss_values_over_steps = self._loss_values_over_steps[1:]
+      
+      if self._step_counter % 50000 == 0:
+        if len(self._loss_values_over_steps) > 0:
+          val = sum(self._loss_values_over_steps) / len(self._loss_values_over_steps)
+          print("DQN training average loss value for agent {} as of step {}: {}".format(self.player_id, self._step_counter, val))
 
       if self._step_counter % self._update_target_network_every == 0:
         self._session.run(self._update_target_network)
@@ -283,7 +308,7 @@ class DQN(rl_agent.AbstractAgent):
       A valid epsilon-greedy action and valid action probabilities.
     """
     probs = np.zeros(self._num_actions)
-    # TODO: I changed this to be probabilistic instead of epsilon greedy!
+
     if np.random.rand() < epsilon:
       action = np.random.choice(legal_actions)
       probs[legal_actions] = 1.0 / len(legal_actions)
@@ -292,14 +317,19 @@ class DQN(rl_agent.AbstractAgent):
       q_values = self._session.run(
           self._q_values, feed_dict={self._info_state_ph: info_state})[0]
       legal_q_values = q_values[legal_actions]
-      """
-      if not is_evaluation:
-          boltzmann = 3
-          exps = np.exp(boltzmann * legal_q_values)
-          probs = exps / np.sum(exps)
-          action = legal_actions[np.random.choice(len(legal_actions), 1, p=probs)[0]]
-      else:
-      """
+      
+      # if not is_evaluation:
+      # exps = np.exp(self._boltzmann * legal_q_values) + 1e-6
+      # probs = exps / np.sum(exps)
+
+      # if np.isnan(probs).any() or np.sum(probs) != 1:
+      #   probs = np.zeros(self._num_actions)
+      #   action = legal_actions[np.argmax(legal_q_values)]
+      #   probs[action] = 1.0
+      # else:
+      #   action = legal_actions[np.random.choice(len(legal_actions), 1, p=probs)[0]]
+      # else:
+      
       # Original code:
       action = legal_actions[np.argmax(legal_q_values)]
       probs[action] = 1.0

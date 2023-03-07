@@ -176,7 +176,7 @@ def prd_strategy(solver, return_joint=False, initial_strategies=None):
 def rrd_strategy(solver, return_joint=False, initial_strategies=None):
   return
 
-def prd_collab_strategy(solver, regret_lambda=1, return_joint=False):
+def prd_collab_strategy(solver, regret_lambda=1, init_strategies=None, explore_min=0, index_explore=[], return_joint=False):
   boltzmann = 0
   # First index: player   Second index: strategy index
   meta_games = solver.get_meta_game()
@@ -203,7 +203,7 @@ def prd_collab_strategy(solver, regret_lambda=1, return_joint=False):
   # print("Initial meta-strategies: ", initial_strategies)
   # result_from_prd = prd_strategy(solver, return_joint, initial_strategies=initial_strategies)  # This should be a 2d np array.
   result = projected_replicator_dynamics.regularized_replicator_dynamics(
-      meta_games, regret_lambda=regret_lambda, **kwargs) # prd_initial_strategies=initial_strategies, **kwargs)
+      meta_games, regret_lambda=regret_lambda, prd_initial_strategies=init_strategies, explore_min=explore_min, index_explore=index_explore, **kwargs) # prd_initial_strategies=initial_strategies, **kwargs)
 
   if return_joint:
     print("THIS IS NOT SUPPORTED")
@@ -306,4 +306,5 @@ META_STRATEGY_METHODS = {
     "prd": prd_strategy,
     "rm": rm_strategy,
     "prd_collab": prd_collab_strategy,
+    "rrd": rrd_strategy
 }

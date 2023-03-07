@@ -29,7 +29,6 @@ _DEFAULT_PARAMS = {"termination_probability": 0.125, "max_game_length": 10}
 _PAYOFF = [[3, 3, -2], [1, 3, 0], [0, -2, 5]]
 _SINGLE_STATE = False
 _SOCIAL_WELFARE_OPTIMIZATION = False
-_SAVE_FOLDER_PATH = "../examples/data/simple_iterated_game/"
 
 """   
 What the game looks like: 
@@ -124,13 +123,13 @@ class SimpleIteratedGame(pyspiel.Game):
         print("\n")
     return
 
-  def save_iteration_data(self, iteration_number, meta_probabilities, U, policies):
+  def save_iteration_data(self, iteration_number, meta_probabilities, U, policies, save_folder_path):
       """ Save a list of numpy arrays representing:
             [num_players, S] shape matrix of meta_probabilities (where S is the number of policies so far)
             [num_players, num_states, num_actions, S] shape matrix representing policies
             [num_players, S, S] shape matrix representing utilities (U)
       """
-      save_data_path = _SAVE_FOLDER_PATH + "iteration_{}.npy".format(iteration_number)
+      save_data_path = save_folder_path + "iteration_{}.npy".format(iteration_number)
       all_meta_probabilities = np.vstack(meta_probabilities)
       S = meta_probabilities[0].size
       policy_matrix = np.zeros((_NUM_PLAYERS, 1 if _SINGLE_STATE else 4, self.num_distinct_actions(), S))

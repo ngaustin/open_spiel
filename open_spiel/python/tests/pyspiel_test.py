@@ -56,6 +56,7 @@ EXPECTED_GAMES = frozenset([
     "gin_rummy",
     "go",
     "goofspiel",
+    "harvest",
     "havannah",
     "hex",
     "hearts",

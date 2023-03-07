@@ -33,3 +33,4 @@ from open_spiel.python.games import tic_tac_toe
 from open_spiel.python.games import simple_box_pushing
 from open_spiel.python.games import simple_iterated_game
 from open_spiel.python.games import simple_fire_extinguisher
+from open_spiel.python.games import harvest

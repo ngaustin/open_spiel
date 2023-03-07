@@ -22,25 +22,27 @@ import numpy as np
 from open_spiel.python.algorithms.psro_v2 import optimization_oracle
 from open_spiel.python.algorithms.psro_v2 import utils
 from open_spiel.python.algorithms import imitation
+from open_spiel.python.algorithms import imitation_deep
 from open_spiel.python.algorithms import imitation_q_learn
+from open_spiel.python.algorithms import imitation_q_learn_deep
 from open_spiel.python.algorithms import tabular_qlearner
 
 
-def update_episodes_per_oracles(episodes_per_oracle, played_policies_indexes):
-  """Updates the current episode count per policy.
+def update_steps_per_oracles(steps_per_oracle, played_policies_indexes, num_steps):
+    """Updates the current episode count per policy.
 
-  Args:
-    episodes_per_oracle: List of list of number of episodes played per policy.
-      One list per player.
-    played_policies_indexes: List with structure (player_index, policy_index) of
-      played policies whose count needs updating.
+    Args:
+        steps_per_oracle: List of list of number of steps played per policy.
+        One list per player.
+        played_policies_indexes: List with structure (player_index, policy_index) of
+        played policies whose count needs updating.
 
-  Returns:
-    Updated count.
-  """
-  for player_index, policy_index in played_policies_indexes:
-    episodes_per_oracle[player_index][policy_index] += 1
-  return episodes_per_oracle
+    Returns:
+        Updated count.
+    """
+    for player_index, policy_index in played_policies_indexes:
+        steps_per_oracle[player_index][policy_index] += num_steps
+    return steps_per_oracle
 
 
 def freeze_all(policies_per_player):
@@ -80,7 +82,7 @@ class RLOracle(optimization_oracle.AbstractOracle):
                env,
                best_response_class,
                best_response_kwargs,
-               number_training_episodes=1e3,
+               number_training_steps=1e4,
                self_play_proportion=0.0,
                **kwargs):
     """Init function for the RLOracle.
@@ -89,7 +91,7 @@ class RLOracle(optimization_oracle.AbstractOracle):
       env: rl_environment instance.
       best_response_class: class of the best response.
       best_response_kwargs: kwargs of the best response.
-      number_training_episodes: (Minimal) number of training episodes to run
+      number_training_steps: (Minimal) number of environment steps to run
         each best response through. May be higher for some policies.
       self_play_proportion: Float, between 0 and 1. Defines the probability that
         a non-currently-training player will actually play (one of) its
@@ -102,13 +104,14 @@ class RLOracle(optimization_oracle.AbstractOracle):
     self._best_response_kwargs = best_response_kwargs
 
     self._self_play_proportion = self_play_proportion
-    self._number_training_episodes = number_training_episodes
+    self._number_training_steps = number_training_steps
 
     super(RLOracle, self).__init__(**kwargs)
 
   def sample_episode(self, unused_time_step, agents, is_evaluation=False):
     time_step = self._env.reset()
     cumulative_rewards = 0.0
+    steps = 0
     while not time_step.last():
       if time_step.is_simultaneous_move():
         action_list = []
@@ -132,22 +135,23 @@ class RLOracle(optimization_oracle.AbstractOracle):
         action_list = [agent_output.action]
         time_step = self._env.step(action_list)
         cumulative_rewards += np.array(time_step.rewards)
+      steps += 1
 
     if not is_evaluation:
       for agent in agents:
         agent.step(time_step)
 
-    return cumulative_rewards
+    return steps, cumulative_rewards
 
-  def _has_terminated(self, episodes_per_oracle):
+  def _has_terminated(self, steps_per_oracle):
     # The oracle has terminated when all policies have at least trained for
     # self._number_training_episodes. Given the stochastic nature of our
     # training, some policies may have more training episodes than that value.
     return np.all(
-        episodes_per_oracle.reshape(-1) > self._number_training_episodes)
+        steps_per_oracle.reshape(-1) > self._number_training_steps)
 
   def sample_policies_for_episode(self, new_policies, training_parameters,
-                                  episodes_per_oracle, strategy_sampler):
+                                  steps_per_oracle, strategy_sampler):
     """Randomly samples a set of policies to run during the next episode.
 
     Note : sampling is biased to select players & strategies that haven't
@@ -158,8 +162,8 @@ class RLOracle(optimization_oracle.AbstractOracle):
         player.
       training_parameters: List of list of training parameters dictionaries, one
         list per player, one dictionary per training policy.
-      episodes_per_oracle: List of list of integers, computing the number of
-        episodes trained on by each policy. Used to weight the strategy
+      steps_per_oracle: List of list of integers, computing the number of
+        steps trained on by each policy. Used to weight the strategy
         sampling.
       strategy_sampler: Sampling function that samples a joint strategy given
         probabilities.
@@ -171,8 +175,8 @@ class RLOracle(optimization_oracle.AbstractOracle):
     num_players = len(training_parameters)
 
     # Prioritizing players that haven't had as much training as the others.
-    episodes_per_player = [sum(episodes) for episodes in episodes_per_oracle]
-    chosen_player = random_count_weighted_choice(episodes_per_player)
+    steps_per_player = [sum(steps) for steps in steps_per_oracle]
+    chosen_player = random_count_weighted_choice(steps_per_player)
 
     # Uniformly choose among the sampled player.
     agent_chosen_ind = np.random.randint(
@@ -201,7 +205,7 @@ class RLOracle(optimization_oracle.AbstractOracle):
           # trained strategies of current_player, with priority given to less-
           # selected agents.
           agent_index = random_count_weighted_choice(
-              episodes_per_oracle[player])
+              steps_per_oracle[player])
           self_play_agent = new_policies[player][agent_index]
           episode_policies[player] = self_play_agent
           live_agents_player_index.append((player, agent_index))
@@ -211,7 +215,7 @@ class RLOracle(optimization_oracle.AbstractOracle):
     return episode_policies, live_agents_player_index
 
   def _rollout(self, game, agents, **oracle_specific_execution_kwargs):
-    self.sample_episode(None, agents, is_evaluation=False)
+    return self.sample_episode(None, agents, is_evaluation=False)
 
   def generate_new_policies(self, training_parameters):
     """Generates new policies to be trained into best responses.
@@ -230,8 +234,9 @@ class RLOracle(optimization_oracle.AbstractOracle):
       new_pols = []
       for param in player_parameters:
         current_pol = param["policy"]
-        if isinstance(current_pol, self._best_response_class) and not isinstance(current_pol._policy, imitation.Imitation)\
-                and not isinstance(current_pol._policy, imitation_q_learn.Imitation) and not isinstance(current_pol._policy, tabular_qlearner.QLearner):
+        # if isinstance(current_pol, self._best_response_class) and not isinstance(current_pol._policy, imitation.Imitation)\
+        #         and not isinstance(current_pol._policy, imitation_q_learn.Imitation) and not isinstance(current_pol._policy, tabular_qlearner.QLearner):
+        if isinstance(current_pol, self._best_response_class) and not any([isinstance(current_pol._policy, pol) for pol in [imitation.Imitation, imitation_q_learn.Imitation, imitation_deep.Imitation, imitation_q_learn_deep.Imitation, tabular_qlearner.QLearner]]):
           new_pol = current_pol.copy_with_noise(self._kwargs.get("sigma", 0.0))
         else:
           new_pol = self._best_response_class(self._env, player,
@@ -271,21 +276,21 @@ class RLOracle(optimization_oracle.AbstractOracle):
       A list of list, one for each member of training_parameters, of (epsilon)
       best responses.
     """
-    episodes_per_oracle = [[0
+    steps_per_oracle = [[0
                             for _ in range(len(player_params))]
                            for player_params in training_parameters]
-    episodes_per_oracle = np.array(episodes_per_oracle)
+    steps_per_oracle = np.array(steps_per_oracle)
 
     new_policies = self.generate_new_policies(training_parameters)
 
     # TODO(author4): Look into multithreading.
-    while not self._has_terminated(episodes_per_oracle):
+    while not self._has_terminated(steps_per_oracle):
       agents, indexes = self.sample_policies_for_episode(
-          new_policies, training_parameters, episodes_per_oracle,
+          new_policies, training_parameters, steps_per_oracle,
           strategy_sampler)
-      self._rollout(game, agents, **oracle_specific_execution_kwargs)
-      episodes_per_oracle = update_episodes_per_oracles(episodes_per_oracle,
-                                                        indexes)
+      num_steps, _ = self._rollout(game, agents, **oracle_specific_execution_kwargs)
+      steps_per_oracle = update_steps_per_oracles(steps_per_oracle,
+                                                        indexes, num_steps)
     # Freeze the new policies to keep their weights static. This allows us to
     # later not have to make the distinction between static and training
     # policies in training iterations.

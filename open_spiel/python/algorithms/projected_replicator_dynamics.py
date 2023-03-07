@@ -195,16 +195,20 @@ def projected_replicator_dynamics(payoff_tensors,
                                         average_over_last_n_strategies)
   averager.append(new_strategies)
 
-  for _ in range(prd_iterations):
+  for i in range(prd_iterations):
     new_strategies = _projected_replicator_dynamics_step(
         payoff_tensors, new_strategies, prd_dt, prd_gamma, use_approx)
-    if i >= prd_iterations - average_over_last_n_strategies:
-      meta_strategy_window.append(new_strategies)
-  average_new_strategies = np.mean(meta_strategy_window, axis=0)
-  return average_new_strategies
+    averager.append(new_strategies)
+  return averager.average_strategies()
+    # if i >= prd_iterations - average_over_last_n_strategies:
+    #   meta_strategy_window.append(new_strategies)
+  # average_new_strategies = np.mean(meta_strategy_window, axis=0)
+  # return average_new_strategies
 
 def regularized_replicator_dynamics(payoff_tensors,
                                   regret_lambda=.05,
+                                  explore_min=0,
+                                  index_explore=[],
                                   prd_initial_strategies=None,
                                   prd_iterations=int(1e5),
                                   prd_dt=1e-3,
@@ -215,6 +219,13 @@ def regularized_replicator_dynamics(payoff_tensors,
   number_players = len(payoff_tensors)
   # Number of actions available to each player.
   action_space_shapes = payoff_tensors[0].shape
+
+  # TODO: Delete this. This is for an experiment
+  # prd_initial_strategies = [] 
+  # for k in range(number_players):
+  #   strategy = np.zeros(action_space_shapes[k])
+  #   strategy[-1] = 1
+  #   prd_initial_strategies.append(strategy)
 
   # If no initial starting position is given, start with uniform probabilities.
   new_strategies = prd_initial_strategies or [
@@ -232,10 +243,28 @@ def regularized_replicator_dynamics(payoff_tensors,
       # meta_strategy_window.append(new_strategies)
     total_regret = np.sum([get_regret(payoff_tensors, new_strategies, i) for i in range(number_players)])
     assert total_regret == total_regret  # nan value check
-    print("RRD ITERATION NUMBER {} WITH NORMALIZED REGRET {} AND LAMBDA {}".format(i, total_regret, regret_lambda))
-    if total_regret < regret_lambda:
-      print("GETTING OUT: ", total_regret, regret_lambda)
+    # print("RRD ITERATION NUMBER {} WITH NORMALIZED REGRET {} AND LAMBDA {}".format(i, total_regret, regret_lambda))
+
+    exit_for_explore = False
+    for i, strategy in enumerate(new_strategies):
+      weight = np.sum(np.take(strategy, index_explore))
+      if weight < explore_min and len(index_explore) > 0:
+        print("Exited RRD with total regret {} and exploration weight {} that was less than explore minimum {} after {} iterations ".format(total_regret, weight, explore_min, i))
+        exit_for_explore = True 
+    
+    if exit_for_explore:
       break
+
+    if total_regret < regret_lambda:
+      print("Exited RRD with total regret {} that was less than regret lambda {} after {} iterations ".format(total_regret, regret_lambda, i))
+      break
+
+  # THIS IS A TEST. TODO: Delete this later
+  # new_strategies = []
+  # for k in range(number_players):
+  #   new_strat = np.zeros(action_space_shapes[k])
+  #   new_strat[-1] = 1.0
+  #   new_strategies.append(new_strat)
 
   # average_new_strategies = np.mean(meta_strategy_window, axis=0)
   return new_strategies

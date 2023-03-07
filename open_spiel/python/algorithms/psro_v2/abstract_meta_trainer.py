@@ -240,9 +240,12 @@ class AbstractMetaTrainer(object):
       Average episode return over num episodes.
     """
     totals = np.zeros(self._num_players)
+    # import time 
     for _ in range(num_episodes):
+      # prev_time = time.time()
       totals += sample_episode(self._game.new_initial_state(),
                                policies).reshape(-1)
+      # print("Episode seconds taken: ", round((time.time() - prev_time), 2))
     return totals / num_episodes
 
   def get_meta_strategies(self):

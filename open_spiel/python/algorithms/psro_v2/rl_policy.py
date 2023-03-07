@@ -24,6 +24,7 @@ from open_spiel.python import rl_environment
 from open_spiel.python.algorithms import dqn
 from open_spiel.python.algorithms import policy_gradient
 from open_spiel.python.algorithms import tabular_qlearner
+from open_spiel.python.algorithms import a2c
 
 
 def rl_policy_factory(rl_class):
@@ -153,4 +154,5 @@ def rl_policy_factory(rl_class):
 PGPolicy = rl_policy_factory(policy_gradient.PolicyGradient)
 DQNPolicy = rl_policy_factory(dqn.DQN)
 TabularQPolicy = rl_policy_factory(tabular_qlearner.QLearner)
+A2Cpolicy = rl_policy_factory(a2c.A2C)
 # pylint: enable=invalid-name

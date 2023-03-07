@@ -42,7 +42,7 @@ class Imitation(rl_agent.AbstractAgent):
 
     def __init__(self,
                  player_id,
-                 imitation_mode,
+                 consensus_kwargs, 
                  num_actions):
         """Initialize the DQN agent."""
 
@@ -52,13 +52,16 @@ class Imitation(rl_agent.AbstractAgent):
 
         self.player_id = player_id
         self._num_actions = num_actions
+        self.boltzmann = consensus_kwargs["boltzmann"] 
 
         self.observations = []  # list of observations
         self.actions = []  # list of lists. For each observation, there is a set of actions
         self.rewards = []  # list of lists of lists. For each observation and action, there is a set of rewards
+        self.rets = []  # list of lists of lists. For each observation and actions, there is a set of returns
         self.counts = []  # a list of lists corresponding to each action
 
-        self.mode = imitation_mode
+        self.boltzmann = consensus_kwargs["boltzmann"]
+        self.mode = consensus_kwargs["imitation_mode"]
 
 
     def step(self, time_step, is_evaluation=False, add_transition_record=True):
@@ -91,9 +94,19 @@ class Imitation(rl_agent.AbstractAgent):
                     actions = self.actions[index]
                     counts = self.counts[index]
 
-                    total_count = sum(counts)
-                    probs_subset = [float(c) / total_count for c in counts]
-                    # print("Probs subset ", probs_subset, actions)
+                    # TODO: This is a test to see if weighting by return helps 
+                    rets = self.rets[index]
+                    prob_subset = []
+                    for ret_set in rets:
+                        curr_rets = np.array(ret_set)
+                        prob_subset.append(np.sum(np.exp(curr_rets)))
+                    total_count = sum(prob_subset)
+                    probs_subset = [p / total_count for p in prob_subset]
+
+                    # Original code: 
+                    # total_count = sum(counts)
+                    # probs_subset = [float(c) / total_count for c in counts]
+
                     action = np.random.choice(actions, p=probs_subset)
                 elif self.mode == "prob_reward":
                     index = [np.all(o == info_state) for o in self.observations].index(True)
@@ -101,7 +114,7 @@ class Imitation(rl_agent.AbstractAgent):
                     rewards = self.rewards[index]
 
                     reward_average_each_action = np.array([np.mean(r_set) for r_set in rewards])
-                    probs_subset = np.exp(reward_average_each_action) / np.sum(np.exp(reward_average_each_action))
+                    probs_subset = np.exp(self.boltzmann * reward_average_each_action) / np.sum(np.exp(self.boltzmann * reward_average_each_action))
                     action = np.random.choice(actions, p=probs_subset)
                 else:
                     print('Invalid mode for imitation')
@@ -121,7 +134,7 @@ class Imitation(rl_agent.AbstractAgent):
 
         return rl_agent.StepOutput(action=action, probs=probs)
 
-    def add_transition(self, prev_time_step, prev_action, time_step):
+    def add_transition(self, prev_time_step, prev_action, time_step, ret):
         """Adds the new transition using `time_step` to the replay buffer.
 
         Adds the transition from `self._prev_timestep` to `time_step` by
@@ -144,17 +157,20 @@ class Imitation(rl_agent.AbstractAgent):
                 index_action = [np.all(prev_action == a) for a in actions_so_far].index(True)
                 self.counts[index][index_action] += 1
                 self.rewards[index][index_action].append(r)
+                self.rets[index][index_action].append(ret)
             else:
                 # Seen the observation but NOT the action
                 actions_so_far.append(prev_action)
                 self.counts[index].append(1)  # 1 count now
                 self.rewards[index].append([r])
+                self.rets[index].append([ret])
         else:
             # Seen neither the observation nor the action
             self.observations.append(o)
             self.actions.append([prev_action])
             self.counts.append([1])
             self.rewards.append([[r]])
+            self.rets.append([[ret]])
 
 
     def learn(self):

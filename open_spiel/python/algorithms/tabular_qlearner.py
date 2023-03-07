@@ -37,13 +37,15 @@ class QLearner(rl_agent.AbstractAgent):
   def __init__(self,
                player_id,
                num_actions,
+               state_representation_size,
                step_size=0.1,
-               epsilon_schedule=rl_tools.ConstantSchedule(0.1),
+               epsilon_schedule=rl_tools.LinearSchedule(1, .1, 1500000),
                discount_factor=.99,
                centralized=False):
     """Initialize the Q-Learning agent."""
     self._player_id = player_id
     self._num_actions = num_actions
+    self._state_representation_size = state_representation_size  # not currently used
     self._step_size = step_size
     self._epsilon_schedule = epsilon_schedule
     self._epsilon = epsilon_schedule.value
@@ -53,6 +55,9 @@ class QLearner(rl_agent.AbstractAgent):
     self._prev_info_state = None
     self._prev_action = None
     self._last_loss_value = None
+
+    self._loss_values_over_steps = []
+    self._total_steps = 0
 
     self.buffer = []
     self.boltzmann = 1000
@@ -182,6 +187,13 @@ class QLearner(rl_agent.AbstractAgent):
       self._q_values[self._prev_info_state][self._prev_action] += (
           self._step_size * self._last_loss_value)
 
+      self._loss_values_over_steps.append(abs(self._last_loss_value))
+      self._total_steps += 1
+      if len(self._loss_values_over_steps) > 50000:
+        self._loss_values_over_steps = self._loss_values_over_steps[1:]
+      
+      if self._total_steps % 50000 == 0:
+        print("Average tabular q loss past 10000 steps after {} training steps player {}: {}".format(self._total_steps, self._player_id, sum(self._loss_values_over_steps) / len(self._loss_values_over_steps)))
 
       # else:
         # self.learn(is_evaluation)

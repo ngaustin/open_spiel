@@ -27,10 +27,10 @@ from datetime import datetime
 
 _NUM_PLAYERS = 2
 _DEFAULT_PARAMS = {"max_game_length": 40, "grid_size": 5}
-_MAX_GRID_SIZE = 10  # we do this to keep the rewards scaled the same way between different grid sizes
+_MAX_GRID_SIZE = 8  # we do this to keep the rewards scaled the same way between different grid sizes
 # make it square because implementation depends on it
-_REWARDS = {"burn_reward": -.2, "extinguish_reward": 20, "collision_fire": -10}
-_SAVE_FOLDER_PATH = "../examples/data/simple_fire_extinguisher"
+# _REWARDS = {"burn_reward": -.5, "extinguish_reward": 5, "collision_fire": -15}
+_REWARDS = {"burn_reward": -.2, "extinguish_reward": 10, "collision_fire": -10}
 
 max_distance = 2 * _DEFAULT_PARAMS["grid_size"]
 
@@ -100,11 +100,11 @@ class SimpleFireExtinguisherGame(pyspiel.Game):
     # TODO: Implement this
     return
 
-  def save_iteration_data(self, iteration_number, meta_probabilities, U, policies):
+  def save_iteration_data(self, iteration_number, meta_probabilities, U, policies, save_folder_path):
       """ How to save the iteration data? """
       date_time_string = str(datetime.now())
       date_time_string = date_time_string.replace(':', '_')
-      save_data_path = _SAVE_FOLDER_PATH + "_" + date_time_string + "_" + "iteration_{}.npy".format(iteration_number)
+      save_data_path = save_folder_path + date_time_string + "_" + "iteration_{}.npy".format(iteration_number)
 
       all_meta_probabilities = np.vstack(meta_probabilities)
       array_list = [all_meta_probabilities, np.stack(U, axis=0)]
@@ -123,7 +123,7 @@ class SimpleFireExtinguisherGame(pyspiel.Game):
       welfare = 0
       for i in range(len(agent_locs)):
         manhattan_distance = SimpleFireExtinguisherGameState.distance(agent_locs[i], fire_loc)
-        welfare += sum((_MAX_GRID_SIZE - np.array(list(range(1, manhattan_distance))) + 1) * _REWARDS["burn_reward"])
+        welfare += sum((1.5 ** (_MAX_GRID_SIZE - np.array(list(range(1, manhattan_distance))) + 1)) * _REWARDS["burn_reward"])
         welfare += _REWARDS["extinguish_reward"]
       return welfare
 
@@ -147,7 +147,7 @@ class SimpleFireExtinguisherGameState(pyspiel.State):
     self._returns = np.zeros(_NUM_PLAYERS)
 
     self.grid = np.zeros((_DEFAULT_PARAMS["grid_size"], _DEFAULT_PARAMS["grid_size"])) + Unit.empty
-    self.agent_locations = [[0, 0], [1, 0]]
+    self.agent_locations = [[0, 0], [0, 0]]
     self.fire_location = [_DEFAULT_PARAMS["grid_size"] - 1, _DEFAULT_PARAMS["grid_size"] - 1]
     self.fire_extinguished = False
     self._reached_max_iterations = False
@@ -177,7 +177,7 @@ class SimpleFireExtinguisherGameState(pyspiel.State):
 
     # For each of the actions, change the state of the player
     # Calculate the reward for each move
-    # Account for collisions
+    # Allow players to occupy the same spot
 
     change_in_position = {Action.LEFT: (-1, 0), Action.RIGHT: (1, 0), Action.UP: (0, 1), Action.DOWN: (0, -1)}
     for i, a in enumerate(actions):
@@ -215,7 +215,7 @@ class SimpleFireExtinguisherGameState(pyspiel.State):
     self._returns += self._rewards
     self._current_iteration += 1
     # TODO: This ruins our Q value calculations...
-    self._game_over = self._current_iteration > self.get_game().max_game_length()
+    self._game_over = self._current_iteration > self.get_game().max_game_length() or self.fire_extinguished
     # self._reached_max_iterations = self._current_iteration > self.get_game().max_game_length()
 
   def _calculate_burn_reward(self, location):
@@ -223,7 +223,7 @@ class SimpleFireExtinguisherGameState(pyspiel.State):
           return 0
       dist = SimpleFireExtinguisherGameState.distance(location, self.fire_location)
       assert (_MAX_GRID_SIZE - dist) >= 0 and _REWARDS["burn_reward"] < 0
-      return (_MAX_GRID_SIZE - dist + 1) * _REWARDS["burn_reward"]
+      return 1.5 ** (_MAX_GRID_SIZE - dist + 1) * _REWARDS["burn_reward"]
 
   @staticmethod
   def distance(location1, location2):

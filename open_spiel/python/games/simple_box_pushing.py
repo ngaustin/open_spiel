@@ -28,7 +28,6 @@ from datetime import datetime
 _NUM_PLAYERS = 2
 _DEFAULT_PARAMS = {"path_length": 10, "initial_distance_from_box": 4, "max_game_length": 30}
 _REWARDS = {"effort_cost": -2, "push_cost": -4, "box_move_reward": 6, "box_reach_goal": 8}
-_SAVE_FOLDER_PATH = "../examples/data/simple_box_pushing"
 
 """
 Create a game with a horizontal path that can hold two agents in a column. On the left side of the horizontal path, 
@@ -176,10 +175,10 @@ class SimpleBoxPushingGame(pyspiel.Game):
           print_strings_to_console(separate_actions, "Separate Actions")
       return
 
-  def save_iteration_data(self, iteration_number, meta_probabilities, U, policies):
+  def save_iteration_data(self, iteration_number, meta_probabilities, U, policies, save_folder_path):
       date_time_string = str(datetime.now())
       date_time_string = date_time_string.replace(':', '_')
-      save_data_path = _SAVE_FOLDER_PATH + "_" + date_time_string + "_" + "iteration_{}.npy".format(iteration_number)
+      save_data_path = save_folder_path + date_time_string + "_" + "iteration_{}.npy".format(iteration_number)
 
       all_meta_probabilities = np.vstack(meta_probabilities)
       array_list = [all_meta_probabilities, np.stack(U, axis=0)]
