@@ -100,7 +100,7 @@ class Imitation(rl_agent.AbstractAgent):
             # TODO: Consider making entropy regularizer so that the policy doesn't collapse?
 
             # Plug into cross entropy class 
-            self._loss = tf.reduce_mean(loss_class(self.one_hot_vectors, self.log_probs, weights=self._return_ph))
+            self._loss = tf.reduce_mean(loss_class(self.one_hot_vectors, self.log_probs, weights=tf.math.exp(self._return_ph)))
 
         elif self.mode == "prob_reward":
             self._info_state_ph = tf.placeholder(
@@ -175,6 +175,10 @@ class Imitation(rl_agent.AbstractAgent):
 
 
             action_probs = np.exp(self.boltzmann * logits) / np.sum(np.exp(self.boltzmann * logits))
+            if np.isnan(action_probs).any():
+                action = np.argmax(action_probs)
+                action_probs = np.zeros(self._num_actions)
+                action_probs[action] = 1.0
 
             # action_probs = action_probs.eval()  # to numpy...this is what causes the slow down
 
@@ -252,7 +256,7 @@ class Imitation(rl_agent.AbstractAgent):
                         self._info_state_ph: info_states,
                         self._action_ph: actions,
                         self._return_ph: [1 for _ in rets],
-                    })
+                    })[0]
                     # print("ACTIONS: {}".format(actions))
                     # print("LOG PROBS: {}, ONE HOTS: {}".format(log_probs, one_hots))
                     # print(yes)

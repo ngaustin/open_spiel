@@ -123,15 +123,6 @@ class RLOracleCooperative(rl_oracle.RLOracle):
 
         rollout_trajectories, rollout_actions, rollout_returns = {}, {}, {}
 
-        """
-        print("Clearing observation")
-        for agent_index, policy_set in enumerate(all_policies):
-            for policy_index, p in enumerate(policy_set):
-                if isinstance(p._policy, imitation_q_learn.Imitation):
-                    p._policy.running_not_seen_steps = 0
-                    p._policy.running_steps = 0
-        """
-
         while not self._has_terminated(steps_per_oracle):
             """ Note: basically, this while loop cycles through each of the agent's new policies at a time. It will 
             use sample_policies_for_episode to determine which agent's new policy to train and what policies each of the 
@@ -162,17 +153,6 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         # If a dummy is passed in for "policy," a new policy is created and not copied. Assumed that we create one
         # for every player
 
-        """
-        print("Printing observation seen proportions: ")
-        for agent_index, policy_set in enumerate(all_policies):
-            for policy_index, p in enumerate(policy_set):
-                if isinstance(p._policy, imitation_q_learn.Imitation):
-                    p._policy.running_not_seen_steps = 0
-                    p._policy.running_steps = 0
-                    print("Proportion of not seen observations for agent_index {} policy index {}".format(agent_index,
-                                                                                                          policy_index),
-                          float(p._policy.running_not_seen_steps) / p._policy.running_steps)
-        """
         print("Creating Consensus Policies: ")
         consensus_policies = self.create_consensus_policies(training_parameters, rollout_trajectories,
                                                          rollout_actions, rollout_returns)
@@ -194,19 +174,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             for trans in buffer:
                 set_of_strings.add(np.array2string(np.array(trans.info_state)))
             return len(set_of_strings)
-        """
-        for i, pol in enumerate(new_policies): 
-            buff = pol[-1]._policy.replay_buffer
-            all_data = buff.sample(len(buff))
-            print("Best response number {} had {} distinct observations".format(i, count_distinct_observations(all_data)))
 
-        for i, pol in enumerate(consensus_policies): 
-            buff = pol[-1]._policy.replay_buffer
-            all_data = buff.sample(len(buff))
-            print("Exploration strategy number {} had {} distinct observations".format(i, count_distinct_observations(all_data)))
-
-        print("")
-        """
         return new_policies_total
 
     def create_consensus_policies(self, training_parameters, rollout_trajectories, rollout_actions, rollout_returns):

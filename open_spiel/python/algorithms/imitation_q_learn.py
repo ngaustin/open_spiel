@@ -120,7 +120,7 @@ class Imitation(rl_agent.AbstractAgent):
                         if a in actions:
                             probs.append(probs_subset[actions.index(a)])
                         else:
-                            probs.append(0)
+                            probs.append(0) 
                     """
                     action = max(action_to_max_over_other_actions, key=action_to_max_over_other_actions.get)
                 else:
