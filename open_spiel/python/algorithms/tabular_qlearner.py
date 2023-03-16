@@ -38,7 +38,7 @@ class QLearner(rl_agent.AbstractAgent):
                player_id,
                num_actions,
                step_size=0.1,
-               epsilon_schedule=rl_tools.LinearSchedule(1, .1, 2000000),
+               epsilon_schedule=rl_tools.ConstantSchedule(0.2), # rl_tools.LinearSchedule(1, .1, 2000000),
                discount_factor=.99,
                centralized=False):
     """Initialize the Q-Learning agent."""
@@ -51,21 +51,12 @@ class QLearner(rl_agent.AbstractAgent):
     self._centralized = centralized
     self._q_values = collections.defaultdict(valuedict)
 
-    # Consider adding count-based exploration to aid Harvest 
-    self._state_action_counts = collections.defaultdict(valuedict)
-
     self._prev_info_state = None
     self._prev_action = None
     self._last_loss_value = None
 
     self._loss_values_over_steps = []
     self._total_steps = 0
-
-    self.curr_trajectory = []
-    self.curr_return = 0
-    self.top_trajectories = [] # Keep track of top 100 trajectories learned so far
-    self.top_returns = []
-    self.top_return_to_trajectories = {}
 
     self.buffer = []
     self.boltzmann = 1000
@@ -78,7 +69,7 @@ class QLearner(rl_agent.AbstractAgent):
 
     # self.no_buffer = True
 
-  def _epsilon_greedy(self, info_state, legal_actions, epsilon, is_evaluation):
+  def _epsilon_greedy(self, info_state, legal_actions, epsilon):
     """Returns a valid epsilon-greedy action and valid action probs.
 
     If the agent has not been to `info_state`, a valid random action is chosen.
@@ -98,28 +89,13 @@ class QLearner(rl_agent.AbstractAgent):
     greedy_actions = [
       a for a in legal_actions if self._q_values[info_state][a] == greedy_q
     ]
-    # probs[legal_actions] = epsilon / len(legal_actions)
-
-    # Count-based exploration in epsilon 
-    counts = [self._state_action_counts[info_state][a] for a in legal_actions]
-    max_count = max(counts)
-    min_count = min(counts)
-    if (max_count - min_count) == 0: 
-      # default to normal epsilon greedy 
-      probs[legal_actions] = epsilon / len(legal_actions)
-    else: 
-      deltas = np.array([max_count - c for c in counts])
-      probs[legal_actions] = epsilon * (deltas / np.sum(deltas))
-
+    probs[legal_actions] = epsilon / len(legal_actions)
     probs[greedy_actions] += (1 - epsilon) / len(greedy_actions)
     action = np.random.choice(range(self._num_actions), p=probs)
 
-    # Count-based exploration update _state_action_counts
-    self._state_action_counts[info_state][action] += 1
-
     return action, probs
 
-  def _get_action_probs(self, info_state, legal_actions, epsilon, is_evaluation):
+  def _get_action_probs(self, info_state, legal_actions, epsilon):
     """Returns a selected action and the probabilities of legal actions.
 
     To be overwritten by subclasses that implement other action selection
@@ -133,7 +109,7 @@ class QLearner(rl_agent.AbstractAgent):
         epsilon-greedy, but subclasses are free to interpret in different ways
         (e.g. as temperature in softmax).
     """
-    return self._epsilon_greedy(info_state, legal_actions, epsilon, is_evaluation)
+    return self._epsilon_greedy(info_state, legal_actions, epsilon)
 
   def step(self, time_step, is_evaluation=False):
     """Returns the action to be taken and updates the Q-values if needed.
@@ -169,7 +145,7 @@ class QLearner(rl_agent.AbstractAgent):
     # Act step: don't act at terminal states.
     if not time_step.last():
       epsilon = 0.0 if is_evaluation else self._epsilon
-      action, probs = self._get_action_probs(info_state, legal_actions, epsilon, is_evaluation)
+      action, probs = self._get_action_probs(info_state, legal_actions, epsilon)
 
     # Learn step: don't learn during evaluation or at first agent steps.
     if self._prev_info_state and not is_evaluation:
@@ -192,9 +168,6 @@ class QLearner(rl_agent.AbstractAgent):
       if self._total_steps % 50000 == 0:
         print("Average tabular q loss past 50000 steps after {} training steps player {}: {}".format(self._total_steps, self._player_id, sum(self._loss_values_over_steps) / len(self._loss_values_over_steps)))
 
-      if self._total_steps % 10000 == 0:
-        self.learn(is_evaluation)
-
       # Decay epsilon, if necessary.
       self._epsilon = self._epsilon_schedule.step()
 
@@ -214,72 +187,6 @@ class QLearner(rl_agent.AbstractAgent):
       self._prev_info_state = info_state
       self._prev_action = action
     return rl_agent.StepOutput(action=action, probs=probs)
-
-  def learn(self, is_evaluation):
-    for trajectory in self.top_return_to_trajectories.values():
-      for transition in reversed(trajectory):
-        o = transition.info_state
-        a = transition.action 
-        r = transition.reward 
-        next_o = transition.next_info_state
-        done = transition.is_final_step
-        legal_actions = transition.legal_actions
-
-        target = r
-        if not done:  # Q values are zero for terminal.
-          target += self._discount_factor * max(
-            [self._q_values[next_o][act] for act in legal_actions])
-
-        prev_q_value = self._q_values[o][a]
-        self._last_loss_value = target - prev_q_value
-
-        self._q_values[o][a] += (self._step_size * self._last_loss_value)
-
-    return
-  """
-  def learn(self, is_evaluation):
-    # Learn step: don't learn during evaluation or at first agent steps.
-    loss = 0
-    loss_values_for_pairs = collections.defaultdict(valuedict)
-    update_counts_for_pairs = collections.defaultdict(valuedict)
-
-    # if len(self.buffer) >= self.batch_size and self.episode_counter % self.train_every_episode == 0:
-    # if len(self.buffer) >= self.num_transitions_bake:
-    training_indices = list(np.random.choice(len(self.buffer), min(len(self.buffer), self.batch_size)))
-
-    # for transition in reversed(self.buffer):\
-    for i in training_indices:
-      transition = self.buffer[i]
-      o = transition.info_state
-      a = transition.action
-      r = transition.reward
-      next_o = transition.next_info_state
-      done = transition.is_final_step
-      legal_actions = transition.legal_actions
-
-      if self._prev_info_state and not is_evaluation:
-      # if not is_evaluation:
-        target = r
-        if not done:  # Q values are zero for terminal.
-          target += self._discount_factor * max(
-            [self._q_values[next_o][a] for a in legal_actions])
-
-        prev_q_value = self._q_values[o][a]
-        self._last_loss_value = target - prev_q_value
-        loss += abs(self._last_loss_value)
-
-        loss_values_for_pairs[o][a] += self._last_loss_value
-        update_counts_for_pairs[o][a] += 1
-        self._q_values[o][a] += (self._step_size * self._last_loss_value)
-
-      # for o, a_to_q in loss_values_for_pairs.items():
-      #   for a in a_to_q.keys():
-      #     average_loss = loss_values_for_pairs[o][a] / update_counts_for_pairs[o][a]
-      #     self._q_values[o][a] += (self._step_size * average_loss)
-      # print("Average absolute loss this batch: {}".format(loss / len(training_indices)))
-      # self.buffer = []
-    return
-    """
 
   @property
   def loss(self):

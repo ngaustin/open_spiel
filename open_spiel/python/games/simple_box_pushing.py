@@ -355,6 +355,7 @@ class SimpleBoxPushingObserver:
   def set_from(self, state, player):
     """Updates `tensor` and `dict` to reflect `state` from PoV of `player`."""
     # Each agent gets two values: box in front (1 or -1) and player adjacent (1 or -1)
+    assert player == 0 or player == 1
     agent_locations = state.agent_locations
     box_location = state.box_location
     adjacent_to_each_other = int(all([loc == agent_locations[0] for loc in agent_locations]))

@@ -301,6 +301,7 @@ class SimpleIteratedGameObserver:
 
   def set_from(self, state, player):
     # self.tensor = np.ones(1) # This is just to indicate to RL algorithms that there is a single observation for both players given a state
+    assert player == 0 or player == 1
     if not _SINGLE_STATE:
         history = state.full_history()
         # print(history, len(history), self.tensor)
