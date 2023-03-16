@@ -1,1 +1,627 @@
-dummy file
+game: harvest
+
+GameType.chance_mode = ChanceMode.EXPLICIT_STOCHASTIC
+GameType.dynamics = Dynamics.SIMULTANEOUS
+GameType.information = Information.PERFECT_INFORMATION
+GameType.long_name = "Apple harvesting game social dilemma"
+GameType.max_num_players = 2
+GameType.min_num_players = 2
+GameType.parameter_specification = ["apple_radius", "max_game_length", "view_size"]
+GameType.provides_information_state_string = True
+GameType.provides_information_state_tensor = False
+GameType.provides_observation_string = True
+GameType.provides_observation_tensor = True
+GameType.provides_factored_observation_string = False
+GameType.reward_model = RewardModel.REWARDS
+GameType.short_name = "harvest"
+GameType.utility = Utility.GENERAL_SUM
+
+NumDistinctActions() = 4
+PolicyTensorShape() = [4]
+MaxChanceOutcomes() = 2
+GetParameters() = {apple_radius=2,max_game_length=1000,view_size=5}
+NumPlayers() = 2
+MinUtility() = 0.0
+MaxUtility() = 1000.0
+UtilitySum() = 0.0
+InformationStateTensorShape() = [4]
+InformationStateTensorLayout() = TensorLayout.CHW
+InformationStateTensorSize() = 4
+ObservationTensorShape() = [4]
+ObservationTensorLayout() = TensorLayout.CHW
+ObservationTensorSize() = 4
+MaxGameLength() = 1000
+ToString() = "harvest(apple_radius=2,max_game_length=1000,view_size=5)"
+
+# State 0
+# p0: p1:
+IsTerminal() = False
+History() = []
+HistoryString() = ""
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = PlayerId.SIMULTANEOUS
+InformationStateString(0) = "us: op:"
+InformationStateString(1) = "us: op:"
+InformationStateTensor(0).observation: ◉◉◉◉◉◯◯◯◯◉◯◯◯◯◉◯◯◯◯◉◉◉◉◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◯◉◉◉◯◯◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◯◯◉◯◯◯◉◯◯◯◯◯◯◯
+InformationStateTensor(1).observation: ◉◉◉◉◉◉◯◯◯◯◉◯◯◯◯◉◯◯◯◯◉◉◉◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◉◉◉◯◯◯◉◉◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◯◉◯◯◯◯◯◉◯◯◯◯◯◯◯
+ObservationString(0) = "us: op:"
+ObservationString(1) = "us: op:"
+ObservationTensor(0): ◉◉◉◉◉◯◯◯◯◉◯◯◯◯◉◯◯◯◯◉◉◉◉◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◯◉◉◉◯◯◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◯◯◉◯◯◯◉◯◯◯◯◯◯◯
+ObservationTensor(1): ◉◉◉◉◉◉◯◯◯◯◉◯◯◯◯◉◯◯◯◯◉◉◉◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◉◉◉◯◯◯◉◉◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◯◉◯◯◯◯◯◉◯◯◯◯◯◯◯
+Rewards() = [0, 0]
+Returns() = [0, 0]
+LegalActions(0) = [0, 1, 2, 3]
+LegalActions(1) = [0, 1, 2, 3]
+StringLegalActions(0) = ["LEFT", "UP", "RIGHT", "DOWN"]
+StringLegalActions(1) = ["LEFT", "UP", "RIGHT", "DOWN"]
+
+# Apply joint action ["DOWN", "DOWN"]
+actions: [3, 3]
+
+# State 1
+# p0:D p1:D
+IsTerminal() = False
+History() = [3, 3]
+HistoryString() = "3, 3"
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = PlayerId.SIMULTANEOUS
+InformationStateString(0) = "us:D op:D"
+InformationStateString(1) = "us:D op:D"
+InformationStateTensor(0).observation: ◉◉◉◉◉◯◯◯◯◉◯◯◯◯◉◯◯◯◯◉◉◉◉◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◯◉◉◉◯◯◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◯◯◉◯◯◯◯◉◯◯◯◯◯◯
+InformationStateTensor(1).observation: ◉◉◉◉◉◉◯◯◯◯◉◯◯◯◯◉◯◯◯◯◉◉◉◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◉◉◉◯◯◯◉◉◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◯◉◯◯◯◯◯◉◯◯◯◯◯◯◯
+ObservationString(0) = "us:D op:D"
+ObservationString(1) = "us:D op:D"
+ObservationTensor(0): ◉◉◉◉◉◯◯◯◯◉◯◯◯◯◉◯◯◯◯◉◉◉◉◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◯◉◉◉◯◯◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◯◯◉◯◯◯◯◉◯◯◯◯◯◯
+ObservationTensor(1): ◉◉◉◉◉◉◯◯◯◯◉◯◯◯◯◉◯◯◯◯◉◉◉◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◉◉◉◯◯◯◉◉◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◯◉◯◯◯◯◯◉◯◯◯◯◯◯◯
+Rewards() = [0, 0]
+Returns() = [0, 0]
+LegalActions(0) = [0, 1, 2, 3]
+LegalActions(1) = [0, 1, 2, 3]
+StringLegalActions(0) = ["LEFT", "UP", "RIGHT", "DOWN"]
+StringLegalActions(1) = ["LEFT", "UP", "RIGHT", "DOWN"]
+
+# Apply joint action ["RIGHT", "DOWN"]
+actions: [2, 3]
+
+# State 2
+# p0:DR p1:DD
+IsTerminal() = False
+History() = [3, 3, 2, 3]
+HistoryString() = "3, 3, 2, 3"
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = PlayerId.SIMULTANEOUS
+InformationStateString(0) = "us:DR op:DD"
+InformationStateString(1) = "us:DD op:DR"
+InformationStateTensor(0).observation: ◉◉◉◉◉◯◯◯◯◉◯◯◯◯◉◯◯◯◯◉◉◉◉◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◯◉◉◉◯◯◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◯◯◉◯◯◯◯◉◯◯◯◯◯◯
+InformationStateTensor(1).observation: ◉◉◉◉◉◉◯◯◯◯◉◯◯◯◯◉◯◯◯◯◉◉◉◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◉◉◉◯◯◯◉◉◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◯◉◯◯◯◯◯◉◯◯◯◯◯◯◯
+ObservationString(0) = "us:DR op:DD"
+ObservationString(1) = "us:DD op:DR"
+ObservationTensor(0): ◉◉◉◉◉◯◯◯◯◉◯◯◯◯◉◯◯◯◯◉◉◉◉◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◯◉◉◉◯◯◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◯◯◉◯◯◯◯◉◯◯◯◯◯◯
+ObservationTensor(1): ◉◉◉◉◉◉◯◯◯◯◉◯◯◯◯◉◯◯◯◯◉◉◉◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◉◉◉◯◯◯◉◉◯◯◯◯◯◯◯◯◯◯◯◉◉◯◯◯◉◯◯◯◯◯◉◯◯◯◯◯◯◯
+Rewards() = [0, 0]
+Returns() = [0, 0]
+LegalActions(0) = [0, 1, 2, 3]
+LegalActions(1) = [0, 1, 2, 3]
+StringLegalActions(0) = ["LEFT", "UP", "RIGHT", "DOWN"]
+StringLegalActions(1) = ["LEFT", "UP", "RIGHT", "DOWN"]
+
+# Apply joint action ["RIGHT", "UP"]
+actions: [2, 1]
+
+# State 3
+# Apply joint action ["DOWN", "DOWN"]
+actions: [3, 3]
+
+# State 4
+# Apply joint action ["LEFT", "LEFT"]
+actions: [0, 0]
+
+# State 5
+# Apply joint action ["UP", "LEFT"]
+actions: [1, 0]
+
+# State 6
+# Apply joint action ["DOWN", "RIGHT"]
+actions: [3, 2]
+
+# State 7
+# Apply joint action ["RIGHT", "DOWN"]
+actions: [2, 3]
+
+# State 8
+# Apply joint action ["DOWN", "RIGHT"]
+actions: [3, 2]
+
+# State 9
+# Apply joint action ["RIGHT", "UP"]
+actions: [2, 1]
+
+# State 10
+# p0:DRRDLUDRDR p1:DDUDLLRDRU
+IsTerminal() = False
+History() = [3, 3, 2, 3, 2, 1, 3, 3, 0, 0, 1, 0, 3, 2, 2, 3, 3, 2, 2, 1]
+HistoryString() = "3, 3, 2, 3, 2, 1, 3, 3, 0, 0, 1, 0, 3, 2, 2, 3, 3, 2, 2, 1"
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = PlayerId.SIMULTANEOUS
+InformationStateString(0) = "us:DRRDLUDRDR op:DDUDLLRDRU"
+InformationStateString(1) = "us:DDUDLLRDRU op:DRRDLUDRDR"
+InformationStateTensor(0).observation = [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0]
+InformationStateTensor(1).observation = [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+ObservationString(0) = "us:DRRDLUDRDR op:DDUDLLRDRU"
+ObservationString(1) = "us:DDUDLLRDRU op:DRRDLUDRDR"
+ObservationTensor(0) = [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0]
+ObservationTensor(1) = [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+Rewards() = [0, 0]
+Returns() = [5, 0]
+LegalActions(0) = [0, 1, 2, 3]
+LegalActions(1) = [0, 1, 2, 3]
+StringLegalActions(0) = ["LEFT", "UP", "RIGHT", "DOWN"]
+StringLegalActions(1) = ["LEFT", "UP", "RIGHT", "DOWN"]
+
+# Apply joint action ["UP", "UP"]
+actions: [1, 1]
+
+# State 11
+# Apply joint action ["RIGHT", "LEFT"]
+actions: [2, 0]
+
+# State 12
+# Apply joint action ["RIGHT", "UP"]
+actions: [2, 1]
+
+# State 13
+# Apply joint action ["RIGHT", "UP"]
+actions: [2, 1]
+
+# State 14
+# Apply joint action ["RIGHT", "UP"]
+actions: [2, 1]
+
+# State 15
+# Apply joint action ["RIGHT", "LEFT"]
+actions: [2, 0]
+
+# State 16
+# Apply joint action ["UP", "DOWN"]
+actions: [1, 3]
+
+# State 17
+# Apply joint action ["RIGHT", "DOWN"]
+actions: [2, 3]
+
+# State 18
+# Apply joint action ["UP", "RIGHT"]
+actions: [1, 2]
+
+# State 19
+# Apply joint action ["RIGHT", "RIGHT"]
+actions: [2, 2]
+
+# State 20
+# p0:DRRDLUDRDRURRRRRURUR p1:DDUDLLRDRUULUUULDDRR
+IsTerminal() = False
+History() = [3, 3, 2, 3, 2, 1, 3, 3, 0, 0, 1, 0, 3, 2, 2, 3, 3, 2, 2, 1, 1, 1, 2, 0, 2, 1, 2, 1, 2, 1, 2, 0, 1, 3, 2, 3, 1, 2, 2, 2]
+HistoryString() = "3, 3, 2, 3, 2, 1, 3, 3, 0, 0, 1, 0, 3, 2, 2, 3, 3, 2, 2, 1, 1, 1, 2, 0, 2, 1, 2, 1, 2, 1, 2, 0, 1, 3, 2, 3, 1, 2, 2, 2"
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = PlayerId.SIMULTANEOUS
+InformationStateString(0) = "us:DRRDLUDRDRURRRRRURUR op:DDUDLLRDRUULUUULDDRR"
+InformationStateString(1) = "us:DDUDLLRDRUULUUULDDRR op:DRRDLUDRDRURRRRRURUR"
+InformationStateTensor(0).observation = [1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0]
+InformationStateTensor(1).observation: ◉◉◉◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◉◉◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◉◉◉◯◉◉◉◉◉◉◯◉◉◯◯◯◯◯
+ObservationString(0) = "us:DRRDLUDRDRURRRRRURUR op:DDUDLLRDRUULUUULDDRR"
+ObservationString(1) = "us:DDUDLLRDRUULUUULDDRR op:DRRDLUDRDRURRRRRURUR"
+ObservationTensor(0) = [1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0]
+ObservationTensor(1): ◉◉◉◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◉◉◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◉◉◉◯◉◉◉◉◉◉◯◉◉◯◯◯◯◯
+Rewards() = [0, 1]
+Returns() = [5, 7]
+LegalActions(0) = [0, 1, 2, 3]
+LegalActions(1) = [0, 1, 2, 3]
+StringLegalActions(0) = ["LEFT", "UP", "RIGHT", "DOWN"]
+StringLegalActions(1) = ["LEFT", "UP", "RIGHT", "DOWN"]
+
+# Apply joint action ["DOWN", "LEFT"]
+actions: [3, 0]
+
+# State 21
+# Apply joint action ["UP", "UP"]
+actions: [1, 1]
+
+# State 22
+# Apply joint action ["RIGHT", "DOWN"]
+actions: [2, 3]
+
+# State 23
+# Apply joint action ["LEFT", "RIGHT"]
+actions: [0, 2]
+
+# State 24
+# Apply joint action ["UP", "RIGHT"]
+actions: [1, 2]
+
+# State 25
+# Apply joint action ["UP", "LEFT"]
+actions: [1, 0]
+
+# State 26
+# Apply joint action ["RIGHT", "LEFT"]
+actions: [2, 0]
+
+# State 27
+# Apply joint action ["DOWN", "UP"]
+actions: [3, 1]
+
+# State 28
+# Apply joint action ["UP", "LEFT"]
+actions: [1, 0]
+
+# State 29
+# Apply joint action ["DOWN", "DOWN"]
+actions: [3, 3]
+
+# State 30
+# p0:DRRDLUDRDRURRRRRURURDURLUURDUD p1:DDUDLLRDRUULUUULDDRRLUDRRLLULD
+IsTerminal() = False
+History() = [3, 3, 2, 3, 2, 1, 3, 3, 0, 0, 1, 0, 3, 2, 2, 3, 3, 2, 2, 1, 1, 1, 2, 0, 2, 1, 2, 1, 2, 1, 2, 0, 1, 3, 2, 3, 1, 2, 2, 2, 3, 0, 1, 1, 2, 3, 0, 2, 1, 2, 1, 0, 2, 0, 3, 1, 1, 0, 3, 3]
+HistoryString() = "3, 3, 2, 3, 2, 1, 3, 3, 0, 0, 1, 0, 3, 2, 2, 3, 3, 2, 2, 1, 1, 1, 2, 0, 2, 1, 2, 1, 2, 1, 2, 0, 1, 3, 2, 3, 1, 2, 2, 2, 3, 0, 1, 1, 2, 3, 0, 2, 1, 2, 1, 0, 2, 0, 3, 1, 1, 0, 3, 3"
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = PlayerId.SIMULTANEOUS
+InformationStateString(0) = "us:DRRDLUDRDRURRRRRURURDURLUURDUD op:DDUDLLRDRUULUUULDDRRLUDRRLLULD"
+InformationStateString(1) = "us:DDUDLLRDRUULUUULDDRRLUDRRLLULD op:DRRDLUDRDRURRRRRURURDURLUURDUD"
+InformationStateTensor(0).observation = [1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0]
+InformationStateTensor(1).observation = [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0]
+ObservationString(0) = "us:DRRDLUDRDRURRRRRURURDURLUURDUD op:DDUDLLRDRUULUUULDDRRLUDRRLLULD"
+ObservationString(1) = "us:DDUDLLRDRUULUUULDDRRLUDRRLLULD op:DRRDLUDRDRURRRRRURURDURLUURDUD"
+ObservationTensor(0) = [1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0]
+ObservationTensor(1) = [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0]
+Rewards() = [0, 0]
+Returns() = [5, 7]
+LegalActions(0) = [0, 1, 2, 3]
+LegalActions(1) = [0, 1, 2, 3]
+StringLegalActions(0) = ["LEFT", "UP", "RIGHT", "DOWN"]
+StringLegalActions(1) = ["LEFT", "UP", "RIGHT", "DOWN"]
+
+# Apply joint action ["UP", "LEFT"]
+actions: [1, 0]
+
+# State 31
+# Apply joint action ["UP", "RIGHT"]
+actions: [1, 2]
+
+# State 32
+# Apply joint action ["LEFT", "UP"]
+actions: [0, 1]
+
+# State 33
+# Apply joint action ["DOWN", "LEFT"]
+actions: [3, 0]
+
+# State 34
+# Apply joint action ["UP", "LEFT"]
+actions: [1, 0]
+
+# State 35
+# Apply joint action ["LEFT", "DOWN"]
+actions: [0, 3]
+
+# State 36
+# Apply joint action ["UP", "RIGHT"]
+actions: [1, 2]
+
+# State 37
+# Apply joint action ["DOWN", "UP"]
+actions: [3, 1]
+
+# State 38
+# Apply joint action ["RIGHT", "UP"]
+actions: [2, 1]
+
+# State 39
+# Apply joint action ["RIGHT", "DOWN"]
+actions: [2, 3]
+
+# State 40
+# p0:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRR p1:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUD
+IsTerminal() = False
+History() = [3, 3, 2, 3, 2, 1, 3, 3, 0, 0, 1, 0, 3, 2, 2, 3, 3, 2, 2, 1, 1, 1, 2, 0, 2, 1, 2, 1, 2, 1, 2, 0, 1, 3, 2, 3, 1, 2, 2, 2, 3, 0, 1, 1, 2, 3, 0, 2, 1, 2, 1, 0, 2, 0, 3, 1, 1, 0, 3, 3, 1, 0, 1, 2, 0, 1, 3, 0, 1, 0, 0, 3, 1, 2, 3, 1, 2, 1, 2, 3]
+HistoryString() = "3, 3, 2, 3, 2, 1, 3, 3, 0, 0, 1, 0, 3, 2, 2, 3, 3, 2, 2, 1, 1, 1, 2, 0, 2, 1, 2, 1, 2, 1, 2, 0, 1, 3, 2, 3, 1, 2, 2, 2, 3, 0, 1, 1, 2, 3, 0, 2, 1, 2, 1, 0, 2, 0, 3, 1, 1, 0, 3, 3, 1, 0, 1, 2, 0, 1, 3, 0, 1, 0, 0, 3, 1, 2, 3, 1, 2, 1, 2, 3"
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = PlayerId.SIMULTANEOUS
+InformationStateString(0) = "us:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRR op:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUD"
+InformationStateString(1) = "us:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUD op:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRR"
+InformationStateTensor(0).observation = [1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0]
+InformationStateTensor(1).observation = [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0]
+ObservationString(0) = "us:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRR op:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUD"
+ObservationString(1) = "us:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUD op:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRR"
+ObservationTensor(0) = [1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0]
+ObservationTensor(1) = [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0]
+Rewards() = [0, 0]
+Returns() = [5, 7]
+LegalActions(0) = [0, 1, 2, 3]
+LegalActions(1) = [0, 1, 2, 3]
+StringLegalActions(0) = ["LEFT", "UP", "RIGHT", "DOWN"]
+StringLegalActions(1) = ["LEFT", "UP", "RIGHT", "DOWN"]
+
+# Apply joint action ["UP", "UP"]
+actions: [1, 1]
+
+# State 41
+# Apply joint action ["RIGHT", "LEFT"]
+actions: [2, 0]
+
+# State 42
+# Apply joint action ["RIGHT", "RIGHT"]
+actions: [2, 2]
+
+# State 43
+# Apply joint action ["DOWN", "RIGHT"]
+actions: [3, 2]
+
+# State 44
+# Apply joint action ["UP", "UP"]
+actions: [1, 1]
+
+# State 45
+# Apply joint action ["UP", "LEFT"]
+actions: [1, 0]
+
+# State 46
+# Apply joint action ["RIGHT", "DOWN"]
+actions: [2, 3]
+
+# State 47
+# Apply joint action ["LEFT", "UP"]
+actions: [0, 1]
+
+# State 48
+# Apply joint action ["LEFT", "DOWN"]
+actions: [0, 3]
+
+# State 49
+# Apply joint action ["RIGHT", "RIGHT"]
+actions: [2, 2]
+
+# State 50
+# p0:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLR p1:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDR
+IsTerminal() = False
+History() = [3, 3, 2, 3, 2, 1, 3, 3, 0, 0, 1, 0, 3, 2, 2, 3, 3, 2, 2, 1, 1, 1, 2, 0, 2, 1, 2, 1, 2, 1, 2, 0, 1, 3, 2, 3, 1, 2, 2, 2, 3, 0, 1, 1, 2, 3, 0, 2, 1, 2, 1, 0, 2, 0, 3, 1, 1, 0, 3, 3, 1, 0, 1, 2, 0, 1, 3, 0, 1, 0, 0, 3, 1, 2, 3, 1, 2, 1, 2, 3, 1, 1, 2, 0, 2, 2, 3, 2, 1, 1, 1, 0, 2, 3, 0, 1, 0, 3, 2, 2]
+HistoryString() = "3, 3, 2, 3, 2, 1, 3, 3, 0, 0, 1, 0, 3, 2, 2, 3, 3, 2, 2, 1, 1, 1, 2, 0, 2, 1, 2, 1, 2, 1, 2, 0, 1, 3, 2, 3, 1, 2, 2, 2, 3, 0, 1, 1, 2, 3, 0, 2, 1, 2, 1, 0, 2, 0, 3, 1, 1, 0, 3, 3, 1, 0, 1, 2, 0, 1, 3, 0, 1, 0, 0, 3, 1, 2, 3, 1, 2, 1, 2, 3, 1, 1, 2, 0, 2, 2, 3, 2, 1, 1, 1, 0, 2, 3, 0, 1, 0, 3, 2, 2"
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = PlayerId.SIMULTANEOUS
+InformationStateString(0) = "us:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLR op:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDR"
+InformationStateString(1) = "us:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDR op:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLR"
+InformationStateTensor(0).observation = [1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0]
+InformationStateTensor(1).observation = [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0]
+ObservationString(0) = "us:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLR op:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDR"
+ObservationString(1) = "us:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDR op:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLR"
+ObservationTensor(0) = [1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0]
+ObservationTensor(1) = [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0]
+Rewards() = [0, 0]
+Returns() = [5, 7]
+LegalActions(0) = [0, 1, 2, 3]
+LegalActions(1) = [0, 1, 2, 3]
+StringLegalActions(0) = ["LEFT", "UP", "RIGHT", "DOWN"]
+StringLegalActions(1) = ["LEFT", "UP", "RIGHT", "DOWN"]
+
+# Apply joint action ["UP", "DOWN"]
+actions: [1, 3]
+
+# State 51
+# Apply joint action ["DOWN", "RIGHT"]
+actions: [3, 2]
+
+# State 52
+# Apply joint action ["LEFT", "DOWN"]
+actions: [0, 3]
+
+# State 53
+# Apply joint action ["DOWN", "RIGHT"]
+actions: [3, 2]
+
+# State 54
+# Apply joint action ["DOWN", "DOWN"]
+actions: [3, 3]
+
+# State 55
+# Apply joint action ["UP", "RIGHT"]
+actions: [1, 2]
+
+# State 56
+# Apply joint action ["RIGHT", "DOWN"]
+actions: [2, 3]
+
+# State 57
+# Apply joint action ["RIGHT", "DOWN"]
+actions: [2, 3]
+
+# State 58
+# Apply joint action ["RIGHT", "DOWN"]
+actions: [2, 3]
+
+# State 59
+# Apply joint action ["RIGHT", "RIGHT"]
+actions: [2, 2]
+
+# State 60
+# p0:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLRUDLDDURRRR p1:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDRDRDRDRDDDR
+IsTerminal() = False
+History() = [3, 3, 2, 3, 2, 1, 3, 3, 0, 0, 1, 0, 3, 2, 2, 3, 3, 2, 2, 1, 1, 1, 2, 0, 2, 1, 2, 1, 2, 1, 2, 0, 1, 3, 2, 3, 1, 2, 2, 2, 3, 0, 1, 1, 2, 3, 0, 2, 1, 2, 1, 0, 2, 0, 3, 1, 1, 0, 3, 3, 1, 0, 1, 2, 0, 1, 3, 0, 1, 0, 0, 3, 1, 2, 3, 1, 2, 1, 2, 3, 1, 1, 2, 0, 2, 2, 3, 2, 1, 1, 1, 0, 2, 3, 0, 1, 0, 3, 2, 2, 1, 3, 3, 2, 0, 3, 3, 2, 3, 3, 1, 2, 2, 3, 2, 3, 2, 3, 2, 2]
+HistoryString() = "3, 3, 2, 3, 2, 1, 3, 3, 0, 0, 1, 0, 3, 2, 2, 3, 3, 2, 2, 1, 1, 1, 2, 0, 2, 1, 2, 1, 2, 1, 2, 0, 1, 3, 2, 3, 1, 2, 2, 2, 3, 0, 1, 1, 2, 3, 0, 2, 1, 2, 1, 0, 2, 0, 3, 1, 1, 0, 3, 3, 1, 0, 1, 2, 0, 1, 3, 0, 1, 0, 0, 3, 1, 2, 3, 1, 2, 1, 2, 3, 1, 1, 2, 0, 2, 2, 3, 2, 1, 1, 1, 0, 2, 3, 0, 1, 0, 3, 2, 2, 1, 3, 3, 2, 0, 3, 3, 2, 3, 3, 1, 2, 2, 3, 2, 3, 2, 3, 2, 2"
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = PlayerId.SIMULTANEOUS
+InformationStateString(0) = "us:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLRUDLDDURRRR op:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDRDRDRDRDDDR"
+InformationStateString(1) = "us:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDRDRDRDRDDDR op:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLRUDLDDURRRR"
+InformationStateTensor(0).observation: ◉◉◉◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◉◉◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◉◉◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◉◉◉◯◯◉◉◉◉◯◯◉◉◯◯◯◯◯
+InformationStateTensor(1).observation: ◉◉◉◉◉◉◯◯◯◯◉◯◯◯◯◉◯◯◯◯◉◉◉◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◉◉◉◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◉◉◯◉◯◉◯◯◯◯◯◉◉◯◯◯◯◯◯
+ObservationString(0) = "us:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLRUDLDDURRRR op:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDRDRDRDRDDDR"
+ObservationString(1) = "us:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDRDRDRDRDDDR op:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLRUDLDDURRRR"
+ObservationTensor(0): ◉◉◉◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◉◉◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◉◉◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◉◉◉◯◯◉◉◉◉◯◯◉◉◯◯◯◯◯
+ObservationTensor(1): ◉◉◉◉◉◉◯◯◯◯◉◯◯◯◯◉◯◯◯◯◉◉◉◉◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◯◉◯◯◯◉◉◉◯◯◯◯◉◯◯◯◯◯◯◯◯◯◯◯◉◉◯◉◯◉◯◯◯◯◯◉◉◯◯◯◯◯◯
+Rewards() = [0, 0]
+Returns() = [6, 9]
+LegalActions(0) = [0, 1, 2, 3]
+LegalActions(1) = [0, 1, 2, 3]
+StringLegalActions(0) = ["LEFT", "UP", "RIGHT", "DOWN"]
+StringLegalActions(1) = ["LEFT", "UP", "RIGHT", "DOWN"]
+
+# Apply joint action ["DOWN", "LEFT"]
+actions: [3, 0]
+
+# State 61
+# Apply joint action ["LEFT", "RIGHT"]
+actions: [0, 2]
+
+# State 62
+# Apply joint action ["RIGHT", "DOWN"]
+actions: [2, 3]
+
+# State 63
+# Apply joint action ["LEFT", "LEFT"]
+actions: [0, 0]
+
+# State 64
+# Apply joint action ["RIGHT", "RIGHT"]
+actions: [2, 2]
+
+# State 65
+# Apply joint action ["LEFT", "RIGHT"]
+actions: [0, 2]
+
+# State 66
+# Apply joint action ["UP", "DOWN"]
+actions: [1, 3]
+
+# State 67
+# Apply joint action ["RIGHT", "DOWN"]
+actions: [2, 3]
+
+# State 68
+# Apply joint action ["DOWN", "DOWN"]
+actions: [3, 3]
+
+# State 69
+# Apply joint action ["DOWN", "DOWN"]
+actions: [3, 3]
+
+# State 70
+# p0:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLRUDLDDURRRRDLRLRLURDD p1:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDRDRDRDRDDDRLRDLRRDDDD
+IsTerminal() = False
+History() = [3, 3, 2, 3, 2, 1, 3, 3, 0, 0, 1, 0, 3, 2, 2, 3, 3, 2, 2, 1, 1, 1, 2, 0, 2, 1, 2, 1, 2, 1, 2, 0, 1, 3, 2, 3, 1, 2, 2, 2, 3, 0, 1, 1, 2, 3, 0, 2, 1, 2, 1, 0, 2, 0, 3, 1, 1, 0, 3, 3, 1, 0, 1, 2, 0, 1, 3, 0, 1, 0, 0, 3, 1, 2, 3, 1, 2, 1, 2, 3, 1, 1, 2, 0, 2, 2, 3, 2, 1, 1, 1, 0, 2, 3, 0, 1, 0, 3, 2, 2, 1, 3, 3, 2, 0, 3, 3, 2, 3, 3, 1, 2, 2, 3, 2, 3, 2, 3, 2, 2, 3, 0, 0, 2, 2, 3, 0, 0, 2, 2, 0, 2, 1, 3, 2, 3, 3, 3, 3, 3]
+HistoryString() = "3, 3, 2, 3, 2, 1, 3, 3, 0, 0, 1, 0, 3, 2, 2, 3, 3, 2, 2, 1, 1, 1, 2, 0, 2, 1, 2, 1, 2, 1, 2, 0, 1, 3, 2, 3, 1, 2, 2, 2, 3, 0, 1, 1, 2, 3, 0, 2, 1, 2, 1, 0, 2, 0, 3, 1, 1, 0, 3, 3, 1, 0, 1, 2, 0, 1, 3, 0, 1, 0, 0, 3, 1, 2, 3, 1, 2, 1, 2, 3, 1, 1, 2, 0, 2, 2, 3, 2, 1, 1, 1, 0, 2, 3, 0, 1, 0, 3, 2, 2, 1, 3, 3, 2, 0, 3, 3, 2, 3, 3, 1, 2, 2, 3, 2, 3, 2, 3, 2, 2, 3, 0, 0, 2, 2, 3, 0, 0, 2, 2, 0, 2, 1, 3, 2, 3, 3, 3, 3, 3"
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = PlayerId.SIMULTANEOUS
+InformationStateString(0) = "us:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLRUDLDDURRRRDLRLRLURDD op:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDRDRDRDRDDDRLRDLRRDDDD"
+InformationStateString(1) = "us:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDRDRDRDRDDDRLRDLRRDDDD op:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLRUDLDDURRRRDLRLRLURDD"
+InformationStateTensor(0).observation = [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0]
+InformationStateTensor(1).observation = [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0]
+ObservationString(0) = "us:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLRUDLDDURRRRDLRLRLURDD op:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDRDRDRDRDDDRLRDLRRDDDD"
+ObservationString(1) = "us:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDRDRDRDRDDDRLRDLRRDDDD op:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLRUDLDDURRRRDLRLRLURDD"
+ObservationTensor(0) = [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0]
+ObservationTensor(1) = [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0]
+Rewards() = [0, 0]
+Returns() = [8, 9]
+LegalActions(0) = [0, 1, 2, 3]
+LegalActions(1) = [0, 1, 2, 3]
+StringLegalActions(0) = ["LEFT", "UP", "RIGHT", "DOWN"]
+StringLegalActions(1) = ["LEFT", "UP", "RIGHT", "DOWN"]
+
+# Apply joint action ["LEFT", "LEFT"]
+actions: [0, 0]
+
+# State 71
+# Apply joint action ["RIGHT", "RIGHT"]
+actions: [2, 2]
+
+# State 72
+# Apply joint action ["RIGHT", "DOWN"]
+actions: [2, 3]
+
+# State 73
+# Apply joint action ["DOWN", "DOWN"]
+actions: [3, 3]
+
+# State 74
+# Apply joint action ["UP", "UP"]
+actions: [1, 1]
+
+# State 75
+# Apply joint action ["RIGHT", "UP"]
+actions: [2, 1]
+
+# State 76
+# Apply joint action ["LEFT", "DOWN"]
+actions: [0, 3]
+
+# State 77
+# Apply joint action ["UP", "UP"]
+actions: [1, 1]
+
+# State 78
+# Apply joint action ["DOWN", "UP"]
+actions: [3, 1]
+
+# State 79
+# Apply joint action ["LEFT", "DOWN"]
+actions: [0, 3]
+
+# State 80
+# p0:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLRUDLDDURRRRDLRLRLURDDLRRDURLUDL p1:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDRDRDRDRDDDRLRDLRRDDDDLRDDUUDUUD
+IsTerminal() = False
+History() = [3, 3, 2, 3, 2, 1, 3, 3, 0, 0, 1, 0, 3, 2, 2, 3, 3, 2, 2, 1, 1, 1, 2, 0, 2, 1, 2, 1, 2, 1, 2, 0, 1, 3, 2, 3, 1, 2, 2, 2, 3, 0, 1, 1, 2, 3, 0, 2, 1, 2, 1, 0, 2, 0, 3, 1, 1, 0, 3, 3, 1, 0, 1, 2, 0, 1, 3, 0, 1, 0, 0, 3, 1, 2, 3, 1, 2, 1, 2, 3, 1, 1, 2, 0, 2, 2, 3, 2, 1, 1, 1, 0, 2, 3, 0, 1, 0, 3, 2, 2, 1, 3, 3, 2, 0, 3, 3, 2, 3, 3, 1, 2, 2, 3, 2, 3, 2, 3, 2, 2, 3, 0, 0, 2, 2, 3, 0, 0, 2, 2, 0, 2, 1, 3, 2, 3, 3, 3, 3, 3, 0, 0, 2, 2, 2, 3, 3, 3, 1, 1, 2, 1, 0, 3, 1, 1, 3, 1, 0, 3]
+HistoryString() = "3, 3, 2, 3, 2, 1, 3, 3, 0, 0, 1, 0, 3, 2, 2, 3, 3, 2, 2, 1, 1, 1, 2, 0, 2, 1, 2, 1, 2, 1, 2, 0, 1, 3, 2, 3, 1, 2, 2, 2, 3, 0, 1, 1, 2, 3, 0, 2, 1, 2, 1, 0, 2, 0, 3, 1, 1, 0, 3, 3, 1, 0, 1, 2, 0, 1, 3, 0, 1, 0, 0, 3, 1, 2, 3, 1, 2, 1, 2, 3, 1, 1, 2, 0, 2, 2, 3, 2, 1, 1, 1, 0, 2, 3, 0, 1, 0, 3, 2, 2, 1, 3, 3, 2, 0, 3, 3, 2, 3, 3, 1, 2, 2, 3, 2, 3, 2, 3, 2, 2, 3, 0, 0, 2, 2, 3, 0, 0, 2, 2, 0, 2, 1, 3, 2, 3, 3, 3, 3, 3, 0, 0, 2, 2, 2, 3, 3, 3, 1, 1, 2, 1, 0, 3, 1, 1, 3, 1, 0, 3"
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = PlayerId.SIMULTANEOUS
+InformationStateString(0) = "us:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLRUDLDDURRRRDLRLRLURDDLRRDURLUDL op:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDRDRDRDRDDDRLRDLRRDDDDLRDDUUDUUD"
+InformationStateString(1) = "us:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDRDRDRDRDDDRLRDLRRDDDDLRDDUUDUUD op:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLRUDLDDURRRRDLRLRLURDDLRRDURLUDL"
+InformationStateTensor(0).observation = [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0]
+InformationStateTensor(1).observation = [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0]
+ObservationString(0) = "us:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLRUDLDDURRRRDLRLRLURDDLRRDURLUDL op:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDRDRDRDRDDDRLRDLRRDDDDLRDDUUDUUD"
+ObservationString(1) = "us:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDRDRDRDRDDDRLRDLRRDDDDLRDDUUDUUD op:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLRUDLDDURRRRDLRLRLURDDLRRDURLUDL"
+ObservationTensor(0) = [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0]
+ObservationTensor(1) = [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0]
+Rewards() = [1, 0]
+Returns() = [11, 9]
+LegalActions(0) = [0, 1, 2, 3]
+LegalActions(1) = [0, 1, 2, 3]
+StringLegalActions(0) = ["LEFT", "UP", "RIGHT", "DOWN"]
+StringLegalActions(1) = ["LEFT", "UP", "RIGHT", "DOWN"]
+
+# Apply joint action ["DOWN", "LEFT"]
+actions: [3, 0]
+
+# State 81
+# Apply joint action ["UP", "LEFT"]
+actions: [1, 0]
+
+# State 82
+# Apply joint action ["DOWN", "DOWN"]
+actions: [3, 3]
+
+# State 83
+# p0:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLRUDLDDURRRRDLRLRLURDDLRRDURLUDLDUD p1:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDRDRDRDRDDDRLRDLRRDDDDLRDDUUDUUDLLD
+IsTerminal() = True
+History() = [3, 3, 2, 3, 2, 1, 3, 3, 0, 0, 1, 0, 3, 2, 2, 3, 3, 2, 2, 1, 1, 1, 2, 0, 2, 1, 2, 1, 2, 1, 2, 0, 1, 3, 2, 3, 1, 2, 2, 2, 3, 0, 1, 1, 2, 3, 0, 2, 1, 2, 1, 0, 2, 0, 3, 1, 1, 0, 3, 3, 1, 0, 1, 2, 0, 1, 3, 0, 1, 0, 0, 3, 1, 2, 3, 1, 2, 1, 2, 3, 1, 1, 2, 0, 2, 2, 3, 2, 1, 1, 1, 0, 2, 3, 0, 1, 0, 3, 2, 2, 1, 3, 3, 2, 0, 3, 3, 2, 3, 3, 1, 2, 2, 3, 2, 3, 2, 3, 2, 2, 3, 0, 0, 2, 2, 3, 0, 0, 2, 2, 0, 2, 1, 3, 2, 3, 3, 3, 3, 3, 0, 0, 2, 2, 2, 3, 3, 3, 1, 1, 2, 1, 0, 3, 1, 1, 3, 1, 0, 3, 3, 0, 1, 0, 3, 3]
+HistoryString() = "3, 3, 2, 3, 2, 1, 3, 3, 0, 0, 1, 0, 3, 2, 2, 3, 3, 2, 2, 1, 1, 1, 2, 0, 2, 1, 2, 1, 2, 1, 2, 0, 1, 3, 2, 3, 1, 2, 2, 2, 3, 0, 1, 1, 2, 3, 0, 2, 1, 2, 1, 0, 2, 0, 3, 1, 1, 0, 3, 3, 1, 0, 1, 2, 0, 1, 3, 0, 1, 0, 0, 3, 1, 2, 3, 1, 2, 1, 2, 3, 1, 1, 2, 0, 2, 2, 3, 2, 1, 1, 1, 0, 2, 3, 0, 1, 0, 3, 2, 2, 1, 3, 3, 2, 0, 3, 3, 2, 3, 3, 1, 2, 2, 3, 2, 3, 2, 3, 2, 2, 3, 0, 0, 2, 2, 3, 0, 0, 2, 2, 0, 2, 1, 3, 2, 3, 3, 3, 3, 3, 0, 0, 2, 2, 2, 3, 3, 3, 1, 1, 2, 1, 0, 3, 1, 1, 3, 1, 0, 3, 3, 0, 1, 0, 3, 3"
+IsChanceNode() = False
+IsSimultaneousNode() = False
+CurrentPlayer() = PlayerId.TERMINAL
+InformationStateString(0) = "us:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLRUDLDDURRRRDLRLRLURDDLRRDURLUDLDUD op:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDRDRDRDRDDDRLRDLRRDDDDLRDDUUDUUDLLD"
+InformationStateString(1) = "us:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDRDRDRDRDDDRLRDLRRDDDDLRDDUUDUUDLLD op:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLRUDLDDURRRRDLRLRLURDDLRRDURLUDLDUD"
+InformationStateTensor(0).observation = [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0]
+InformationStateTensor(1).observation = [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0]
+ObservationString(0) = "us:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLRUDLDDURRRRDLRLRLURDDLRRDURLUDLDUD op:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDRDRDRDRDDDRLRDLRRDDDDLRDDUUDUUDLLD"
+ObservationString(1) = "us:DDUDLLRDRUULUUULDDRRLUDRRLLULDLRULLDRUUDULRRULDUDRDRDRDRDDDRLRDLRRDDDDLRDDUUDUUDLLD op:DRRDLUDRDRURRRRRURURDURLUURDUDUULDULUDRRURRDUURLLRUDLDDURRRRDLRLRLURDDLRRDURLUDLDUD"
+ObservationTensor(0) = [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0]
+ObservationTensor(1) = [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0]
+Rewards() = [0, 1]
+Returns() = [11, 10]

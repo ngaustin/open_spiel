@@ -1,1 +1,159 @@
-dummy file
+game: simple_iterated_game
+
+GameType.chance_mode = ChanceMode.EXPLICIT_STOCHASTIC
+GameType.dynamics = Dynamics.SIMULTANEOUS
+GameType.information = Information.PERFECT_INFORMATION
+GameType.long_name = "Python Simple Iterated Game"
+GameType.max_num_players = 2
+GameType.min_num_players = 2
+GameType.parameter_specification = ["max_game_length", "termination_probability"]
+GameType.provides_information_state_string = True
+GameType.provides_information_state_tensor = False
+GameType.provides_observation_string = True
+GameType.provides_observation_tensor = True
+GameType.provides_factored_observation_string = False
+GameType.reward_model = RewardModel.REWARDS
+GameType.short_name = "simple_iterated_game"
+GameType.utility = Utility.GENERAL_SUM
+
+NumDistinctActions() = 3
+PolicyTensorShape() = [3]
+MaxChanceOutcomes() = 2
+GetParameters() = {max_game_length=10,termination_probability=0.125}
+NumPlayers() = 2
+MinUtility() = -20.0
+MaxUtility() = 50.0
+UtilitySum() = 0.0
+InformationStateTensorShape() = [3]
+InformationStateTensorLayout() = TensorLayout.CHW
+InformationStateTensorSize() = 3
+ObservationTensorShape() = [3]
+ObservationTensorLayout() = TensorLayout.CHW
+ObservationTensorSize() = 3
+MaxGameLength() = 10
+ToString() = "simple_iterated_game(max_game_length=10,termination_probability=0.125)"
+
+# State 0
+# p0: p1:
+IsTerminal() = False
+History() = []
+HistoryString() = ""
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = PlayerId.SIMULTANEOUS
+InformationStateString(0) = "us: op:"
+InformationStateString(1) = "us: op:"
+InformationStateTensor(0).observation: ◉◉◉
+InformationStateTensor(1).observation: ◉◉◉
+ObservationString(0) = "us: op:"
+ObservationString(1) = "us: op:"
+ObservationTensor(0): ◉◉◉
+ObservationTensor(1): ◉◉◉
+Rewards() = [0, 0]
+Returns() = [0, 0]
+LegalActions(0) = [0, 1, 2]
+LegalActions(1) = [0, 1, 2]
+StringLegalActions(0) = ["A", "B", "C"]
+StringLegalActions(1) = ["A", "B", "C"]
+
+# Apply joint action ["B", "B"]
+actions: [1, 1]
+
+# State 1
+# p0:B p1:B
+IsTerminal() = False
+History() = [1, 1]
+HistoryString() = "1, 1"
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = PlayerId.SIMULTANEOUS
+InformationStateString(0) = "us:B op:B"
+InformationStateString(1) = "us:B op:B"
+InformationStateTensor(0).observation: ◉◯◉
+InformationStateTensor(1).observation: ◉◯◉
+ObservationString(0) = "us:B op:B"
+ObservationString(1) = "us:B op:B"
+ObservationTensor(0): ◉◯◉
+ObservationTensor(1): ◉◯◉
+Rewards() = [3, 3]
+Returns() = [3, 3]
+LegalActions(0) = [0, 1, 2]
+LegalActions(1) = [0, 1, 2]
+StringLegalActions(0) = ["A", "B", "C"]
+StringLegalActions(1) = ["A", "B", "C"]
+
+# Apply joint action ["C", "A"]
+actions: [2, 0]
+
+# State 2
+# p0:BC p1:BA
+IsTerminal() = False
+History() = [1, 1, 2, 0]
+HistoryString() = "1, 1, 2, 0"
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = PlayerId.SIMULTANEOUS
+InformationStateString(0) = "us:BC op:BA"
+InformationStateString(1) = "us:BA op:BC"
+InformationStateTensor(0).observation: ◯◉◉
+InformationStateTensor(1).observation: ◉◉◯
+ObservationString(0) = "us:BC op:BA"
+ObservationString(1) = "us:BA op:BC"
+ObservationTensor(0): ◯◉◉
+ObservationTensor(1): ◉◉◯
+Rewards() = [0, -2]
+Returns() = [3, 1]
+LegalActions(0) = [0, 1, 2]
+LegalActions(1) = [0, 1, 2]
+StringLegalActions(0) = ["A", "B", "C"]
+StringLegalActions(1) = ["A", "B", "C"]
+
+# Apply joint action ["A", "A"]
+actions: [0, 0]
+
+# State 3
+# Apply joint action ["B", "B"]
+actions: [1, 1]
+
+# State 4
+# Apply joint action ["A", "C"]
+actions: [0, 2]
+
+# State 5
+# Apply joint action ["B", "B"]
+actions: [1, 1]
+
+# State 6
+# Apply joint action ["A", "C"]
+actions: [0, 2]
+
+# State 7
+# Apply joint action ["C", "C"]
+actions: [2, 2]
+
+# State 8
+# Apply joint action ["B", "B"]
+actions: [1, 1]
+
+# State 9
+# Apply joint action ["C", "A"]
+actions: [2, 0]
+
+# State 10
+# p0:BCABABACBC p1:BAABCBCCBA
+IsTerminal() = True
+History() = [1, 1, 2, 0, 0, 0, 1, 1, 0, 2, 1, 1, 0, 2, 2, 2, 1, 1, 2, 0]
+HistoryString() = "1, 1, 2, 0, 0, 0, 1, 1, 0, 2, 1, 1, 0, 2, 2, 2, 1, 1, 2, 0"
+IsChanceNode() = False
+IsSimultaneousNode() = False
+CurrentPlayer() = PlayerId.TERMINAL
+InformationStateString(0) = "us:BCABABACBC op:BAABCBCCBA"
+InformationStateString(1) = "us:BAABCBCCBA op:BCABABACBC"
+InformationStateTensor(0).observation: ◯◉◉
+InformationStateTensor(1).observation: ◉◉◯
+ObservationString(0) = "us:BCABABACBC op:BAABCBCCBA"
+ObservationString(1) = "us:BAABCBCCBA op:BCABABACBC"
+ObservationTensor(0): ◯◉◉
+ObservationTensor(1): ◉◉◯
+Rewards() = [0, -2]
+Returns() = [16, 16]

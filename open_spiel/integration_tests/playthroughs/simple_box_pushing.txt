@@ -1,1 +1,309 @@
-dummy file
+game: simple_box_pushing
+
+GameType.chance_mode = ChanceMode.EXPLICIT_STOCHASTIC
+GameType.dynamics = Dynamics.SIMULTANEOUS
+GameType.information = Information.PERFECT_INFORMATION
+GameType.long_name = "Python Simple Box Pushing"
+GameType.max_num_players = 2
+GameType.min_num_players = 2
+GameType.parameter_specification = ["initial_distance_from_box", "max_game_length", "path_length"]
+GameType.provides_information_state_string = True
+GameType.provides_information_state_tensor = False
+GameType.provides_observation_string = True
+GameType.provides_observation_tensor = True
+GameType.provides_factored_observation_string = False
+GameType.reward_model = RewardModel.REWARDS
+GameType.short_name = "simple_box_pushing"
+GameType.utility = Utility.GENERAL_SUM
+
+NumDistinctActions() = 3
+PolicyTensorShape() = [3]
+MaxChanceOutcomes() = 0
+GetParameters() = {initial_distance_from_box=4,max_game_length=30,path_length=10}
+NumPlayers() = 2
+MinUtility() = -120.0
+MaxUtility() = 240.0
+UtilitySum() = 0.0
+InformationStateTensorShape() = [3]
+InformationStateTensorLayout() = TensorLayout.CHW
+InformationStateTensorSize() = 3
+ObservationTensorShape() = [3]
+ObservationTensorLayout() = TensorLayout.CHW
+ObservationTensorSize() = 3
+MaxGameLength() = 30
+ToString() = "simple_box_pushing(initial_distance_from_box=4,max_game_length=30,path_length=10)"
+
+# State 0
+# p0: p1:
+IsTerminal() = False
+History() = []
+HistoryString() = ""
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = PlayerId.SIMULTANEOUS
+InformationStateString(0) = "us: op:"
+InformationStateString(1) = "us: op:"
+InformationStateTensor(0).observation = [-1, 1]
+InformationStateTensor(1).observation = [-1, 1]
+ObservationString(0) = "us: op:"
+ObservationString(1) = "us: op:"
+ObservationTensor(0) = [-1, 1]
+ObservationTensor(1) = [-1, 1]
+Rewards() = [0, 0]
+Returns() = [0, 0]
+LegalActions(0) = [0, 1, 2]
+LegalActions(1) = [0, 1, 2]
+StringLegalActions(0) = ["backward", "stay", "forward"]
+StringLegalActions(1) = ["backward", "stay", "forward"]
+
+# Apply joint action ["forward", "stay"]
+actions: [2, 1]
+
+# State 1
+# p0:f p1:s
+IsTerminal() = False
+History() = [2, 1]
+HistoryString() = "2, 1"
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = PlayerId.SIMULTANEOUS
+InformationStateString(0) = "us:f op:s"
+InformationStateString(1) = "us:s op:f"
+InformationStateTensor(0).observation = [-1, -1]
+InformationStateTensor(1).observation = [-1, -1]
+ObservationString(0) = "us:f op:s"
+ObservationString(1) = "us:s op:f"
+ObservationTensor(0) = [-1, -1]
+ObservationTensor(1) = [-1, -1]
+Rewards() = [-2, 0]
+Returns() = [-2, 0]
+LegalActions(0) = [0, 1, 2]
+LegalActions(1) = [0, 1, 2]
+StringLegalActions(0) = ["backward", "stay", "forward"]
+StringLegalActions(1) = ["backward", "stay", "forward"]
+
+# Apply joint action ["forward", "stay"]
+actions: [2, 1]
+
+# State 2
+# p0:ff p1:ss
+IsTerminal() = False
+History() = [2, 1, 2, 1]
+HistoryString() = "2, 1, 2, 1"
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = PlayerId.SIMULTANEOUS
+InformationStateString(0) = "us:ff op:ss"
+InformationStateString(1) = "us:ss op:ff"
+InformationStateTensor(0).observation = [-1, -1]
+InformationStateTensor(1).observation = [-1, -1]
+ObservationString(0) = "us:ff op:ss"
+ObservationString(1) = "us:ss op:ff"
+ObservationTensor(0) = [-1, -1]
+ObservationTensor(1) = [-1, -1]
+Rewards() = [-2, 0]
+Returns() = [-4, 0]
+LegalActions(0) = [0, 1, 2]
+LegalActions(1) = [0, 1, 2]
+StringLegalActions(0) = ["backward", "stay", "forward"]
+StringLegalActions(1) = ["backward", "stay", "forward"]
+
+# Apply joint action ["stay", "stay"]
+actions: [1, 1]
+
+# State 3
+# Apply joint action ["forward", "backward"]
+actions: [2, 0]
+
+# State 4
+# Apply joint action ["backward", "forward"]
+actions: [0, 2]
+
+# State 5
+# Apply joint action ["stay", "forward"]
+actions: [1, 2]
+
+# State 6
+# Apply joint action ["stay", "backward"]
+actions: [1, 0]
+
+# State 7
+# Apply joint action ["stay", "stay"]
+actions: [1, 1]
+
+# State 8
+# Apply joint action ["forward", "stay"]
+actions: [2, 1]
+
+# State 9
+# Apply joint action ["forward", "backward"]
+actions: [2, 0]
+
+# State 10
+# p0:ffsfbsssff p1:sssbffbssb
+IsTerminal() = False
+History() = [2, 1, 2, 1, 1, 1, 2, 0, 0, 2, 1, 2, 1, 0, 1, 1, 2, 1, 2, 0]
+HistoryString() = "2, 1, 2, 1, 1, 1, 2, 0, 0, 2, 1, 2, 1, 0, 1, 1, 2, 1, 2, 0"
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = PlayerId.SIMULTANEOUS
+InformationStateString(0) = "us:ffsfbsssff op:sssbffbssb"
+InformationStateString(1) = "us:sssbffbssb op:ffsfbsssff"
+InformationStateTensor(0).observation = [1, -1]
+InformationStateTensor(1).observation = [-1, -1]
+ObservationString(0) = "us:ffsfbsssff op:sssbffbssb"
+ObservationString(1) = "us:sssbffbssb op:ffsfbsssff"
+ObservationTensor(0) = [1, -1]
+ObservationTensor(1) = [-1, -1]
+Rewards() = [-4, -2]
+Returns() = [-22, -14]
+LegalActions(0) = [0, 1, 2]
+LegalActions(1) = [0, 1, 2]
+StringLegalActions(0) = ["backward", "stay", "forward"]
+StringLegalActions(1) = ["backward", "stay", "forward"]
+
+# Apply joint action ["forward", "backward"]
+actions: [2, 0]
+
+# State 11
+# Apply joint action ["forward", "stay"]
+actions: [2, 1]
+
+# State 12
+# Apply joint action ["stay", "forward"]
+actions: [1, 2]
+
+# State 13
+# Apply joint action ["forward", "forward"]
+actions: [2, 2]
+
+# State 14
+# Apply joint action ["forward", "forward"]
+actions: [2, 2]
+
+# State 15
+# Apply joint action ["backward", "backward"]
+actions: [0, 0]
+
+# State 16
+# Apply joint action ["backward", "backward"]
+actions: [0, 0]
+
+# State 17
+# Apply joint action ["stay", "backward"]
+actions: [1, 0]
+
+# State 18
+# Apply joint action ["stay", "backward"]
+actions: [1, 0]
+
+# State 19
+# Apply joint action ["forward", "backward"]
+actions: [2, 0]
+
+# State 20
+# p0:ffsfbsssffffsffbbssf p1:sssbffbssbbsfffbbbbb
+IsTerminal() = False
+History() = [2, 1, 2, 1, 1, 1, 2, 0, 0, 2, 1, 2, 1, 0, 1, 1, 2, 1, 2, 0, 2, 0, 2, 1, 1, 2, 2, 2, 2, 2, 0, 0, 0, 0, 1, 0, 1, 0, 2, 0]
+HistoryString() = "2, 1, 2, 1, 1, 1, 2, 0, 0, 2, 1, 2, 1, 0, 1, 1, 2, 1, 2, 0, 2, 0, 2, 1, 1, 2, 2, 2, 2, 2, 0, 0, 0, 0, 1, 0, 1, 0, 2, 0"
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = PlayerId.SIMULTANEOUS
+InformationStateString(0) = "us:ffsfbsssffffsffbbssf op:sssbffbssbbsfffbbbbb"
+InformationStateString(1) = "us:sssbffbssbbsfffbbbbb op:ffsfbsssffffsffbbssf"
+InformationStateTensor(0).observation = [-1, -1]
+InformationStateTensor(1).observation = [-1, -1]
+ObservationString(0) = "us:ffsfbsssffffsffbbssf op:sssbffbssbbsfffbbbbb"
+ObservationString(1) = "us:sssbffbssbbsfffbbbbb op:ffsfbsssffffsffbbssf"
+ObservationTensor(0) = [-1, -1]
+ObservationTensor(1) = [-1, -1]
+Rewards() = [-2, -2]
+Returns() = [-52, -34]
+LegalActions(0) = [0, 1, 2]
+LegalActions(1) = [0, 1, 2]
+StringLegalActions(0) = ["backward", "stay", "forward"]
+StringLegalActions(1) = ["backward", "stay", "forward"]
+
+# Apply joint action ["forward", "backward"]
+actions: [2, 0]
+
+# State 21
+# Apply joint action ["backward", "forward"]
+actions: [0, 2]
+
+# State 22
+# Apply joint action ["stay", "backward"]
+actions: [1, 0]
+
+# State 23
+# Apply joint action ["backward", "forward"]
+actions: [0, 2]
+
+# State 24
+# Apply joint action ["forward", "forward"]
+actions: [2, 2]
+
+# State 25
+# Apply joint action ["stay", "stay"]
+actions: [1, 1]
+
+# State 26
+# Apply joint action ["forward", "forward"]
+actions: [2, 2]
+
+# State 27
+# Apply joint action ["stay", "stay"]
+actions: [1, 1]
+
+# State 28
+# Apply joint action ["stay", "backward"]
+actions: [1, 0]
+
+# State 29
+# Apply joint action ["forward", "stay"]
+actions: [2, 1]
+
+# State 30
+# p0:ffsfbsssffffsffbbssffbsbfsfssf p1:sssbffbssbbsfffbbbbbbfbffsfsbs
+IsTerminal() = False
+History() = [2, 1, 2, 1, 1, 1, 2, 0, 0, 2, 1, 2, 1, 0, 1, 1, 2, 1, 2, 0, 2, 0, 2, 1, 1, 2, 2, 2, 2, 2, 0, 0, 0, 0, 1, 0, 1, 0, 2, 0, 2, 0, 0, 2, 1, 0, 0, 2, 2, 2, 1, 1, 2, 2, 1, 1, 1, 0, 2, 1]
+HistoryString() = "2, 1, 2, 1, 1, 1, 2, 0, 0, 2, 1, 2, 1, 0, 1, 1, 2, 1, 2, 0, 2, 0, 2, 1, 1, 2, 2, 2, 2, 2, 0, 0, 0, 0, 1, 0, 1, 0, 2, 0, 2, 0, 0, 2, 1, 0, 0, 2, 2, 2, 1, 1, 2, 2, 1, 1, 1, 0, 2, 1"
+IsChanceNode() = False
+IsSimultaneousNode() = True
+CurrentPlayer() = PlayerId.SIMULTANEOUS
+InformationStateString(0) = "us:ffsfbsssffffsffbbssffbsbfsfssf op:sssbffbssbbsfffbbbbbbfbffsfsbs"
+InformationStateString(1) = "us:sssbffbssbbsfffbbbbbbfbffsfsbs op:ffsfbsssffffsffbbssffbsbfsfssf"
+InformationStateTensor(0).observation = [1, -1]
+InformationStateTensor(1).observation = [-1, -1]
+ObservationString(0) = "us:ffsfbsssffffsffbbssffbsbfsfssf op:sssbffbssbbsfffbbbbbbfbffsfsbs"
+ObservationString(1) = "us:sssbffbssbbsfffbbbbbbfbffsfsbs op:ffsfbsssffffsffbbssffbsbfsfssf"
+ObservationTensor(0) = [1, -1]
+ObservationTensor(1) = [-1, -1]
+Rewards() = [-4, -2]
+Returns() = [-74, -54]
+LegalActions(0) = [0, 1, 2]
+LegalActions(1) = [0, 1, 2]
+StringLegalActions(0) = ["backward", "stay", "forward"]
+StringLegalActions(1) = ["backward", "stay", "forward"]
+
+# Apply joint action ["backward", "stay"]
+actions: [0, 1]
+
+# State 31
+# p0:ffsfbsssffffsffbbssffbsbfsfssfb p1:sssbffbssbbsfffbbbbbbfbffsfsbss
+IsTerminal() = True
+History() = [2, 1, 2, 1, 1, 1, 2, 0, 0, 2, 1, 2, 1, 0, 1, 1, 2, 1, 2, 0, 2, 0, 2, 1, 1, 2, 2, 2, 2, 2, 0, 0, 0, 0, 1, 0, 1, 0, 2, 0, 2, 0, 0, 2, 1, 0, 0, 2, 2, 2, 1, 1, 2, 2, 1, 1, 1, 0, 2, 1, 0, 1]
+HistoryString() = "2, 1, 2, 1, 1, 1, 2, 0, 0, 2, 1, 2, 1, 0, 1, 1, 2, 1, 2, 0, 2, 0, 2, 1, 1, 2, 2, 2, 2, 2, 0, 0, 0, 0, 1, 0, 1, 0, 2, 0, 2, 0, 0, 2, 1, 0, 0, 2, 2, 2, 1, 1, 2, 2, 1, 1, 1, 0, 2, 1, 0, 1"
+IsChanceNode() = False
+IsSimultaneousNode() = False
+CurrentPlayer() = PlayerId.TERMINAL
+InformationStateString(0) = "us:ffsfbsssffffsffbbssffbsbfsfssfb op:sssbffbssbbsfffbbbbbbfbffsfsbss"
+InformationStateString(1) = "us:sssbffbssbbsfffbbbbbbfbffsfsbss op:ffsfbsssffffsffbbssffbsbfsfssfb"
+InformationStateTensor(0).observation = [1, -1]
+InformationStateTensor(1).observation = [-1, -1]
+ObservationString(0) = "us:ffsfbsssffffsffbbssffbsbfsfssfb op:sssbffbssbbsfffbbbbbbfbffsfsbss"
+ObservationString(1) = "us:sssbffbssbbsfffbbbbbbfbffsfsbss op:ffsfbsssffffsffbbssffbsbfsfssfb"
+ObservationTensor(0) = [1, -1]
+ObservationTensor(1) = [-1, -1]
+Rewards() = [-4, -2]
+Returns() = [-78, -56]
