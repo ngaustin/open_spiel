@@ -250,13 +250,9 @@ class SimpleIteratedGameState(pyspiel.State):
     self._current_iteration += 1
     self._game_over = self._current_iteration > self.get_game().max_game_length()
 
-  def information_state_string(self, p):
-    assert p == 0 or p == 1
-    return self.information_state_string
-
-  def information_state_string(self):
-      # TODO: Change this to be more distinct based on what is said in spiel.h more identifiable!
-      return "Iteration {}.".format(self._current_iteration)
+  # def information_state_string(self):
+  #     # TODO: Change this to be more distinct based on what is said in spiel.h more identifiable!
+  #     return "Iteration {}.".format(self._current_iteration)
 
   def _action_to_string(self, player, action):
     """Action -> string."""

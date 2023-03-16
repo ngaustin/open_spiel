@@ -304,12 +304,8 @@ class SimpleBoxPushingState(pyspiel.State):
     self._returns += self._rewards
     self._current_iteration += 1
 
-  def information_state_string(self, p):
-    assert p == 0 or p == 1
-    return self.information_state_string
-
-  def information_state_string(self):
-      return "Iteration {}.".format(self._current_iteration)
+  # def information_state_string(self):
+  #     return "Iteration {}.".format(self._current_iteration)
 
   def _action_to_string(self, player, action):
     """Action -> string."""
