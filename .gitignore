@@ -54,6 +54,7 @@ Manifest.toml
 # IDE
 .idea/
 .vscode/
+.vs/
 *~
 
 
