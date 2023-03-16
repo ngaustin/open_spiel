@@ -139,8 +139,6 @@ class QLearner(rl_agent.AbstractAgent):
                         is_final_step=float(time_step.last()),
                         legal_actions=legal_actions)
       self.buffer.append(new_transition)
-      self.curr_trajectory.append(new_transition)
-      self.curr_return += time_step.rewards[self._player_id]
 
     # Act step: don't act at terminal states.
     if not time_step.last():
@@ -160,13 +158,13 @@ class QLearner(rl_agent.AbstractAgent):
       self._q_values[self._prev_info_state][self._prev_action] += (
           self._step_size * self._last_loss_value)
 
-      self._loss_values_over_steps.append(abs(self._last_loss_value))
-      self._total_steps += 1
-      if len(self._loss_values_over_steps) > 50000:
-        self._loss_values_over_steps = self._loss_values_over_steps[1:]
+      # self._loss_values_over_steps.append(abs(self._last_loss_value))
+      # self._total_steps += 1
+      # if len(self._loss_values_over_steps) > 50000:
+      #   self._loss_values_over_steps = self._loss_values_over_steps[1:]
       
-      if self._total_steps % 50000 == 0:
-        print("Average tabular q loss past 50000 steps after {} training steps player {}: {}".format(self._total_steps, self._player_id, sum(self._loss_values_over_steps) / len(self._loss_values_over_steps)))
+      # if self._total_steps % 50000 == 0:
+      #   print("Average tabular q loss past 50000 steps after {} training steps player {}: {}".format(self._total_steps, self._player_id, sum(self._loss_values_over_steps) / len(self._loss_values_over_steps)))
 
       # Decay epsilon, if necessary.
       self._epsilon = self._epsilon_schedule.step()
@@ -174,12 +172,6 @@ class QLearner(rl_agent.AbstractAgent):
       if time_step.last():  # prepare for the next episode.
         self._prev_info_state = None
         self._prev_action = None
-        if len(self.top_return_to_trajectories) < 100 or self.curr_return > min(self.top_return_to_trajectories.keys()):
-          if len(self.top_return_to_trajectories) >= 100:
-            del self.top_return_to_trajectories[min(self.top_return_to_trajectories.keys())]
-          self.top_return_to_trajectories[self.curr_return] = self.curr_trajectory
-        self.curr_trajectory = []
-        self.curr_return = 0
         return
 
     # Don't mess up with the state during evaluation.
