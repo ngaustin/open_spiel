@@ -47,6 +47,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         self._consensus_oracle = consensus_kwargs["consensus_oracle"]
         self._imitation_mode = consensus_kwargs["imitation_mode"]
         self._joint = consensus_kwargs["joint"]
+        self._rewards_joint = consensus_kwargs["rewards_joint"]
         self._num_simulations_fit = consensus_kwargs["num_simulations_fit"]
         self._num_iterations_fit = consensus_kwargs["num_iterations_fit"]
         self.proportion_uniform_trajectories = consensus_kwargs["proportion_uniform_trajectories"]
@@ -190,11 +191,11 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                 curr._policy = imitation_q_learn.Imitation(**{"player_id": i, "consensus_kwargs": self._consensus_kwargs}, **new_arguments)
             elif self._consensus_oracle == "trajectory_deep":
                 new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], 
-                                 "state_representation_size": self._best_response_kwargs["state_representation_size"]}
+                                 "state_representation_size": self._consensus_kwargs["state_representation_size"]}
                 curr._policy = imitation_deep.Imitation(**{"player_id": i, "consensus_kwargs": self._consensus_kwargs}, **new_arguments)
             elif self._consensus_oracle == "cql_deep":
                 new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], 
-                                 "state_representation_size": self._best_response_kwargs["state_representation_size"], 
+                                 "state_representation_size": self._consensus_kwargs["state_representation_size"], 
                                  "num_players": self._consensus_kwargs["num_players"]}
                 curr._policy = imitation_q_learn_deep.Imitation(**{"player_id": i, "consensus_kwargs": self._consensus_kwargs}, **new_arguments)
             else:
@@ -208,7 +209,12 @@ class RLOracleCooperative(rl_oracle.RLOracle):
 
             # Find the highest self._num_simulations_fit trajectories from each of the past self._num_iterations_fit
             # simulations in terms of social welfare
-            social_welfare = [np.sum(individual_returns) for individual_returns in returns]
+            
+            # TODO: Maybe optimize on individual returns instead of welfare? 
+            if self._rewards_joint: 
+                social_welfare = [np.sum(individual_returns) for individual_returns in returns]
+            else:
+                social_welfare = [individual_returns[player] for individual_returns in returns]
 
             # Original code
             max_indices = np.array(social_welfare).argsort()[-self._num_simulations_fit:]

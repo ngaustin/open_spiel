@@ -51,7 +51,7 @@ _GAME_TYPE = pyspiel.GameType(
     reward_model=pyspiel.GameType.RewardModel.REWARDS,
     max_num_players=_NUM_PLAYERS,
     min_num_players=_NUM_PLAYERS,
-    provides_information_state_string=False,
+    provides_information_state_string=True, # for test passing
     provides_information_state_tensor=False,
     provides_observation_string=True,
     provides_observation_tensor=True,
@@ -77,7 +77,7 @@ class SimpleFireExtinguisherGame(pyspiel.Game):
             num_distinct_actions=4,
             max_chance_outcomes=2,
             num_players=2,
-            min_utility=_REWARDS["burn_reward"] * _DEFAULT_PARAMS["max_game_length"] * max_distance,
+            min_utility=_REWARDS["burn_reward"] * _DEFAULT_PARAMS["max_game_length"] * (1.5 ** max_distance),
             max_utility=_REWARDS["extinguish_reward"],
             utility_sum=0.0,
             max_game_length=max_game_length), params)
