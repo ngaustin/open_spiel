@@ -304,7 +304,7 @@ class DQN(rl_agent.AbstractAgent):
     """
     probs = np.zeros(self._num_actions)
 
-    if np.random.rand() < epsilon:
+    if np.random.rand() < epsilon or not self.trained_at_least_once: # If this is a newly initialized policy, enforce that it is a uniform
       action = np.random.choice(legal_actions)
       probs[legal_actions] = 1.0 / len(legal_actions)
     else:
@@ -316,9 +316,6 @@ class DQN(rl_agent.AbstractAgent):
       action = legal_actions[np.argmax(legal_q_values)]
       probs[action] = 1.0
 
-    if not self.trained_at_least_once:  # If this is a newly initialized policy, enforce that it is a uniform
-      action = np.random.choice(len(legal_actions))
-      probs = np.ones(len(legal_actions)) / (float(len(legal_actions)))
     return action, probs
 
   def _get_epsilon(self, is_evaluation, power=1.0):
