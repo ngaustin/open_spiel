@@ -231,10 +231,6 @@ class SimpleFireExtinguisherGameState(pyspiel.State):
       # return np.sqrt((location1[0] - location2[0]) ** 2 + (location1[1] - location2[1]) ** 2)
       return abs(location1[0] - location2[0]) + abs(location1[1] - location2[1])
 
-  # def information_state_string(self):
-  #     # TODO: Change this to be more distinct based on what is said in spiel.h more identifiable!
-  #     return "Iteration {}.".format(self._current_iteration)
-
   def _action_to_string(self, player, action):
     """Action -> string."""
     if player == pyspiel.PlayerId.CHANCE:

@@ -51,7 +51,6 @@ class DQN(rl_agent.AbstractAgent):
                replay_buffer_class=ReplayBuffer,
                learning_rate=0.01,
                update_target_network_every=1000,
-               boltzmann=1.0,
                learn_every=10,
                discount_factor=.99,
                min_buffer_size_to_learn=1000,
@@ -138,21 +137,19 @@ class DQN(rl_agent.AbstractAgent):
     illegal_actions = 1 - self._legal_actions_mask_ph
     illegal_logits = illegal_actions * ILLEGAL_ACTION_LOGITS_PENALTY
 
-    # TODO: Modify the following line for DDQN update as opposed to DQN 
-    next_q_double = self._q_network(self._next_info_state_ph)
-    max_next_a = tf.math.argmax((tf.math.add(tf.stop_gradient(next_q_double), illegal_logits)), axis=-1)
-    max_next_q = tf.gather(self._target_q_values, max_next_a, axis=1, batch_dims=1)
-    # print("shapes ", next_q_double.shape, max_next_a.shape, max_next_q.shape)
+    # NOTE: The following is for DDQN.  
+    # next_q_double = self._q_network(self._next_info_state_ph)
+    # max_next_a = tf.math.argmax((tf.math.add(tf.stop_gradient(next_q_double), illegal_logits)), axis=-1)
+    # max_next_q = tf.gather(self._target_q_values, max_next_a, axis=1, batch_dims=1)
 
-    # max_next_q = tf.reduce_max(
-    #     tf.math.add(tf.stop_gradient(self._target_q_values), illegal_logits),
-    #     axis=-1)
+    max_next_q = tf.reduce_max(
+        tf.math.add(tf.stop_gradient(self._target_q_values), illegal_logits),
+        axis=-1)
 
 
     target = (
         self._reward_ph +
         (1 - self._is_final_step_ph) * self._discount_factor * max_next_q)
-    # print("target shape: ", target.shape)
 
     action_indices = tf.stack(
         [tf.range(tf.shape(self._q_values)[0]), self._action_ph], axis=-1)
@@ -207,8 +204,7 @@ class DQN(rl_agent.AbstractAgent):
       info_state = time_step.observations["info_state"][self.player_id]
       legal_actions = time_step.observations["legal_actions"][self.player_id]
       epsilon = self._get_epsilon(is_evaluation)
-      action, probs = self._epsilon_greedy(info_state, legal_actions, epsilon, is_evaluation)
-      # print('IN DQN: ', info_state, legal_actions, epsilon, action, probs)
+      action, probs = self._epsilon_greedy(info_state, legal_actions, epsilon)
     else:
       action = None
       probs = []
@@ -294,7 +290,7 @@ class DQN(rl_agent.AbstractAgent):
         for (target_v, v) in zip(self._target_variables, self._variables)
     ])
 
-  def _epsilon_greedy(self, info_state, legal_actions, epsilon, is_evaluation):
+  def _epsilon_greedy(self, info_state, legal_actions, epsilon):
     """Returns a valid epsilon-greedy action and valid action probs.
 
     Action probabilities are given by a softmax over legal q-values.
@@ -318,24 +314,9 @@ class DQN(rl_agent.AbstractAgent):
           self._q_values, feed_dict={self._info_state_ph: info_state})[0]
       legal_q_values = q_values[legal_actions]
       
-      # if not is_evaluation:
-      # exps = np.exp(self._boltzmann * legal_q_values) + 1e-6
-      # probs = exps / np.sum(exps)
-
-      # if np.isnan(probs).any() or np.sum(probs) != 1:
-      #   probs = np.zeros(self._num_actions)
-      #   action = legal_actions[np.argmax(legal_q_values)]
-      #   probs[action] = 1.0
-      # else:
-      #   action = legal_actions[np.random.choice(len(legal_actions), 1, p=probs)[0]]
-      # else:
-      
-      # Original code:
       action = legal_actions[np.argmax(legal_q_values)]
       probs[action] = 1.0
 
-      # if self.trained_at_least_once:
-      #   print("Q values: ", legal_q_values)
     if not self.trained_at_least_once:  # If this is a newly initialized policy, enforce that it is a uniform
       action = np.random.choice(len(legal_actions))
       probs = np.ones(len(legal_actions)) / (float(len(legal_actions)))

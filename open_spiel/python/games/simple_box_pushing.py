@@ -304,9 +304,6 @@ class SimpleBoxPushingState(pyspiel.State):
     self._returns += self._rewards
     self._current_iteration += 1
 
-  # def information_state_string(self):
-  #     return "Iteration {}.".format(self._current_iteration)
-
   def _action_to_string(self, player, action):
     """Action -> string."""
     if player == pyspiel.PlayerId.CHANCE:

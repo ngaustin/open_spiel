@@ -132,7 +132,7 @@ _GAME_TYPE = pyspiel.GameType(
     long_name="Apple harvesting game social dilemma",
     dynamics=pyspiel.GameType.Dynamics.SIMULTANEOUS,
     chance_mode=pyspiel.GameType.ChanceMode.EXPLICIT_STOCHASTIC,
-    information=pyspiel.GameType.Information.PERFECT_INFORMATION,
+    information=pyspiel.GameType.Information.IMPERFECT_INFORMATION,
     utility=pyspiel.GameType.Utility.GENERAL_SUM,
     reward_model=pyspiel.GameType.RewardModel.REWARDS,
     max_num_players=_NUM_PLAYERS,
@@ -405,10 +405,6 @@ class HarvestGameState(pyspiel.State):
       # Manhattan distance for ease of calculation and analysis
       # return np.sqrt((location1[0] - location2[0]) ** 2 + (location1[1] - location2[1]) ** 2)
       return abs(location1[0] - location2[0]) + abs(location1[1] - location2[1])
-
-  # def information_state_string(self):
-  #     # TODO: Change this to be more distinct based on what is said in spiel.h more identifiable!
-  #     return "Iteration {}.".format(self._current_iteration)
 
   def _action_to_string(self, player, action):
     """Action -> string."""

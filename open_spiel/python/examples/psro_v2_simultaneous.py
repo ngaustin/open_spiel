@@ -80,6 +80,7 @@ flags.DEFINE_bool("q_learn_joint", False, "Whether to train in joint state space
 flags.DEFINE_string("trajectory_mode", "prob_reward", "How to fit to a trajectory. Options are prob_reward and prob_action")
 flags.DEFINE_integer("n_top_trajectories", 1, "Number of trajectories to take from each of the BR simulations")
 flags.DEFINE_integer("past_simulations", 3, "Number of BR simulations to look in the past")
+flags.DEFINE_bool("rewards_joint", True, "Whether to select trajectories and optimize consensus policies on joint rewards")
 flags.DEFINE_float("proportion_uniform_trajectories", 0, "Proportion of taken trajectories that will be uniformly sampled across non-high return ones")
 
 # Reward Fitting 
@@ -101,7 +102,7 @@ flags.DEFINE_float("alpha", 5.0, "Hyperparameter for q value minimization")
 # RRD and MSS 
 flags.DEFINE_float("regret_lambda_init", .7, "Lambda threshold for RRD initially")
 flags.DEFINE_float("regret_lambda_final", 0, "Lambda threshold decay every iteration")
-flags.DEFINE_float("minimum_exploration_init", .8, "Minimum amount of profile weight on exploration policies")
+flags.DEFINE_float("minimum_exploration_init", 0, "Minimum amount of profile weight on exploration policies")
 flags.DEFINE_float("final_exploration", 0, "After annealing, the minimum amount of profile weight on exploration policies")
 
 # Saving Data Path
@@ -128,7 +129,7 @@ flags.DEFINE_string("training_strategy_selector", "probabilistic",
                     "probability strategy available to each player.")
 
 # General (RL) agent parameters
-flags.DEFINE_string("oracle_type", "BR", "Choices are DQN, A2C (LSTM implementation of Advantage Actor-Critic), PG (Policy "
+flags.DEFINE_string("oracle_type", "BR", "Choices are DQN, PG (Policy "
                     "Gradient) TAB_Q (tabular q learning) or BR (exact Best Response)")
 flags.DEFINE_integer("number_training_steps", int(1e6), "Number of environment " 
                      "steps per RL policy. Used for PG, DQN, and Tabular Q")
@@ -154,7 +155,6 @@ flags.DEFINE_integer("learn_every", 10, "Learn every [X] steps.")  # CHANGED FRO
 flags.DEFINE_integer("min_buffer_size_to_learn", 1000, "Learn after getting certain number of transitions")
 flags.DEFINE_integer("max_buffer_size", int(1e4), "Buffer Size")
 flags.DEFINE_integer("epsilon_decay_duration", 1000, "Number of steps for epsilon from 1 to .1")
-flags.DEFINE_float("dqn_boltzmann", 2.0, "DQN probabilistic boltzmann")
 
 # General
 flags.DEFINE_integer("seed", 1, "Seed.")
@@ -232,11 +232,11 @@ def init_dqn_responder(sess, env):
       "min_buffer_size_to_learn": FLAGS.min_buffer_size_to_learn,
       "replay_buffer_capacity": FLAGS.max_buffer_size,
       "epsilon_decay_duration": FLAGS.epsilon_decay_duration, 
-      "boltzmann": FLAGS.dqn_boltzmann
   }
 
   consensus_kwargs={
     "session": sess,
+    "state_representation_size": state_representation_size,
     "alpha": FLAGS.alpha,
     "consensus_oracle":FLAGS.consensus_oracle,
     "imitation_mode":FLAGS.trajectory_mode, 
@@ -244,6 +244,7 @@ def init_dqn_responder(sess, env):
     "num_iterations_fit":FLAGS.past_simulations,
     "proportion_uniform_trajectories":FLAGS.proportion_uniform_trajectories,
     "joint": FLAGS.q_learn_joint,
+    "rewards_joint": FLAGS.rewards_joint,
     "boltzmann": FLAGS.boltzmann, 
     "training_epochs": FLAGS.consensus_training_epochs,
     "update_target_every": FLAGS.consensus_update_target_every,
@@ -297,17 +298,18 @@ def init_tabular_q_responder(sess, env):
       "num_actions": num_actions,
       "step_size": FLAGS.step_size,
       "discount_factor": FLAGS.discount_factor,
-      "state_representation_size": state_representation_size,
   }
   consensus_kwargs={
     "session": sess,
     "alpha": FLAGS.alpha,
+    "state_representation_size": state_representation_size,
     "consensus_oracle":FLAGS.consensus_oracle,
     "imitation_mode":FLAGS.trajectory_mode, 
     "num_simulations_fit":FLAGS.n_top_trajectories,
     "num_iterations_fit":FLAGS.past_simulations,
     "proportion_uniform_trajectories":FLAGS.proportion_uniform_trajectories,
     "joint": FLAGS.q_learn_joint,
+    "rewards_joint": FLAGS.rewards_joint,
     "boltzmann": FLAGS.boltzmann, 
     "training_epochs": FLAGS.consensus_training_epochs,
     "update_target_every": FLAGS.consensus_update_target_every,
