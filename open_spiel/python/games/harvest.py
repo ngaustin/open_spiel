@@ -424,7 +424,7 @@ class HarvestGameState(pyspiel.State):
   def _action_to_string(self, player, action):
     """Action -> string."""
     if player == pyspiel.PlayerId.CHANCE:
-      raise Exception("Should not be a chance node")
+      return "Spawned apples"
     else:
       return Action(action).name
 
