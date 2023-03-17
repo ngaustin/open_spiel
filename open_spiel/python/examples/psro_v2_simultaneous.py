@@ -395,7 +395,7 @@ def gpsro_looper(env, oracle, agents):
   """Initializes and executes the GPSRO training loop."""
   sample_from_marginals = True  # TODO(somidshafiei) set False for alpharank
   training_strategy_selector = FLAGS.training_strategy_selector or strategy_selectors.probabilistic
-
+  
   g_psro_solver = psro_v2.PSROSolver(
       env.game,
       oracle,

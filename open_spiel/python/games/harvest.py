@@ -231,10 +231,13 @@ class HarvestGameState(pyspiel.State):
     self.grid_shape = (x_max, y_max)
     self.agent_locations = []
     self.agent_spawn_points = []
-    # self.apple_locations = []
     self.apple_spawn_points = []
 
-    # Spawn apples in initially random locations
+    self.new_apple_locations = []
+
+    self.chance_to_spawn_apples = False 
+
+    # Spawn apples
     for i in range(x_max):
       for j in range(y_max):
         if _HARVEST_MAP[i][j] == "A":
@@ -289,7 +292,7 @@ class HarvestGameState(pyspiel.State):
     """Returns id of the next player to move, or TERMINAL if game is over."""
     if self._game_over:
       return pyspiel.PlayerId.TERMINAL
-    elif self._is_chance:
+    elif self.chance_to_spawn_apples:
       return pyspiel.PlayerId.CHANCE
     else:
       return pyspiel.PlayerId.SIMULTANEOUS
@@ -344,8 +347,24 @@ class HarvestGameState(pyspiel.State):
         r += 1
         if rand_num < spawn_prob:
           # print("Spawning apple because {} is less than spawn prob {}".format(rand_num, spawn_prob))
-          self.grid[row, col] = Unit.apple
+          self.new_apple_locations.append((row, col))
+          # self.grid[row, col] = Unit.apple
 
+  def chance_outcomes(self):
+    """Spawn apples """
+    assert self.is_chance_node()
+    self._spawn_apples()
+    return [(0, 1.0)]  # this is just a filler 
+
+  def _apply_action(self, action):
+    """ This is used to randomly spawn apples. This is called only when it is a chance node."""
+    assert self.is_chance_node()
+    # Action is a dummy variable. Not used.
+    for point in self.new_apple_locations:
+      self.grid[point[0], point[1]] = Unit.apple
+    self.chance_to_spawn_apples = False
+    self.new_apple_locations = []
+    return 
 
   def _show_apple_map(self):
     print("### MAP ### ")
@@ -384,16 +403,12 @@ class HarvestGameState(pyspiel.State):
         if self.grid[pos[0], pos[1]] == Unit.apple:
           self._rewards[i] += _REWARDS["apple"]
         
-        # print("Current Iteration{}: Agent {} to position {}. Got Apple: {}".format(self._current_iteration, i, pos, self.grid[pos[0], pos[1]] == Unit.apple))
         self.grid[pos[0], pos[1]] = i  # new location of player i 
         self.agent_locations[i] = pos
 
-        
-
     self._returns += self._rewards
-    self._spawn_apples()
-    # print("Actions: {}, Intended Positions: {}, Rewards {}, Returns {}".format(actions, intended_positions, self._rewards, self._returns))
     self._current_iteration += 1
+    self.chance_to_spawn_apples = True   # set so that next environment step is a chancen node
 
     # Also insert GAME OVER if all of the apples are gone! 
     apples_are_gone = not np.any(self.grid == Unit.apple)
