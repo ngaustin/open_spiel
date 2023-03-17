@@ -76,7 +76,6 @@ class DQN(rl_agent.AbstractAgent):
     self._learn_every = learn_every
     self._min_buffer_size_to_learn = min_buffer_size_to_learn
     self._discount_factor = discount_factor
-    self._boltzmann = boltzmann
 
     self._epsilon_start = epsilon_start
     self._epsilon_end = epsilon_end
