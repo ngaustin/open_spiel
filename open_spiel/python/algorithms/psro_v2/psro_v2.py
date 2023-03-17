@@ -233,7 +233,7 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
 
     if self._meta_strategy_method.__name__ == "prd_collab_strategy":
         proportion_explore = len(index_explore) / float(len(self._policies[0]))
-        if proportion_explore < self.mss_explore: 
+        if proportion_explore < self.mss_explore and self.consensus_imitation: 
           init_strategies = [] 
           action_space_shapes = len(self._policies[0])
           for k in range(len(self._policies)):
