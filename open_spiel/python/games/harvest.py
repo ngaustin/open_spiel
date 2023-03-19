@@ -13,7 +13,6 @@
 # limitations under the License.
 
 """Python implementation of harvest game.
-
 This is primarily here to demonstrate simultaneous-move games in Python.
 """
 
@@ -24,9 +23,6 @@ import numpy as np
 import pyspiel
 
 from datetime import datetime
-
-import itertools
-from collections import OrderedDict
 
 _NUM_PLAYERS = 2
 _DEFAULT_PARAMS = {"max_game_length": 1000, "view_size": 5, "apple_radius": 2}
@@ -134,8 +130,8 @@ _GAME_TYPE = pyspiel.GameType(
     short_name="harvest",
     long_name="Apple harvesting game social dilemma",
     dynamics=pyspiel.GameType.Dynamics.SIMULTANEOUS,
-    chance_mode=pyspiel.GameType.ChanceMode.SAMPLED_STOCHASTIC,
-    information=pyspiel.GameType.Information.IMPERFECT_INFORMATION,
+    chance_mode=pyspiel.GameType.ChanceMode.EXPLICIT_STOCHASTIC,
+    information=pyspiel.GameType.Information.PERFECT_INFORMATION,
     utility=pyspiel.GameType.Utility.GENERAL_SUM,
     reward_model=pyspiel.GameType.RewardModel.REWARDS,
     max_num_players=_NUM_PLAYERS,
@@ -164,7 +160,7 @@ class HarvestGame(pyspiel.Game):
         _GAME_TYPE,
         pyspiel.GameInfo(
             num_distinct_actions=4,
-            max_chance_outcomes=2048,
+            max_chance_outcomes=2,
             num_players=2,
             min_utility=0,
             max_utility=max_game_length * _REWARDS["apple"],
@@ -234,17 +230,10 @@ class HarvestGameState(pyspiel.State):
     self.grid_shape = (x_max, y_max)
     self.agent_locations = []
     self.agent_spawn_points = []
+    # self.apple_locations = []
     self.apple_spawn_points = []
 
-    self.new_apple_locations = []
-
-    # For chance nodes
-    self.empty_spawn_points = []
-    self.probs_spawn = []
-
-    self.chance_to_spawn_apples = False 
-
-    # Spawn apples
+    # Spawn apples in initially random locations
     for i in range(x_max):
       for j in range(y_max):
         if _HARVEST_MAP[i][j] == "A":
@@ -299,7 +288,7 @@ class HarvestGameState(pyspiel.State):
     """Returns id of the next player to move, or TERMINAL if game is over."""
     if self._game_over:
       return pyspiel.PlayerId.TERMINAL
-    elif self.chance_to_spawn_apples:
+    elif self._is_chance:
       return pyspiel.PlayerId.CHANCE
     else:
       return pyspiel.PlayerId.SIMULTANEOUS
@@ -317,8 +306,6 @@ class HarvestGameState(pyspiel.State):
     r = 0
     apple_radius = _DEFAULT_PARAMS["apple_radius"]
     
-    self.empty_spawn_points = []
-    self.probs_spawn = []
     for i in range(len(self.apple_spawn_points)):
       row, col = self.apple_spawn_points[i]
 
@@ -354,52 +341,10 @@ class HarvestGameState(pyspiel.State):
         spawn_prob = _SPAWN_PROB[min(num_apples, 3)]
         rand_num = random_numbers[r]
         r += 1
-
-        # if spawn_prob > 0:
-        #   self.empty_spawn_points.append(i)
-        #   self.probs_spawn.append(spawn_prob)
         if rand_num < spawn_prob:
           # print("Spawning apple because {} is less than spawn prob {}".format(rand_num, spawn_prob))
-          # self.new_apple_locations.append((row, col))
           self.grid[row, col] = Unit.apple
 
-  def chance_outcomes(self):
-    """Spawn apples """
-    assert self.is_chance_node()
-    # self._spawn_apples()
-    """
-    if len(self.probs_spawn) > 0:
-      self.binary_map = np.array(list(itertools.product([0, 1], repeat=len(self.probs_spawn))))
-      probs_spawn = np.array(self.probs_spawn)
-      
-
-      spawn = self.binary_map * probs_spawn 
-      no_spawn = (1 - self.binary_map) * (1 - probs_spawn)
-      probs_each_configuration = np.prod(spawn, axis=1, where=spawn != 0) * np.prod(no_spawn, axis=1, where=no_spawn != 0)
-      probs_each_configuration = probs_each_configuration.T
-    
-    """
-      
-    #   return [(index, p) for index, p in enumerate(probs_each_configuration)] 
-    # else:
-    return [(0, 1.0)]
-
-  def _apply_action(self, action):
-    """ This is used to randomly spawn apples. This is called only when it is a chance node."""
-    assert self.is_chance_node()
-    # Action is one of the indexes in the binary map
-    """
-    if len(self.probs_spawn) > 0:
-      apples_to_spawn = self.binary_map[action]
-      for j, indicator in enumerate(apples_to_spawn):
-        if indicator == 1:
-          point = self.apple_spawn_points[self.empty_spawn_points[j]]
-          self.grid[point[0], point[1]] = Unit.apple
-    """
-    self._spawn_apples()
-
-    self.chance_to_spawn_apples = False
-    return 
 
   def _show_apple_map(self):
     print("### MAP ### ")
@@ -438,12 +383,16 @@ class HarvestGameState(pyspiel.State):
         if self.grid[pos[0], pos[1]] == Unit.apple:
           self._rewards[i] += _REWARDS["apple"]
         
+        # print("Current Iteration{}: Agent {} to position {}. Got Apple: {}".format(self._current_iteration, i, pos, self.grid[pos[0], pos[1]] == Unit.apple))
         self.grid[pos[0], pos[1]] = i  # new location of player i 
         self.agent_locations[i] = pos
 
+        
+
     self._returns += self._rewards
+    self._spawn_apples()
+    # print("Actions: {}, Intended Positions: {}, Rewards {}, Returns {}".format(actions, intended_positions, self._rewards, self._returns))
     self._current_iteration += 1
-    self.chance_to_spawn_apples = True   # set so that next environment step is a chance node if 0 < num apples < max_apples 
 
     # Also insert GAME OVER if all of the apples are gone! 
     apples_are_gone = not np.any(self.grid == Unit.apple)
@@ -456,10 +405,14 @@ class HarvestGameState(pyspiel.State):
       # return np.sqrt((location1[0] - location2[0]) ** 2 + (location1[1] - location2[1]) ** 2)
       return abs(location1[0] - location2[0]) + abs(location1[1] - location2[1])
 
+  # def information_state_string(self):
+  #     # TODO: Change this to be more distinct based on what is said in spiel.h more identifiable!
+  #     return "Iteration {}.".format(self._current_iteration)
+
   def _action_to_string(self, player, action):
     """Action -> string."""
     if player == pyspiel.PlayerId.CHANCE:
-      return "Spawned apples"
+      raise Exception("Should not be a chance node")
     else:
       return Action(action).name
 
