@@ -84,6 +84,7 @@ class Imitation(rl_agent.AbstractAgent):
         self.hidden_layer_size = consensus_kwargs["hidden_layer_size"]
         self.n_hidden_layers = consensus_kwargs["n_hidden_layers"]
         self.joint = consensus_kwargs["joint"]
+        self.rewards_joint = consensus_kwargs["rewards_joint"]
         self.alpha = consensus_kwargs["alpha"]
         self.boltzmann = consensus_kwargs["boltzmann"]
         self.update_target_network_every = consensus_kwargs["update_target_every"]
@@ -304,15 +305,16 @@ class Imitation(rl_agent.AbstractAgent):
             marginalized_q_values = np.max(actions_mapped_to_values, axis=1)
             # print("Q vals: ", marginalized_q_values)
 
-            exps = np.exp(self.boltzmann * marginalized_q_values) + 1e-6
-            probs = exps / np.sum(exps)
+            # exps = np.exp(self.boltzmann * marginalized_q_values) + 1e-6
+            # probs = exps / np.sum(exps)
 
-            if np.isnan(probs).any() or np.sum(probs) != 1:
-                probs = np.zeros(self._num_actions)
-                action = np.argmax(marginalized_q_values)
-                probs[action] = 1.0
-            else:
-                action = np.random.choice(self._num_actions, 1, p=probs)[0]
+            # if np.isnan(probs).any() or np.sum(probs) != 1:
+            probs = np.zeros(self._num_actions)
+            action = np.argmax(marginalized_q_values)
+            probs[action] = 1.0
+            # else:
+            #     action = np.random.choice(self._num_actions, 1, p=probs)[0]
+
             # logits = self.session.run(self._logits, feed_dict={self._info_state_ph: info_state})[0]
             # print("Logits: ", logits)
             
@@ -369,7 +371,8 @@ class Imitation(rl_agent.AbstractAgent):
           time_step: current ts, an instance of rl_environment.TimeStep.
         """
         o = prev_time_step.observations["info_state"][self.player_id][:]
-        r = sum(time_step.rewards) # WELFARE
+        # TODO: Consider not using welfare but rather individual rewards 
+        r = sum(time_step.rewards) if self.rewards_joint else time_step.rewards[self.player_id] # WELFARE
 
         transition = Transition(
             info_state=(

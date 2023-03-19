@@ -61,6 +61,7 @@ class Imitation(rl_agent.AbstractAgent):
 
         self.action_conditioned = True
         self.joint = consensus_kwargs["joint"]
+        self.rewards_joint = consensus_kwargs["rewards_joint"]
         self.lr = 1e-2
         self.discount_factor = .99
 
@@ -159,9 +160,10 @@ class Imitation(rl_agent.AbstractAgent):
             o = prev_time_step.observations["info_state"][self.player_id][:]
             next_o = time_step.observations["info_state"][self.player_id][:]
 
+        # TODO: Consider not using welfare but rather individual rewards?
         new_transition = Transition(info_state=o,
             action=prev_action,
-            reward=np.sum(time_step.rewards),  # make this optimize sum of rewards?
+            reward=np.sum(time_step.rewards) if self.rewards_joint else time_step.rewards[self.player_id],  # make this optimize sum of rewards?
             # next_info_state=time_step.observations["info_state"][self.player_id][:],
             next_info_state=next_o,
             is_final_step=float(time_step.last()))

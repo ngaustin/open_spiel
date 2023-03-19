@@ -87,9 +87,9 @@ class Imitation(rl_agent.AbstractAgent):
             self._action_ph = tf.placeholder(
                 shape=[None], dtype=tf.int32, name="action_ph")
             
-            self._return_ph = tf.placeholder(
-                shape=[None], dtype=tf.float32, name="return_ph"
-            )
+            # self._return_ph = tf.placeholder(
+            #     shape=[None], dtype=tf.float32, name="return_ph"
+            # )
 
             self.log_probs = self.net(self._info_state_ph)
             loss_class = tf.losses.softmax_cross_entropy 
@@ -97,10 +97,8 @@ class Imitation(rl_agent.AbstractAgent):
             # Convert the actions to one hot vectors 
             self.one_hot_vectors = tf.one_hot(self._action_ph, depth=self._num_actions)
 
-            # TODO: Consider making entropy regularizer so that the policy doesn't collapse?
-
             # Plug into cross entropy class 
-            self._loss = tf.reduce_mean(loss_class(self.one_hot_vectors, self.log_probs, weights=tf.math.exp(self._return_ph)))
+            self._loss = tf.reduce_mean(loss_class(self.one_hot_vectors, self.log_probs))# weights=tf.math.exp(self._return_ph)))
 
         elif self.mode == "prob_reward":
             self._info_state_ph = tf.placeholder(
@@ -230,15 +228,29 @@ class Imitation(rl_agent.AbstractAgent):
         length = len(self.replay_buffer)
         dataset = self.replay_buffer.sample(length)  # samples without replacement so take the entire thing. Random order
         indices = list(range(length))
+
+        # Try normalizing each of the returns to be between -10 and 0 if the range is bigger
+        """
+        all_returns = [t.ret for t in dataset]
+        max_return = max(all_returns)
+        shifted_returns = [r - max_return for r in all_returns]  # make the max 0 so that the datapoint's weight is 1
+        min_shifted_return = min(shifted_returns)
+        if min_shifted_return != 0: # min_shifted_return < -10: 
+            return_normalization = lambda ret: ((ret - max_return) / min_shifted_return) * 0  # TODO: CHANGED THIS SO THAT THERE WAS NO NORMALIZATION ANYMORE
+        else:
+            return_normalization = lambda ret: ret - max_return 
+        """
+
         for ep in range(self.epochs):
-            i, batches, loss_total = 0, 0, 0
+            i, batches, loss_total, entropy_total = 0, 0, 0, 0  # entropy_total is just an estimate
             dataset = random.sample(dataset, len(dataset))
             while i < length:
                 transitions = dataset[i: min(length, i+self.batch)] 
                 info_states = [t.info_state for t in transitions]
                 actions = [t.action for t in transitions]
                 rewards = [t.reward for t in transitions]
-                rets = [t.ret for t in transitions]
+                # rets = [t.ret for t in transitions]
+                # rets = [return_normalization(r) for r in rets]
 
                 if self.mode == "prob_action":
                     loss, _, log_probs, one_hots = self.session.run(
@@ -246,17 +258,17 @@ class Imitation(rl_agent.AbstractAgent):
                     feed_dict={
                         self._info_state_ph: info_states,
                         self._action_ph: actions,
-                        self._return_ph: rets,
+                        # self._return_ph: rets,
                     })
 
                     # Just to track entropy
-                    loss = self.session.run(
-                        [self._loss],
-                    feed_dict={
-                        self._info_state_ph: info_states,
-                        self._action_ph: actions,
-                        self._return_ph: [1 for _ in rets],
-                    })[0]
+                    # loss = self.session.run(
+                    #     [self._loss],
+                    # feed_dict={
+                    #     self._info_state_ph: info_states,
+                    #     self._action_ph: actions,
+                    #     self._return_ph: [0 for _ in rets],
+                    # })[0]
                     # print("ACTIONS: {}".format(actions))
                     # print("LOG PROBS: {}, ONE HOTS: {}".format(log_probs, one_hots))
                     # print(yes)
@@ -275,7 +287,7 @@ class Imitation(rl_agent.AbstractAgent):
                 i += self.batch
                 batches +=1 
             if ep % 100 == 0:
-                print("Average loss for epoch {}: {}".format(ep, loss_total / float(batches)))
+                print("Average loss for epoch {}: {} ".format(ep, loss_total / float(batches)))
 
             if loss_total / float(batches) < self.minimum_entropy:
                 print("Exiting training after {} epochs with loss of {}".format(ep, loss_total / float(batches)))

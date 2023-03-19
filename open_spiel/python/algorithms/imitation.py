@@ -95,17 +95,17 @@ class Imitation(rl_agent.AbstractAgent):
                     counts = self.counts[index]
 
                     # TODO: This is a test to see if weighting by return helps 
-                    rets = self.rets[index]
-                    prob_subset = []
-                    for ret_set in rets:
-                        curr_rets = np.array(ret_set)
-                        prob_subset.append(np.sum(np.exp(curr_rets)))
-                    total_count = sum(prob_subset)
-                    probs_subset = [p / total_count for p in prob_subset]
+                    # rets = self.rets[index]
+                    # prob_subset = []
+                    # for ret_set in rets:
+                    #     curr_rets = np.array(ret_set)
+                    #     prob_subset.append(np.sum(np.exp(curr_rets)))
+                    # total_count = sum(prob_subset)
+                    # probs_subset = [p / total_count for p in prob_subset]
 
                     # Original code: 
-                    # total_count = sum(counts)
-                    # probs_subset = [float(c) / total_count for c in counts]
+                    total_count = sum(counts)
+                    probs_subset = [float(c) / total_count for c in counts]
 
                     action = np.random.choice(actions, p=probs_subset)
                 elif self.mode == "prob_reward":
