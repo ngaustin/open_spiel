@@ -44,7 +44,7 @@ assert len(SPIEL_LOADABLE_GAMES_LIST) >= 38, len(SPIEL_LOADABLE_GAMES_LIST)
 # All simultaneous games.
 SPIEL_SIMULTANEOUS_GAMES_LIST = [
     g for g in SPIEL_LOADABLE_GAMES_LIST
-    if g.dynamics == pyspiel.GameType.Dynamics.SIMULTANEOUS
+    if g.dynamics == pyspiel.GameType.Dynamics.SIMULTANEOUS and g.short_name != "harvest"
 ]
 assert len(SPIEL_SIMULTANEOUS_GAMES_LIST) >= 14, len(
     SPIEL_SIMULTANEOUS_GAMES_LIST)
