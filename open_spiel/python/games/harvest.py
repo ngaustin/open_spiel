@@ -134,7 +134,7 @@ _GAME_TYPE = pyspiel.GameType(
     short_name="harvest",
     long_name="Apple harvesting game social dilemma",
     dynamics=pyspiel.GameType.Dynamics.SIMULTANEOUS,
-    chance_mode=pyspiel.GameType.ChanceMode.EXPLICIT_STOCHASTIC,
+    chance_mode=pyspiel.GameType.ChanceMode.SAMPLED_STOCHASTIC,
     information=pyspiel.GameType.Information.IMPERFECT_INFORMATION,
     utility=pyspiel.GameType.Utility.GENERAL_SUM,
     reward_model=pyspiel.GameType.RewardModel.REWARDS,
@@ -237,6 +237,10 @@ class HarvestGameState(pyspiel.State):
     self.apple_spawn_points = []
 
     self.new_apple_locations = []
+
+    # For chance nodes
+    self.empty_spawn_points = []
+    self.probs_spawn = []
 
     self.chance_to_spawn_apples = False 
 
@@ -351,18 +355,19 @@ class HarvestGameState(pyspiel.State):
         rand_num = random_numbers[r]
         r += 1
 
-        if spawn_prob > 0:
-          self.empty_spawn_points.append(i)
-          self.probs_spawn.append(spawn_prob)
-        # if rand_num < spawn_prob:
+        # if spawn_prob > 0:
+        #   self.empty_spawn_points.append(i)
+        #   self.probs_spawn.append(spawn_prob)
+        if rand_num < spawn_prob:
           # print("Spawning apple because {} is less than spawn prob {}".format(rand_num, spawn_prob))
           # self.new_apple_locations.append((row, col))
-          # self.grid[row, col] = Unit.apple
+          self.grid[row, col] = Unit.apple
 
   def chance_outcomes(self):
     """Spawn apples """
     assert self.is_chance_node()
-    self._spawn_apples()
+    # self._spawn_apples()
+    """
     if len(self.probs_spawn) > 0:
       self.binary_map = np.array(list(itertools.product([0, 1], repeat=len(self.probs_spawn))))
       probs_spawn = np.array(self.probs_spawn)
@@ -372,21 +377,26 @@ class HarvestGameState(pyspiel.State):
       no_spawn = (1 - self.binary_map) * (1 - probs_spawn)
       probs_each_configuration = np.prod(spawn, axis=1, where=spawn != 0) * np.prod(no_spawn, axis=1, where=no_spawn != 0)
       probs_each_configuration = probs_each_configuration.T
+    
+    """
       
-      return [(index, p) for index, p in enumerate(probs_each_configuration)] 
-    else:
-      return [(0, 1.0)]
+    #   return [(index, p) for index, p in enumerate(probs_each_configuration)] 
+    # else:
+    return [(0, 1.0)]
 
   def _apply_action(self, action):
     """ This is used to randomly spawn apples. This is called only when it is a chance node."""
     assert self.is_chance_node()
     # Action is one of the indexes in the binary map
+    """
     if len(self.probs_spawn) > 0:
       apples_to_spawn = self.binary_map[action]
       for j, indicator in enumerate(apples_to_spawn):
         if indicator == 1:
           point = self.apple_spawn_points[self.empty_spawn_points[j]]
           self.grid[point[0], point[1]] = Unit.apple
+    """
+    self._spawn_apples()
 
     self.chance_to_spawn_apples = False
     return 
