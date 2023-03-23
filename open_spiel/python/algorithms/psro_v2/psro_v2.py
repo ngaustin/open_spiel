@@ -494,7 +494,7 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
             prev = time.time()
             utility_estimates = self.sample_episodes(estimated_policies,
                                                      self._sims_per_entry)
-            print("Current player {} and current index {} took {} seconds to finish estimate".format(current_player, current_index, round(time.time() - prev, 2)))
+            print("Current player {} and current strategies {} took {} seconds to finish estimate".format(current_player, tuple(used_index), round(time.time() - prev, 2)))
             # print('Utility estimates: ', utility_estimates)
             for k in range(self._num_players):
               meta_games[k][tuple(used_index)] = utility_estimates[k]
