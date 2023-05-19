@@ -19,7 +19,7 @@ import numpy as np
 from open_spiel.python.algorithms import lp_solver
 from open_spiel.python.algorithms import projected_replicator_dynamics
 from open_spiel.python.algorithms import regret_matching
-from open_spiel.python.algorithms import jpsro
+# from open_spiel.python.algorithms import jpsro
 import pyspiel
 
 

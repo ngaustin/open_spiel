@@ -44,11 +44,10 @@ class DQN(rl_agent.AbstractAgent):
 
   def __init__(self,
                session,
-               device,
                player_id,
-               symmetric,
                state_representation_size,
                num_actions,
+               symmetric=False,
                hidden_layers_sizes=128,
                replay_buffer_capacity=int(1.5e6),
                batch_size=128,
@@ -72,7 +71,6 @@ class DQN(rl_agent.AbstractAgent):
     self.player_id = player_id
     self.symmetric = symmetric
     self._session = session
-    self.device = device
 
     self._num_actions = num_actions
     if isinstance(hidden_layers_sizes, int):
@@ -337,8 +335,6 @@ class DQN(rl_agent.AbstractAgent):
       probs[legal_actions] = 1.0 / len(legal_actions)
       action = utils.random_choice(list(range(self._num_actions)), probs)
     else:
-      # with tf.device(self.device):
-      #   info_state = np.reshape(info_state, [1, -1])
 
       info_state = np.reshape(info_state, [1, -1])
       q_values = self._session.run(
@@ -384,7 +380,6 @@ class DQN(rl_agent.AbstractAgent):
     self.trained_at_least_once = True
 
     transitions = self._replay_buffer.sample(self._batch_size)
-    # with tf.device(self.device):
     info_states = [t.info_state for t in transitions]
     actions = [t.action for t in transitions]
     rewards = [t.reward for t in transitions]

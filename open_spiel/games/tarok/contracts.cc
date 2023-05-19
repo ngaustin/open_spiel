@@ -78,6 +78,8 @@ std::string ContractNameToString(const ContractName& contract_name) {
       return "Valat without";
     case ContractName::kNotSelected:
       return "Not selected";
+    default:
+      return "";
   }
 }
 

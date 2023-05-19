@@ -318,7 +318,10 @@ class Imitation(rl_agent.AbstractAgent):
 
             if self.joint_action:
                 with tf.device(self.device):
-                    info_state = np.reshape(time_step.observations["global_state"][0], [1, -1])
+                    if len(time_step.observations["global_state"] > 0):
+                        info_state =  np.reshape(time_step.observations["global_state"][0], [1, -1])
+                    else:
+                        info_state = np.reshape(np.concatenate(time_step.observations["info_state"]), [1, -1])
                 
                 
                 joint_q_values = self.session.run(self._q_values, feed_dict={self._info_state_ph: info_state})[0]
@@ -419,13 +422,13 @@ class Imitation(rl_agent.AbstractAgent):
         player_list = [i for i in range(self.num_players)] if self.symmetric else [self.player_id]
 
         if self.joint_action: 
-            o = prev_time_step.observations["global_state"][0][:]
+            o = prev_time_step.observations["global_state"][0][:] if len(prev_time_step.observations["global_state"]) > 0 else np.concatenate(prev_time_step.observations["info_state"])
             r = sum(time_step.rewards)  # NOT accounting for rewards_joint here
             rewards_to_go = sum(ret)
 
             store_action = int(self._calculate_joint_action_index(np.array(prev_action).reshape(1, -1))[0][0])
             store_next_action =  int(self._calculate_joint_action_index(np.array(action).reshape(1, -1))[0][0])
-            next_o = time_step.observations["global_state"][0][:]
+            next_o = time_step.observations["global_state"][0][:] if len(time_step.observations["global_state"]) > 0 else np.concatenate(time_step.observations["info_state"])
             # each element in legal_actions mask is a mask for each player. And each mask is self._num_actions long with 0 or 1. 
             
             all_legal_actions = time_step.observations["legal_actions"]

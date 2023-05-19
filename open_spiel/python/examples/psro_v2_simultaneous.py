@@ -219,7 +219,7 @@ def init_br_responder(env):
 def init_dqn_responder(sess, env):
   """Initializes the Policy Gradient-based responder and agents."""
   state_representation_size = env.observation_spec()["info_state"][0]  # TODO: CHECK THIS IS NON-ZERO
-  global_state_representation_size = env.observation_spec()["global_state"][0]
+  global_state_representation_size = env.observation_spec()["global_state"][0] if len(env.observation_spec()["global_state"]) > 0 else FLAGS.n_players * state_representation_size
   # print("Rep size: ", state_representation_size)
   num_actions = env.action_spec()["num_actions"]
 
@@ -237,7 +237,6 @@ def init_dqn_responder(sess, env):
   agent_class = rl_policy.DQNPolicy
   agent_kwargs = {
       "session": sess,
-      "device": device,
       "state_representation_size": state_representation_size,
       "symmetric": FLAGS.symmetric_game,
       "num_actions": num_actions,

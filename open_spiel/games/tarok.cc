@@ -211,6 +211,8 @@ std::vector<Action> TarokState::LegalActions() const {
       return LegalActionsInTricksPlaying();
     case GamePhase::kFinished:
       return {};
+    default:
+      return {};
   }
 }
 
@@ -439,6 +441,8 @@ std::string TarokState::ActionToString(Player player, Action action_id) const {
       if (talon_.size() == 6) return absl::StrCat("Talon set ", action_id + 1);
       return CardActionToString(action_id);
     case GamePhase::kFinished:
+      return "";
+    default:
       return "";
   }
 }
@@ -1030,6 +1034,8 @@ std::string GamePhaseToString(const GamePhase& game_phase) {
       return "Tricks playing";
     case GamePhase::kFinished:
       return "Finished";
+    default:
+      return "";
   }
 }
 
