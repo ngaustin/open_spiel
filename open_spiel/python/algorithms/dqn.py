@@ -56,7 +56,7 @@ class DQN(rl_agent.AbstractAgent):
                learning_rate=0.01,
                update_target_network_every=1000,
                learn_every=10,
-               discount_factor=.99,
+               discount_factor=1.0,
                min_buffer_size_to_learn=1000,
                epsilon_start=1.0,
                epsilon_end=0.02,

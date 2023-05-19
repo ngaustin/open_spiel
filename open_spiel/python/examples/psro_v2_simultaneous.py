@@ -250,6 +250,7 @@ def init_dqn_responder(sess, env):
       "min_buffer_size_to_learn": FLAGS.min_buffer_size_to_learn,
       "replay_buffer_capacity": FLAGS.max_buffer_size,
       "epsilon_decay_duration": FLAGS.epsilon_decay_duration, 
+      "discount_factor": FLAGS.discount_factor
   }
 
   consensus_kwargs={
