@@ -272,14 +272,16 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             trajectory = curr_trajectories[trajectory_index]
             for j in range(len(trajectory)):
                 timestep = trajectory[j]
-                seen_joint_observations.add(''.join(map(str, timestep.observations["global_state"][0][:])))
+                if len(timestep.observations["global_state"]) > 0:
+                    seen_joint_observations.add(''.join(map(str, timestep.observations["global_state"][0][:])))
                 for p in range(self.num_players):
                     curr_obs = timestep.observations["info_state"][p][:]
                     curr_seen_observations.add(''.join(map(str, curr_obs)))
             incremental_seen_observations.append(len(curr_seen_observations))
             incremental_seen_observations_joint.append(len(seen_joint_observations))
         print("Cumulative seen decentralized observations: ", [float(num) / incremental_seen_observations[-1] for num in incremental_seen_observations])
-        print("Cumulative seen joint observations: ", [float(num) / incremental_seen_observations_joint[-1] for num in incremental_seen_observations_joint] )
+        if len(timestep.observations["global_state"]) > 0:
+            print("Cumulative seen joint observations: ", [float(num) / incremental_seen_observations_joint[-1] for num in incremental_seen_observations_joint] )
 
         # For each of the selected trajectory indices 
             # Assign the new self._high_return_trajectories to be from the selected trajectories 

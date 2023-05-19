@@ -353,15 +353,11 @@ class DQN(rl_agent.AbstractAgent):
     """Returns the evaluation or decayed epsilon value."""
     if is_evaluation:
       return 0.0
-    decay_steps = min(self._step_counter - self._min_buffer_size_to_learn, self._epsilon_decay_duration)
-    if self.trained_at_least_once:
-      assert decay_steps >= 0
-      decayed_epsilon = (
-          self._epsilon_end + (self._epsilon_start - self._epsilon_end) *
-          (1 - decay_steps / self._epsilon_decay_duration)**power)
-      return decayed_epsilon
-    else:
-      return self._epsilon_start
+    decay_steps = min(self._step_counter, self._epsilon_decay_duration)
+    decayed_epsilon = (
+        self._epsilon_end + (self._epsilon_start - self._epsilon_end) *
+        (1 - decay_steps / self._epsilon_decay_duration)**power)
+    return decayed_epsilon
 
   def learn(self):
     """Compute the loss on sampled transitions and perform a Q-network update.
