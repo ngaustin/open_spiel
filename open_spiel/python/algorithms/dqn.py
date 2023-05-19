@@ -47,13 +47,14 @@ class DQN(rl_agent.AbstractAgent):
                player_id,
                state_representation_size,
                num_actions,
+               double=False,
                symmetric=False,
                hidden_layers_sizes=128,
                replay_buffer_capacity=int(1.5e6),
                batch_size=128,
                replay_buffer_class=ReplayBuffer,
                learning_rate=0.01,
-               update_target_network_every=1,
+               update_target_network_every=1000,
                learn_every=10,
                discount_factor=.99,
                min_buffer_size_to_learn=1000,
@@ -86,6 +87,7 @@ class DQN(rl_agent.AbstractAgent):
     self._epsilon_end = epsilon_end
     self._epsilon_decay_duration = epsilon_decay_duration
     self.trained_at_least_once = False
+    self._double = double
 
     # TODO(author6) Allow for optional replay buffer config.
     if not isinstance(replay_buffer_capacity, int):
@@ -120,8 +122,7 @@ class DQN(rl_agent.AbstractAgent):
         shape=[None, num_actions],
         dtype=tf.float32,
         name="legal_actions_mask_ph")
-
-    # TODO: Send the networks to gpu? 
+ 
     self._q_network = simple_nets.MLP(state_representation_size,
                                       self._layer_sizes, num_actions)
     self._q_values = self._q_network(self._info_state_ph)
@@ -143,13 +144,14 @@ class DQN(rl_agent.AbstractAgent):
     illegal_logits = illegal_actions * ILLEGAL_ACTION_LOGITS_PENALTY
 
     # NOTE: The following is for DDQN.  
-    next_q_double = self._q_network(self._next_info_state_ph)
-    max_next_a = tf.math.argmax((tf.math.add(tf.stop_gradient(next_q_double), illegal_logits)), axis=-1)
-    max_next_q = tf.gather(self._target_q_values, max_next_a, axis=1, batch_dims=1)
-
-    # max_next_q = tf.reduce_max(
-    #     tf.math.add(tf.stop_gradient(self._target_q_values), illegal_logits),
-    #     axis=-1)
+    if self._double:
+      next_q_double = self._q_network(self._next_info_state_ph)
+      max_next_a = tf.math.argmax((tf.math.add(tf.stop_gradient(next_q_double), illegal_logits)), axis=-1)
+      max_next_q = tf.gather(self._target_q_values, max_next_a, axis=1, batch_dims=1)
+    else:
+      max_next_q = tf.reduce_max(
+          tf.math.add(tf.stop_gradient(self._target_q_values), illegal_logits),
+          axis=-1)
 
 
     target = (

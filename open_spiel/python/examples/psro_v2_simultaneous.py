@@ -237,6 +237,7 @@ def init_dqn_responder(sess, env):
   agent_class = rl_policy.DQNPolicy
   agent_kwargs = {
       "session": sess,
+      "double": True,
       "state_representation_size": state_representation_size,
       "symmetric": FLAGS.symmetric_game,
       "num_actions": num_actions,
