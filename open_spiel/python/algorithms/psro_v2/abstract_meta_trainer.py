@@ -22,6 +22,8 @@ import numpy as np
 from open_spiel.python.algorithms.psro_v2 import meta_strategies
 from open_spiel.python.algorithms.psro_v2 import strategy_selectors
 from open_spiel.python.algorithms.psro_v2 import utils
+from open_spiel.python.rl_environment import StepType, TimeStep
+import time 
 
 _DEFAULT_STRATEGY_SELECTION_METHOD = "probabilistic"
 _DEFAULT_META_STRATEGY_METHOD = "prd"
@@ -66,22 +68,24 @@ def sample_episode(state, policies):
     The result of the call to returns() of the final state in the episode.
         Meant to be a win/loss integer.
   """
+
+  # timestep = get_time_step(state)
   if state.is_terminal():
-    return np.array(state.returns(), dtype=np.float32)
+    return np.array(state.returns(), dtype=np.float32), None, None# [timestep], []
 
   if state.is_simultaneous_node():
     actions = [None] * state.num_players()
     for player in range(state.num_players()):
-      state_policy = policies[player](state, player)
+      # calls python.policy.__call__() wheich calls rl_policy.action_probabilities which calls _policy.step (_policy is dqn, imitation etc.)
+      state_policy = policies[player](state, player)  
       outcomes, probs = zip(*state_policy.items())
       actions[player] = utils.random_choice(outcomes, probs)
-    # print("Observation before", state.observation_tensor(0), state.observation_tensor(1))
-    # print("Action before: ", actions)
     state.apply_actions(actions)
-    # print("Observation after", state.observation_tensor(0), state.observation_tensor(1))
-    # print("Actions: ", actions)
-    return sample_episode(state, policies)
+    rets, _, _ = sample_episode(state, policies)
+    return rets, None, None# [timestep] + later_timesteps, [actions] + later_actions
+    # return sample_episode(state, policies)
 
+  # Not implemented
   if state.is_chance_node():
     outcomes, probs = zip(*state.chance_outcomes())
   else:
@@ -196,22 +200,7 @@ class AbstractMetaTrainer(object):
     print('Approximating Best Response')
     self.update_agents()  # Generate new, Best Response agents via oracle.
     print('Updating Empirical Game')
-    from open_spiel.python.algorithms import imitation_q_learn
-    for agent_index, policy_set in enumerate(self._policies):
-      for policy_index, p in enumerate(policy_set):
-        if isinstance(p._policy, imitation_q_learn.Imitation):
-          p._policy.running_not_seen_steps = 0
-          p._policy.running_steps = 0
-
     self.update_empirical_gamestate(seed=seed)  # Update gamestate matrix.
-
-    # TODO: Get rid of this because for testing
-    for agent_index, policy_set in enumerate(self._policies):
-      for policy_index, p in enumerate(policy_set):
-        if isinstance(p._policy, imitation_q_learn.Imitation):
-          print("Proportion of not seen observations for agent_index {} policy index {}".format(agent_index, policy_index),
-                float(p._policy.running_not_seen_steps) / p._policy.running_steps)
-
     print('Computing meta_strategies')
     self.update_meta_strategies()  # Compute meta strategy (e.g. Nash)
 
@@ -240,13 +229,26 @@ class AbstractMetaTrainer(object):
       Average episode return over num episodes.
     """
     totals = np.zeros(self._num_players)
-    # import time 
-    for _ in range(num_episodes):
-      # prev_time = time.time()
-      totals += sample_episode(self._game.new_initial_state(),
-                               policies).reshape(-1)
-      # print("Episode seconds taken: ", round((time.time() - prev_time), 2))
-    return totals / num_episodes
+    all_trajectories = []
+    all_action_trajectories = []
+    all_returns = []
+
+    for pol in policies:
+      pol._policy.clear_state_tracking()
+    
+    for ep in range(num_episodes):
+      rets, _, _ = sample_episode(self._game.new_initial_state(),
+                                        policies)
+      print("Episode returns: ", rets)
+      totals += rets.reshape(-1)
+      all_returns.append(rets.reshape(-1))
+    
+    for k, pol in enumerate(policies):
+      # NOTE: Clear the buffers for frozen policies...only when we are done analyzing these state coverage values
+      pol._policy._replay_buffer.reset()  
+      pol._policy.states_seen_in_evaluation = []
+      
+    return totals / num_episodes, None, None, None# all_trajectories, all_action_trajectories, all_returns
 
   def get_meta_strategies(self):
     """Returns the Nash Equilibrium distribution on meta game matrix."""

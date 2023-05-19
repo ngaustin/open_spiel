@@ -43,7 +43,7 @@ import scipy as sp
 
 from open_spiel.python import policy
 from open_spiel.python.algorithms import projected_replicator_dynamics
-from open_spiel.python.egt import alpharank as alpharank_lib
+# from open_spiel.python.egt import alpharank as alpharank_lib
 import pyspiel
 
 

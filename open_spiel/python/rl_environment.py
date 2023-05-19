@@ -235,7 +235,8 @@ class Environment(object):
         "info_state": [],
         "legal_actions": [],
         "current_player": [],
-        "serialized_state": []
+        "serialized_state": [], 
+        "global_state": []
     }
     rewards = []
     step_type = StepType.LAST if self._state.is_terminal() else StepType.MID
@@ -254,6 +255,9 @@ class Environment(object):
       observations["legal_actions"].append(self._state.legal_actions(player_id))
     observations["current_player"] = self._state.current_player()
     discounts = self._discounts
+
+    if self._game.get_type().provides_information_state_tensor:
+      observations["global_state"].append(self._state.information_state_tensor(0))
 
     # TODO: This is the discount factor. But just make sure that we separate between DONE and iteration DONE
     if step_type == StepType.LAST:
@@ -354,7 +358,8 @@ class Environment(object):
         "info_state": [],
         "legal_actions": [],
         "current_player": [],
-        "serialized_state": []
+        "serialized_state": [], 
+        "global_state": []
     }
     for player_id in range(self.num_players):
       observations["info_state"].append(
@@ -362,6 +367,9 @@ class Environment(object):
           else self._state.information_state_tensor(player_id))
       observations["legal_actions"].append(self._state.legal_actions(player_id))
     observations["current_player"] = self._state.current_player()
+
+    if self._game.get_type().provides_information_state_tensor:
+      observations["global_state"].append(self._state.information_state_tensor(0))
 
     if self._include_full_state:
       observations["serialized_state"] = pyspiel.serialize_game_and_state(
@@ -408,6 +416,7 @@ class Environment(object):
         legal_actions=(self._game.num_distinct_actions(),),
         current_player=(),
         serialized_state=(),
+        global_state=([self._game.information_state_tensor_size()]) if self._game.get_type().provides_information_state_tensor else ()
     )
 
   def action_spec(self):

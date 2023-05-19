@@ -19,10 +19,12 @@ import os
 from absl import logging
 import numpy as np
 import tensorflow.compat.v1 as tf
+import time
 
 from open_spiel.python import rl_agent
 from open_spiel.python import simple_nets
 from open_spiel.python.utils.replay_buffer import ReplayBuffer
+from open_spiel.python.algorithms.psro_v2 import utils
 
 # Temporarily disable TF2 behavior until code is updated.
 tf.disable_v2_behavior()
@@ -42,7 +44,9 @@ class DQN(rl_agent.AbstractAgent):
 
   def __init__(self,
                session,
+               device,
                player_id,
+               symmetric,
                state_representation_size,
                num_actions,
                hidden_layers_sizes=128,
@@ -55,7 +59,7 @@ class DQN(rl_agent.AbstractAgent):
                discount_factor=.99,
                min_buffer_size_to_learn=1000,
                epsilon_start=1.0,
-               epsilon_end=0.1,
+               epsilon_end=0.02,
                epsilon_decay_duration=int(1e6),
                optimizer_str="sgd",
                loss_str="mse"):
@@ -66,7 +70,10 @@ class DQN(rl_agent.AbstractAgent):
     self._kwargs = locals()
 
     self.player_id = player_id
+    self.symmetric = symmetric
     self._session = session
+    self.device = device
+
     self._num_actions = num_actions
     if isinstance(hidden_layers_sizes, int):
       hidden_layers_sizes = [hidden_layers_sizes]
@@ -116,6 +123,7 @@ class DQN(rl_agent.AbstractAgent):
         dtype=tf.float32,
         name="legal_actions_mask_ph")
 
+    # TODO: Send the networks to gpu? 
     self._q_network = simple_nets.MLP(state_representation_size,
                                       self._layer_sizes, num_actions)
     self._q_values = self._q_network(self._info_state_ph)
@@ -137,13 +145,13 @@ class DQN(rl_agent.AbstractAgent):
     illegal_logits = illegal_actions * ILLEGAL_ACTION_LOGITS_PENALTY
 
     # NOTE: The following is for DDQN.  
-    # next_q_double = self._q_network(self._next_info_state_ph)
-    # max_next_a = tf.math.argmax((tf.math.add(tf.stop_gradient(next_q_double), illegal_logits)), axis=-1)
-    # max_next_q = tf.gather(self._target_q_values, max_next_a, axis=1, batch_dims=1)
+    next_q_double = self._q_network(self._next_info_state_ph)
+    max_next_a = tf.math.argmax((tf.math.add(tf.stop_gradient(next_q_double), illegal_logits)), axis=-1)
+    max_next_q = tf.gather(self._target_q_values, max_next_a, axis=1, batch_dims=1)
 
-    max_next_q = tf.reduce_max(
-        tf.math.add(tf.stop_gradient(self._target_q_values), illegal_logits),
-        axis=-1)
+    # max_next_q = tf.reduce_max(
+    #     tf.math.add(tf.stop_gradient(self._target_q_values), illegal_logits),
+    #     axis=-1)
 
 
     target = (
@@ -181,6 +189,12 @@ class DQN(rl_agent.AbstractAgent):
     self._learn_step = self._optimizer.minimize(self._loss)
     self._initialize()
 
+    self.states_seen_in_evaluation = []
+
+  def clear_state_tracking(self):
+    self.states_seen_in_evaluation = []
+    return 
+
   def get_step_counter(self):
     return self._step_counter
 
@@ -195,25 +209,40 @@ class DQN(rl_agent.AbstractAgent):
     Returns:
       A `rl_agent.StepOutput` containing the action probs and chosen action.
     """
-
     # Act step: don't act at terminal info states or if its not our turn.
     if (not time_step.last()) and (
         time_step.is_simultaneous_move() or
-        self.player_id == time_step.current_player()):
-      info_state = time_step.observations["info_state"][self.player_id]
-      legal_actions = time_step.observations["legal_actions"][self.player_id]
+        self.player_id == time_step.current_player() or self.symmetric):
+
+      # This is a weird issue with the current code framework
+      if self.symmetric:
+        # If symmetric, then having a NOT simultaneous move implies that it is updating the empirical game. Time_step.current_player is correctly set corresponding to the player 
+        # However, if it is a simultaneous move, then we are working with BR. self.player_id is set manually from rl_oracle.py's sample_episode to make sure we get the right observation
+        player = (time_step.current_player() if not time_step.is_simultaneous_move() else self.player_id)
+      else:
+        # If it's not symmetric, then each agent is given one policy corresponding to player_id
+        player = self.player_id 
+      
+      
+      info_state = time_step.observations["info_state"][player]
+
+      # print("Info state for player {}".format(player), info_state)
+      legal_actions = time_step.observations["legal_actions"][player]
+
       epsilon = self._get_epsilon(is_evaluation)
       action, probs = self._epsilon_greedy(info_state, legal_actions, epsilon)
+
     else:
       action = None
       probs = []
 
     # Don't mess up with the state during evaluation.
     if not is_evaluation:
+      # If game is symmetric, the player_id will always be 0 and prev_action and prev_timestep will be correctly assigned (because there will only be one oracle being created every iteration)
+      # If the game is symmetric and we are in evaluation, prev_action and prev_obs will not be used anyway
       self._step_counter += 1
 
       if self._step_counter % self._learn_every == 0:
-        self.trained_at_least_once = True
         self._last_loss_value = self.learn()
 
         if self._last_loss_value != None:
@@ -303,11 +332,14 @@ class DQN(rl_agent.AbstractAgent):
       A valid epsilon-greedy action and valid action probabilities.
     """
     probs = np.zeros(self._num_actions)
-
-    if np.random.rand() < epsilon or not self.trained_at_least_once: # If this is a newly initialized policy, enforce that it is a uniform
-      action = np.random.choice(legal_actions)
+    if not self.trained_at_least_once or np.random.rand() < epsilon: # If this is a newly initialized policy, enforce that it is a uniform
+      # action = np.random.choice(legal_actions)
       probs[legal_actions] = 1.0 / len(legal_actions)
+      action = utils.random_choice(list(range(self._num_actions)), probs)
     else:
+      # with tf.device(self.device):
+      #   info_state = np.reshape(info_state, [1, -1])
+
       info_state = np.reshape(info_state, [1, -1])
       q_values = self._session.run(
           self._q_values, feed_dict={self._info_state_ph: info_state})[0]
@@ -315,6 +347,9 @@ class DQN(rl_agent.AbstractAgent):
       
       action = legal_actions[np.argmax(legal_q_values)]
       probs[action] = 1.0
+      
+    # if self.trained_at_least_once:
+    #   print("Should be equal action for player {}: {}".format(self.player_id, action))
 
     return action, probs
 
@@ -322,11 +357,15 @@ class DQN(rl_agent.AbstractAgent):
     """Returns the evaluation or decayed epsilon value."""
     if is_evaluation:
       return 0.0
-    decay_steps = min(self._step_counter, self._epsilon_decay_duration)
-    decayed_epsilon = (
-        self._epsilon_end + (self._epsilon_start - self._epsilon_end) *
-        (1 - decay_steps / self._epsilon_decay_duration)**power)
-    return decayed_epsilon
+    decay_steps = min(self._step_counter - self._min_buffer_size_to_learn, self._epsilon_decay_duration)
+    if self.trained_at_least_once:
+      assert decay_steps >= 0
+      decayed_epsilon = (
+          self._epsilon_end + (self._epsilon_start - self._epsilon_end) *
+          (1 - decay_steps / self._epsilon_decay_duration)**power)
+      return decayed_epsilon
+    else:
+      return self._epsilon_start
 
   def learn(self):
     """Compute the loss on sampled transitions and perform a Q-network update.
@@ -341,14 +380,18 @@ class DQN(rl_agent.AbstractAgent):
     if (len(self._replay_buffer) < self._batch_size or
         len(self._replay_buffer) < self._min_buffer_size_to_learn):
       return None
+    
+    self.trained_at_least_once = True
 
     transitions = self._replay_buffer.sample(self._batch_size)
+    # with tf.device(self.device):
     info_states = [t.info_state for t in transitions]
     actions = [t.action for t in transitions]
     rewards = [t.reward for t in transitions]
     next_info_states = [t.next_info_state for t in transitions]
     are_final_steps = [t.is_final_step for t in transitions]
     legal_actions_mask = [t.legal_actions_mask for t in transitions]
+
     loss, _ = self._session.run(
         [self._loss, self._learn_step],
         feed_dict={

@@ -226,7 +226,6 @@ set(PYTHON_TESTS ${PYTHON_TESTS}
   games/simple_box_pushing_test.py
   games/simple_iterated_game_test.py
   games/simple_fire_extinguisher_test.py
-  games/harvest_test.py
   mfg/algorithms/best_response_value_test.py
   mfg/algorithms/mirror_descent_test.py
   mfg/algorithms/greedy_policy_test.py

@@ -82,6 +82,8 @@ set(GAME_SOURCES
   go/go_board.h
   goofspiel.cc
   goofspiel.h
+  harvest.cc
+  harvest.h
   havannah.cc
   havannah.h
   hearts.cc
@@ -429,6 +431,10 @@ add_test(phantom_go_test phantom_go_test)
 add_executable(goofspiel_test goofspiel_test.cc ${OPEN_SPIEL_OBJECTS}
                $<TARGET_OBJECTS:tests>)
 add_test(goofspiel_test goofspiel_test)
+
+add_executable(harvest_test harvest_test.cc ${OPEN_SPIEL_OBJECTS}
+               $<TARGET_OBJECTS:tests>)
+add_test(harvest_test harvest_test)
 
 add_executable(havannah_test havannah_test.cc ${OPEN_SPIEL_OBJECTS}
                $<TARGET_OBJECTS:tests>)

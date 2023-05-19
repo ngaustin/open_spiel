@@ -115,7 +115,9 @@ class RLOracle(optimization_oracle.AbstractOracle):
     while not time_step.last():
       if time_step.is_simultaneous_move():
         action_list = []
-        for agent in agents:
+        for i, agent in enumerate(agents):
+          # print("Updated agent: ", i)
+          agent.update_player_id(i)  # This is needed for symmetric games
           output = agent.step(time_step, is_evaluation=is_evaluation)
           action_list.append(output.action)
         time_step = self._env.step(action_list)
@@ -283,14 +285,21 @@ class RLOracle(optimization_oracle.AbstractOracle):
 
     new_policies = self.generate_new_policies(training_parameters)
 
+    rewards = [[] for _ in range(len(steps_per_oracle))]
     # TODO(author4): Look into multithreading.
     while not self._has_terminated(steps_per_oracle):
       agents, indexes = self.sample_policies_for_episode(
           new_policies, training_parameters, steps_per_oracle,
           strategy_sampler)
-      num_steps, _ = self._rollout(game, agents, **oracle_specific_execution_kwargs)
+      num_steps, returns = self._rollout(game, agents, **oracle_specific_execution_kwargs)
       steps_per_oracle = update_steps_per_oracles(steps_per_oracle,
                                                         indexes, num_steps)
+      for player_index, policy_index in indexes:
+        rewards[player_index].append(returns[player_index])
+
+    for i in range(len(rewards)):
+      print(" Episode returns for player {} during BR training: {}".format(i, rewards[i]))
+      
     # Freeze the new policies to keep their weights static. This allows us to
     # later not have to make the distinction between static and training
     # policies in training iterations.

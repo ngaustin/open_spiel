@@ -63,7 +63,7 @@ flags.DEFINE_string("meta_strategy_method", "alpharank",
                     "Name of meta strategy computation method.")
 flags.DEFINE_integer("number_policies_selected", 1,  # CHANGED THIS from 5
                      "Number of new strategies trained at each PSRO iteration.")
-flags.DEFINE_integer("sims_per_entry", 1000, # 1000,  # CHANGED THIS from 1000
+flags.DEFINE_integer("sims_per_entry", 100, # 1000,  # CHANGED THIS from 1000
                      ("Number of simulations to run to estimate each element"
                       "of the game outcome matrix."))
 
@@ -76,7 +76,7 @@ flags.DEFINE_bool("symmetric_game", False, "Whether to consider the current "
 flags.DEFINE_bool("consensus_imitation", False, "Whether to use consensus oracle as well.")
 flags.DEFINE_string("consensus_oracle", "q_learn", "Choice of oracle for exploration policy. "
                                                       "Choices are trajectory, trajectory_deep, q_learn")
-flags.DEFINE_bool("q_learn_joint", False, "Whether to train in joint state space when fitting exploration Q learning")
+flags.DEFINE_bool("joint_action", False, "Whether to train in joint state space when fitting exploration Q learning")
 flags.DEFINE_string("trajectory_mode", "prob_reward", "How to fit to a trajectory. Options are prob_reward and prob_action")
 flags.DEFINE_integer("n_top_trajectories", 1, "Number of trajectories to take from each of the BR simulations")
 flags.DEFINE_integer("past_simulations", 3, "Number of BR simulations to look in the past")
@@ -89,15 +89,19 @@ flags.DEFINE_float("boltzmann", 1.0, "Boltzmann constant for softmax when reward
 # Deep Trajectory Fitting
 flags.DEFINE_float("consensus_deep_network_lr", 3e-4, "Learning Rate when training network for trajectory/joint q learning")
 flags.DEFINE_float("consensus_deep_policy_network_lr", 3e-4, "Separate learning rate for policy network in CQL ")
-flags.DEFINE_integer("consensus_update_target_every", 1000, "Update target network")
+flags.DEFINE_integer("consensus_update_target_every", 1, "Update target network")
 flags.DEFINE_integer("consensus_batch_size", 128, "Batch size when training consensus network offline")
-flags.DEFINE_integer("consensus_hidden_layer_size", 128, "Hidden layer size for consensus network")
-flags.DEFINE_integer("consensus_n_hidden_layers", 3, "Number of hidden layers in consensus network")
-flags.DEFINE_integer("consensus_training_epochs", 40, "Number of training epochs for offline training")
+flags.DEFINE_integer("consensus_hidden_layer_size", 200, "Hidden layer size for consensus network")
+flags.DEFINE_integer("consensus_n_hidden_layers", 2, "Number of hidden layers in consensus network")
+flags.DEFINE_integer("consensus_training_epochs", 1, "Number of training epochs for offline BC training")
+flags.DEFINE_integer("consensus_training_steps", int(1e3), "Number of training steps for offline RL training")
 flags.DEFINE_float("consensus_minimum_entropy", .8, "Entropy of policy required to stop or until epochs run out")
+flags.DEFINE_float("consensus_tau", 1e-3, "Soft update for target q network")
 
-# Deep CQL
+# Deep CQL or R-BVE
 flags.DEFINE_float("alpha", 5.0, "Hyperparameter for q value minimization")
+flags.DEFINE_float("eta", .05, "Gap between difference in values for regularization")
+flags.DEFINE_float("beta", .5, "Amount of weight put on difference between trajectory returns")
 
 # RRD and MSS 
 flags.DEFINE_float("regret_lambda_init", .7, "Lambda threshold for RRD initially")
@@ -215,13 +219,27 @@ def init_br_responder(env):
 def init_dqn_responder(sess, env):
   """Initializes the Policy Gradient-based responder and agents."""
   state_representation_size = env.observation_spec()["info_state"][0]  # TODO: CHECK THIS IS NON-ZERO
+  global_state_representation_size = env.observation_spec()["global_state"][0]
   # print("Rep size: ", state_representation_size)
   num_actions = env.action_spec()["num_actions"]
+
+  gpu_devices = tf.config.list_physical_devices('GPU')
+  device = None
+
+  if len(gpu_devices) > 0:
+    print(" \n Found gpu device. Using in network passes \n ")
+    assert tf.test.is_gpu_available()
+    device = "/gpu:0"
+  else:
+    print(" \n Did not find gpu device. Using cpu. \n ")
+    device = "/cpu:0"
 
   agent_class = rl_policy.DQNPolicy
   agent_kwargs = {
       "session": sess,
+      "device": device,
       "state_representation_size": state_representation_size,
+      "symmetric": FLAGS.symmetric_game,
       "num_actions": num_actions,
       "hidden_layers_sizes": [FLAGS.hidden_layer_size] * FLAGS.n_hidden_layers,
       "batch_size": FLAGS.batch_size,
@@ -236,17 +254,19 @@ def init_dqn_responder(sess, env):
 
   consensus_kwargs={
     "session": sess,
-    "state_representation_size": state_representation_size,
+    "device": device,
+    "state_representation_size": global_state_representation_size if FLAGS.joint_action else state_representation_size,
     "alpha": FLAGS.alpha,
     "consensus_oracle":FLAGS.consensus_oracle,
     "imitation_mode":FLAGS.trajectory_mode, 
     "num_simulations_fit":FLAGS.n_top_trajectories,
     "num_iterations_fit":FLAGS.past_simulations,
     "proportion_uniform_trajectories":FLAGS.proportion_uniform_trajectories,
-    "joint": FLAGS.q_learn_joint,
+    "joint_action": FLAGS.joint_action,
     "rewards_joint": FLAGS.rewards_joint,
     "boltzmann": FLAGS.boltzmann, 
     "training_epochs": FLAGS.consensus_training_epochs,
+    "training_steps": FLAGS.consensus_training_steps,
     "update_target_every": FLAGS.consensus_update_target_every,
     "minimum_entropy":FLAGS.consensus_minimum_entropy,
     "deep_network_lr": FLAGS.consensus_deep_network_lr,
@@ -255,7 +275,22 @@ def init_dqn_responder(sess, env):
     "hidden_layer_size": FLAGS.consensus_hidden_layer_size,
     "n_hidden_layers": FLAGS.consensus_n_hidden_layers,
     "num_players": FLAGS.n_players,
+    "symmetric": FLAGS.symmetric_game,
+    "tau": FLAGS.consensus_tau, 
+    "discount": FLAGS.discount_factor, 
+    "eta": FLAGS.eta, 
+    "beta": FLAGS.beta
   }
+
+  print("Agent Arguments: ")
+  for key, value in sorted(agent_kwargs.items()):
+    print("{}: {}".format(key, value))
+  print('\n')
+
+  print("Consensus Arguments: ")
+  for key, value in sorted(consensus_kwargs.items()):
+    print("{}: {}".format(key, value))
+  print('\n')
 
   if FLAGS.consensus_imitation:
       oracle = rl_oracle_cooperative.RLOracleCooperative(
@@ -308,10 +343,11 @@ def init_tabular_q_responder(sess, env):
     "num_simulations_fit":FLAGS.n_top_trajectories,
     "num_iterations_fit":FLAGS.past_simulations,
     "proportion_uniform_trajectories":FLAGS.proportion_uniform_trajectories,
-    "joint": FLAGS.q_learn_joint,
+    "joint_action": FLAGS.joint_action,
     "rewards_joint": FLAGS.rewards_joint,
     "boltzmann": FLAGS.boltzmann, 
     "training_epochs": FLAGS.consensus_training_epochs,
+    "training_steps": FLAGS.consensus_training_steps,
     "update_target_every": FLAGS.consensus_update_target_every,
     "minimum_entropy":FLAGS.consensus_minimum_entropy,
     "deep_network_lr": FLAGS.consensus_deep_network_lr,
@@ -319,7 +355,11 @@ def init_tabular_q_responder(sess, env):
     "batch_size": FLAGS.consensus_batch_size,
     "hidden_layer_size": FLAGS.consensus_hidden_layer_size,
     "n_hidden_layers": FLAGS.consensus_n_hidden_layers,
-    "num_players": FLAGS.n_players
+    "num_players": FLAGS.n_players,
+    "tau": FLAGS.consensus_tau, 
+    "discount": FLAGS.discount_factor, 
+    "eta": FLAGS.eta, 
+    "beta": FLAGS.beta
   }
 
   if FLAGS.consensus_imitation:
@@ -406,7 +446,7 @@ def gpsro_looper(env, oracle, agents):
       number_policies_selected=FLAGS.number_policies_selected,
       meta_strategy_method=FLAGS.meta_strategy_method,
       prd_iterations=50000,
-      prd_gamma=1e-2,  # TODO: CHANGED THIS
+      prd_gamma=1e-4,  # TODO: CHANGED THIS
       sample_from_marginals=sample_from_marginals,
       regret_lambda=FLAGS.regret_lambda_init,
       explore_mss=FLAGS.minimum_exploration_init,
@@ -414,7 +454,6 @@ def gpsro_looper(env, oracle, agents):
       symmetric_game=FLAGS.symmetric_game)
 
   start_time = time.time()
-  print("\n### NOTE ### : Max welfare for this game is {}\n".format(env.game.max_welfare_for_trajectory()))
   utils.display_meta_game(g_psro_solver.get_meta_game())
   for gpsro_iteration in range(FLAGS.gpsro_iterations):
     if FLAGS.verbose:
@@ -431,16 +470,18 @@ def gpsro_looper(env, oracle, agents):
     g_psro_solver.update_explore_threshold(FLAGS.final_exploration, FLAGS.gpsro_iterations - gpsro_iteration - 1)
 
     if FLAGS.verbose:
-      print("\n### NOTE ### : Max welfare for this game is {}\n".format(env.game.max_welfare_for_trajectory()))
       utils.display_meta_game(meta_game)
       print("Metagame probabilities: ")
       for i, arr in enumerate(meta_probabilities):
-          line = [str(np.round(prob, 2)) + "  " for prob in arr]
+          line = [str(np.round(prob, 4)) + "  " for prob in arr]
           print("Player #{}: ".format(i) + ''.join(line))
-      env.game.display_policies_in_context(policies)
+      if FLAGS.meta_strategy_method =='mgce':
+          joint = g_psro_solver.get_joint_meta_probabilities()
+          print("Joint meta strategy: ", joint)
+      # env.game.display_policies_in_context(policies)
 
       save_folder_path = FLAGS.save_folder_path if FLAGS.save_folder_path[-1] == "/" else FLAGS.save_folder_path + "/"
-      env.game.save_iteration_data(gpsro_iteration, meta_probabilities, meta_game, policies, save_folder_path)
+      # env.game.save_iteration_data(gpsro_iteration, meta_probabilities, meta_game, policies, save_folder_path)
 
     # The following lines only work for sequential games for the moment.
     if env.game.get_type().dynamics == pyspiel.GameType.Dynamics.SEQUENTIAL:
@@ -465,9 +506,12 @@ def main(argv):
 
   sys.setrecursionlimit(1500)
 
-  game = pyspiel.load_game(FLAGS.game_name)  # The iterated prisoners dilemma does not have "players" info type
+  if FLAGS.game_name=="harvest":
+    game = pyspiel.load_game(FLAGS.game_name, {"rng_seed": FLAGS.seed})
+  else:
+    game = pyspiel.load_game(FLAGS.game_name)  # The iterated prisoners dilemma does not have "players" info type
 
-  env = rl_environment.Environment(game)
+  env = rl_environment.Environment(game, observation_type=rl_environment.ObservationType.OBSERVATION)
 
   # Initialize oracle and agents
   with tf.Session() as sess:

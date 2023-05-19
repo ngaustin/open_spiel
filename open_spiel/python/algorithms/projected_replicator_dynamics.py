@@ -215,6 +215,7 @@ def regularized_replicator_dynamics(payoff_tensors,
                                   prd_gamma=1e-6,
                                   average_over_last_n_strategies=None,
                                   use_approx=False,
+                                  symmetric=False,
                                   **unused_kwargs):
   number_players = len(payoff_tensors)
   # Number of actions available to each player.
@@ -241,12 +242,15 @@ def regularized_replicator_dynamics(payoff_tensors,
       payoff_tensors, new_strategies, prd_dt, prd_gamma, use_approx)
     # if i >= prd_iterations - average_over_last_n_strategies:
       # meta_strategy_window.append(new_strategies)
-    total_regret = np.sum([get_regret(payoff_tensors, new_strategies, i) for i in range(number_players)])
+    if symmetric:
+      new_strategies = [np.copy(new_strategies[0]) for _ in range(len(new_strategies))]
+    total_regret = np.sum([get_regret(payoff_tensors, new_strategies, j) for j in range(number_players)])
+    # print("Regret iteration {}: {}".format(i, total_regret))
     assert total_regret == total_regret  # nan value check
     # print("RRD ITERATION NUMBER {} WITH NORMALIZED REGRET {} AND LAMBDA {}".format(i, total_regret, regret_lambda))
 
     exit_for_explore = False
-    for i, strategy in enumerate(new_strategies):
+    for _, strategy in enumerate(new_strategies):
       weight = np.sum(np.take(strategy, index_explore))
       if weight < explore_min and len(index_explore) > 0:
         print("Exited RRD with total regret {} and exploration weight {} that was less than explore minimum {} after {} iterations ".format(total_regret, weight, explore_min, i))
@@ -266,6 +270,18 @@ def regularized_replicator_dynamics(payoff_tensors,
   #   new_strat[-1] = 1.0
   #   new_strategies.append(new_strat)
 
+  # TODO Delete this later. This is only for testing
+  """
+  br_weight_only = []
+  for strat in new_strategies 
+    total_weight_on_ex = sum([strat[i] if i % 2 == 0 else 0 for i in range(strat.shape[0])])
+    num_br = sum(1 if i % 2 == 1 else 0 for i in range(strat.shape[0]))
+    each_br_add_weight = total_weight_on_ex / num_br
+    new_strat = np.array([strat[i] + each_br_add_weight if i%2 == 1 else 0 for i in range(strat.shape[0])])
+    br_weight_only.append(new_strat)
+  new_strategies = br_weight_only 
+  """
+
   # average_new_strategies = np.mean(meta_strategy_window, axis=0)
   return new_strategies
 
@@ -274,8 +290,8 @@ def get_regret(payoff_tensors, strategies, agent_index):
   agent_strategy = strategies[agent_index]
 
   # TODO: Normalize the payoff so that regret threshold is more consistent
-  if np.std(payoff) != 0:
-    payoff = (payoff - np.mean(payoff)) / np.std(payoff)
+  # if np.std(payoff) != 0:
+  #   payoff = (payoff - np.mean(payoff)) / np.std(payoff)
 
   vector_of_expected_payoff = _partial_multi_dot(payoff, strategies, agent_index)
   expected_payoff = np.dot(agent_strategy, vector_of_expected_payoff)

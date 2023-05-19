@@ -64,7 +64,7 @@ class RLEnvironmentTest(absltest.TestCase):
     self.assertLen(time_step.observations["legal_actions"], 2)
     self.assertLen(time_step.rewards, 2)
     self.assertLen(time_step.discounts, 2)
-    self.assertLen(time_step.observations, 4)
+    self.assertLen(time_step.observations, 5)
 
     # O X O   # Moves 0, 1, 2
     # X O X   # Moves 3, 4, 5
@@ -87,7 +87,7 @@ class RLEnvironmentTest(absltest.TestCase):
     self.assertEqual(env_spec["info_state"], ttt_normalized_info_set_shape)
     self.assertCountEqual(
         env_spec.keys(),
-        ["current_player", "info_state", "serialized_state", "legal_actions"])
+        ["current_player", "info_state", "serialized_state", "legal_actions", "global_state"])
     self.assertCountEqual(action_spec.keys(),
                           ["dtype", "max", "min", "num_actions"])
 
@@ -101,7 +101,7 @@ class RLEnvironmentTest(absltest.TestCase):
     self.assertLen(time_step.observations["legal_actions"], 2)
     self.assertLen(time_step.rewards, 2)
     self.assertLen(time_step.discounts, 2)
-    self.assertLen(time_step.observations, 4)
+    self.assertLen(time_step.observations, 5)
 
     actions = [act[0] for act in time_step.observations["legal_actions"]]
     time_step = env.step(actions)

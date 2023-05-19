@@ -66,6 +66,11 @@ def rl_policy_factory(rl_class):
       time_step = self._env.get_time_step()
       return time_step
 
+    def update_player_id(self, player_id):
+      self.player_ids = player_id 
+      self._policy.player_id = player_id
+      
+
     def action_probabilities(self, state, player_id=None):
       cur_player = state.current_player()
       cur_player = player_id if player_id >= 0 else cur_player
@@ -77,10 +82,10 @@ def rl_policy_factory(rl_class):
       # print(state.information_state_tensor(cur_player))
       self._obs["current_player"] = cur_player
       # TODO: This is still wrong. This makes the calculations for the U matrix only account for a single state. No transitions in observations
-      self._obs["info_state"][cur_player] = state.observation_tensor(cur_player) if not state.get_game().get_type().provides_information_state_tensor else (
-          state.information_state_tensor(cur_player))
-      self._obs["legal_actions"][cur_player] = legal_actions
-
+      self._obs["info_state"][cur_player] = state.observation_tensor(cur_player) # if not state.get_game().get_type().provides_information_state_tensor else (
+          # state.information_state_tensor(cur_player))
+      self._obs["legal_actions"]= [state.legal_actions(p) for p in range(self.game.num_players())]# [cur_player] = legal_actions
+      self._obs["global_state"] = [state.information_state_tensor(0)] if state.get_game().get_type().provides_information_state_tensor else []
       # print(self._obs["info_state"][cur_player])
       # pylint: disable=protected-access
       rewards = state.rewards()

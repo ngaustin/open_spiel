@@ -219,13 +219,7 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
     """
     if self.symmetric_game:
       self._policies = self._policies * self._game_num_players
-
-    # self._meta_strategy_probabilities, self._non_marginalized_probabilities = (
-    #    self._meta_strategy_method(solver=self, return_joint=True))
-
-    # TODO: Allow input to distinguish whether we are using consensus policies 
-    # TODO: If using consensus policies, allow to input the indices of consensus strategies 
-    # TODO: Allow input exploration epsilon and decay
+    
     if self.consensus_imitation:
       index_explore = [i for i in range(len(self._policies[0])) if i != 0 and i % 2 == 0]
     else:
@@ -238,17 +232,26 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
           action_space_shapes = len(self._policies[0])
           for k in range(len(self._policies)):
             strategy = np.zeros(action_space_shapes)
-            strategy[-1] = 1
+            strategy = strategy + (1e-3)
+            strategy[-1] = 1 - (action_space_shapes - 1) * (1e-3)
             init_strategies.append(strategy)
         else:
           init_strategies = None 
-        self._meta_strategy_probabilities = (self._meta_strategy_method(solver=self, regret_lambda=self.regret_lambda, init_strategies=init_strategies, explore_min=self.mss_explore, index_explore=index_explore, return_joint=False))
+        self._meta_strategy_probabilities = (self._meta_strategy_method(solver=self, regret_lambda=self.regret_lambda, init_strategies=init_strategies, 
+                                                                        explore_min=self.mss_explore, index_explore=index_explore, symmetric=self.symmetric_game, 
+                                                                        return_joint=False))
+    elif self._meta_strategy_method.__name__ == "mgce_strategy":
+      self._meta_strategy_probabilities, self._non_marginalized_probabilities = (
+        self._meta_strategy_method(solver=self, return_joint=True))
     else:
         self._meta_strategy_probabilities = (self._meta_strategy_method(solver=self, return_joint=False))
 
     if self.symmetric_game:
       self._policies = [self._policies[0]]
       self._meta_strategy_probabilities = [self._meta_strategy_probabilities[0]]
+    
+  def get_joint_meta_probabilities(self):
+    return self._non_marginalized_probabilities
 
   def update_regret_threshold(self, final_regret, iterations_left):
     if iterations_left > 0:
@@ -265,9 +268,6 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
 
       self.mss_explore -= delta_now 
       print("New explore mss minimum: ", self.mss_explore)
-
-  def get_consensus_returns(self):
-      return self._oracle.get_trajectory_returns()
 
   def get_policies_and_strategies(self):
     """Returns current policy sampler, policies and meta-strategies of the game.
@@ -381,7 +381,7 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
     if self.symmetric_game:
       self._policies = self._game_num_players * self._policies
       self._num_players = self._game_num_players
-      training_parameters = [training_parameters[0]]
+      training_parameters = [training_parameters[0]]  # if it is symmetric only keep one of the training parameters (corresponds to one player)
 
     # List of List of new policies (One list per player)
     self._new_policies = self._oracle(
@@ -410,6 +410,9 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
     if seed is not None:
       np.random.seed(seed=seed)
     assert self._oracle is not None
+
+    if self.consensus_imitation:
+      self._oracle.clear_empirical_game_trajectories()
 
     if self.symmetric_game:
       # Switch to considering the game as a symmetric game where players have
@@ -462,7 +465,7 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
       for current_index in itertools.product(*range_iterators):
         used_index = list(current_index)
         used_index[current_player] += number_older_policies[current_player]
-        if np.isnan(meta_games[current_player][tuple(used_index)]):
+        if np.isnan(meta_games[current_player][tuple(used_index)]): 
           estimated_policies = [
               updated_policies[k][current_index[k]]
               for k in range(current_player)
@@ -474,25 +477,41 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
           ]
 
           if self.symmetric_game:
-            # TODO(author4): This update uses ~2**(n_players-1) * sims_per_entry
-            # samples to estimate each payoff table entry. This should be
-            # brought to sims_per_entry to coincide with expected behavior.
-            utility_estimates = self.sample_episodes(estimated_policies,
-                                                     self._sims_per_entry)
 
+            # TODO: Adapt this so that we get trajectories from updating the empirical gamestate
+            import time
+            prev = time.time()
+            print("Estimating current strategies: ", tuple(used_index))
+            utility_estimates, trajectories, action_trajectories, all_returns = self.sample_episodes(estimated_policies,
+                                                                                self._sims_per_entry)
+            print("Current player {} and current strategies {} took {} seconds to finish estimate with resulting utilities: {}".format(current_player, tuple(used_index), round(time.time() - prev, 2), utility_estimates))
+
+            # Make a grouping of indices of used_index that are the same 
+            computed_average_value = {}  # maps a strategy index to an average payoff
+            utility_estimates_averaged = []
+            for i in used_index:
+              # Average the values in each grouping to create a new averaged utility estimate
+              if i not in computed_average_value: 
+                vals = []
+                for j, k in enumerate(used_index):
+                  if k == i:
+                    vals.append(utility_estimates[j])
+                computed_average_value[i] = sum(vals) / float(len(vals))
+              utility_estimates_averaged.append(computed_average_value[i])
+            
             player_permutations = list(itertools.permutations(list(range(
                 self._num_players))))
+            
             for permutation in player_permutations:
               used_tuple = tuple([used_index[i] for i in permutation])
+              used_utility_average = tuple([utility_estimates_averaged[i] for i in permutation])
               for player in range(self._num_players):
-                if np.isnan(meta_games[player][used_tuple]):
-                  meta_games[player][used_tuple] = 0.0
-                meta_games[player][used_tuple] += utility_estimates[
-                    permutation[player]] / len(player_permutations)
+                meta_games[player][used_tuple] = used_utility_average[player]
+
           else:
             import time
             prev = time.time()
-            utility_estimates = self.sample_episodes(estimated_policies,
+            utility_estimates, _, _, _ = self.sample_episodes(estimated_policies,
                                                      self._sims_per_entry)
             print("Current player {} and current strategies {} took {} seconds to finish estimate".format(current_player, tuple(used_index), round(time.time() - prev, 2)))
             # print('Utility estimates: ', utility_estimates)
