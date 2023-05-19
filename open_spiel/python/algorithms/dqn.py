@@ -53,7 +53,7 @@ class DQN(rl_agent.AbstractAgent):
                batch_size=128,
                replay_buffer_class=ReplayBuffer,
                learning_rate=0.01,
-               update_target_network_every=1000,
+               update_target_network_every=1,
                learn_every=10,
                discount_factor=.99,
                min_buffer_size_to_learn=1000,
