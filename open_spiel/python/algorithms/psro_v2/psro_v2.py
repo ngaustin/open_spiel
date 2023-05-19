@@ -177,10 +177,28 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
         **kwargs)
 
   def _initialize_policy(self, initial_policies):
-    self._policies = [[] for k in range(self._num_players)]
-    self._new_policies = [([initial_policies[k]] if initial_policies else
-                           [policy.UniformRandomPolicy(self._game)])
-                          for k in range(self._num_players)]
+    if self.symmetric_game:
+      self._policies = [[]]
+      # Notice that the following line returns N references to the same policy
+      # This might not be correct for certain applications.
+      # E.g., a DQN BR oracle with player_id information
+      self._new_policies = [
+          (
+              [initial_policies[0]]
+              if initial_policies
+              else [policy.UniformRandomPolicy(self._game)]
+          )
+      ]
+    else:
+      self._policies = [[] for _ in range(self._num_players)]
+      self._new_policies = [
+          (
+              [initial_policies[k]]
+              if initial_policies
+              else [policy.UniformRandomPolicy(self._game)]
+          )
+          for k in range(self._num_players)
+      ]
 
   def _initialize_game_state(self):
     effective_payoff_size = self._game_num_players
@@ -218,6 +236,9 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
     meta-probabilities.
     """
     if self.symmetric_game:
+      # Notice that the following line returns N references to the same policy
+      # This might not be correct for certain applications.
+      # E.g., a DQN BR oracle with player_id information
       self._policies = self._policies * self._game_num_players
     
     if self.consensus_imitation:
@@ -379,6 +400,9 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
         training_parameters[current_player].append(new_parameter)
 
     if self.symmetric_game:
+      # Notice that the following line returns N references to the same policy
+      # This might not be correct for certain applications.
+      # E.g., a DQN BR oracle with player_id information
       self._policies = self._game_num_players * self._policies
       self._num_players = self._game_num_players
       training_parameters = [training_parameters[0]]  # if it is symmetric only keep one of the training parameters (corresponds to one player)
@@ -411,13 +435,13 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
       np.random.seed(seed=seed)
     assert self._oracle is not None
 
-    if self.consensus_imitation:
-      self._oracle.clear_empirical_game_trajectories()
-
     if self.symmetric_game:
       # Switch to considering the game as a symmetric game where players have
       # the same policies & new policies. This allows the empirical gamestate
       # update to function normally.
+      # Notice that the following line returns N references to the same policy
+      # This might not be correct for certain applications.
+      # E.g., a DQN BR oracle with player_id information
       self._policies = self._game_num_players * self._policies
       self._new_policies = self._game_num_players * self._new_policies
       self._num_players = self._game_num_players
@@ -477,7 +501,6 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
           ]
 
           if self.symmetric_game:
-
             # TODO: Adapt this so that we get trajectories from updating the empirical gamestate
             import time
             prev = time.time()
@@ -543,6 +566,9 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
     policies = self._policies
     if self.symmetric_game:
       # For compatibility reasons, return list of expected length.
+      # Notice that the following line returns N references to the same policy
+      # This might not be correct for certain applications.
+      # E.g., a DQN BR oracle with player_id information
       policies = self._game_num_players * self._policies
     return policies
 

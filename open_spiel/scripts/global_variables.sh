@@ -83,8 +83,12 @@ export OPEN_SPIEL_BUILD_WITH_LIBTORCH="${OPEN_SPIEL_BUILD_WITH_LIBTORCH:-"OFF"}"
 # CUDA 10.2  https://download.pytorch.org/libtorch/cu102/libtorch-cxx11-abi-shared-with-deps-1.5.1.zip
 #
 # For C++ Libtorch AlphaZero on macOS we recommend this URL:
-# https://download.pytorch.org/libtorch/cpu/libtorch-macos-1.8.0.zip
-export OPEN_SPIEL_BUILD_WITH_LIBTORCH_DOWNLOAD_URL="${OPEN_SPIEL_BUILD_WITH_LIBTORCH_DOWNLOAD_URL:-"https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-1.5.1%2Bcpu.zip"}"
+# https://download.pytorch.org/libtorch/cpu/libtorch-macos-1.10.1.zip
+#
+# Note: there are currently known problems with the C++ PyTorch: inteferences
+# with pybind11 versions. Until it is properly fixed, there is a workaround:
+# https://github.com/deepmind/open_spiel/issues/966#issuecomment-1322982393
+export OPEN_SPIEL_BUILD_WITH_LIBTORCH_DOWNLOAD_URL="${OPEN_SPIEL_BUILD_WITH_LIBTORCH_DOWNLOAD_URL:-"https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-1.10.1%2Bcpu.zip"}"
 
 # TensorflowCC is a CMake interface to the Tensorflow C++ API. It is used in
 # C++ AlphaZero. See: https://github.com/deepmind/open_spiel/blob/master/docs/alpha_zero.md
@@ -99,10 +103,10 @@ export OPEN_SPIEL_BUILD_WITH_GAMUT="${OPEN_SPIEL_BUILD_WITH_GAMUT:-"OFF"}"
 # See algorithms/ortools/CMakeLists.txt for specific instructions.
 export OPEN_SPIEL_BUILD_WITH_ORTOOLS="${OPEN_SPIEL_BUILD_WITH_ORTOOLS:-"OFF"}"
 # You may want to replace this URL according to your system.
-# Use version 9.2 at minimum, due to compatibility between absl library versions
+# Use version 9.6 at minimum, due to compatibility between absl library versions
 # used in OpenSpiel and in OrTools.
 # Other links to archives found here: https://developers.google.com/optimization/install/cpp/linux
-export OPEN_SPIEL_BUILD_WITH_ORTOOLS_DOWNLOAD_URL="${OPEN_SPIEL_BUILD_WITH_ORTOOLS_DOWNLOAD_URL:-"https://github.com/google/or-tools/releases/download/v9.2/or-tools_amd64_ubuntu-21.10_v9.2.9972.tar.gz"}"
+export OPEN_SPIEL_BUILD_WITH_ORTOOLS_DOWNLOAD_URL="${OPEN_SPIEL_BUILD_WITH_ORTOOLS_DOWNLOAD_URL:-"https://github.com/google/or-tools/releases/download/v9.6/or-tools_amd64_ubuntu-22.04_cpp_v9.6.2534.tar.gz"}"
 # Used to determine whether to include the Python ML frameworks in the tests.
 # A value of AUTO runs the appropriate find_X script in open_spiel/scripts to check what is installed.
 # To override automatic detection, set to either ON or OFF.

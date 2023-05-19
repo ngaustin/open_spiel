@@ -38,6 +38,7 @@ open_spiel/games/bridge/double_dummy_solver/
 open_spiel/games/universal_poker/double_dummy_solver/
 open_spiel/games/hanabi/hanabi-learning-environment/
 open_spiel/pybind11_abseil
+/open_spiel/pybind11_abseil/
 pybind11/
 
 
@@ -64,3 +65,4 @@ open_spiel/cmake-build-debug/
 Package.resolved
 # Visual Studio generated files
 open_spiel/.vs
+/.env
