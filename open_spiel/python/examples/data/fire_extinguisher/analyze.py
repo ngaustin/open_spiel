@@ -5,14 +5,11 @@ from absl import app
 from absl import flags
 import os
 
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 FLAGS = flags.FLAGS
+
+# NOTE: File is designed to analyze one game at a time.
 
 # For the simple one state game:
 #    - Policies and meta probabilities for each step
@@ -61,13 +58,17 @@ def main(argv):
   if len(argv) > 1:
     raise app.UsageError("Too many command-line arguments.")
 
-  data_directory_paths = ["open_spiel/python/examples/data/fire_extinguisher/sample_data/"]
-  iterations = 5
+  data_directory_paths = ["open_spiel/python/examples/data/fire_extinguisher/game_data/"]
+  iterations = len(os.listdir(data_directory_paths[0]))
   num_players = 2
   corresponding_dictionaries = []
   name_of_method = ["Fire Extinguisher"]
   save_graph_path = "open_spiel/python/examples/data/fire_extinguisher/output_plots/"
-
+  graphPathExists = os.path.exists(save_graph_path)
+  if not graphPathExists:
+    # Create directory
+    os.makedirs(save_graph_path)
+    print("Graph directory created.")
 
   def get_data(folder_path):
     """
@@ -91,6 +92,7 @@ def main(argv):
       # save_folder_path + specific_string.format(i)
       save_data_path = [file for file in all_files if "iteration_{}".format(i) in file][0]
       save_data_path = folder_path + save_data_path
+      print("Save_data_path", save_data_path)
       with open(save_data_path, "rb") as npy_file:
           array_list = np.load(npy_file, allow_pickle=True)
       meta_probabilities, utilities = array_list
@@ -100,7 +102,6 @@ def main(argv):
       list_of_meta_probabilities = [meta_probabilities[i] for i in range(meta_probabilities.shape[0])]
       for num_player in range(len(expected_payoff_individual_players)):
         player_profile_history[num_player].append(list_of_meta_probabilities[num_player])
-        max_utility_curr_iter = np.max(utilities[num_player])
         expected_payoff_vector = _partial_multi_dot(utilities[num_player], list_of_meta_probabilities, num_player)
         print("Expected payoff individual {}: ".format(num_player), expected_payoff_vector)
         player_profile = list_of_meta_probabilities[num_player]
@@ -129,8 +130,7 @@ def main(argv):
           print("Previous expected payoff: ", expected_payoff_individual_players[num_player][i - 1])
           regret_individuals[num_player].append(best_response_expected_payoff - expected_payoff_individual_players[num_player][i - 1])
         print("Individual regret vector: ", regret_individuals)
-        max_expected_payoff = np.max(expected_payoff_vector)
-        #Gap gap for readability
+        #Gap for readability
         print()
 
       social_welfare = np.sum(utilities, axis=0)
@@ -147,6 +147,7 @@ def main(argv):
         avg_regret_iter += regret_individuals[num_player][i]
       average_regret.append(avg_regret_iter / num_players)
     print("Average regret: ", average_regret)
+    print("Max welfare:", max_social_welfare_over_iterations)
     return max_social_welfare_over_iterations, expected_payoff_individual_players, expected_welfare, regret_individuals
 
   #Data_directory_paths - in the current case, we only pull data from one directory but can be expanded to hold more.

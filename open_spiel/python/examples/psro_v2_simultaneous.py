@@ -26,6 +26,7 @@ The other parameters keeping their default values.
 """
 
 import time
+from datetime import datetime
 
 from absl import app
 from absl import flags
@@ -164,6 +165,22 @@ flags.DEFINE_integer("epsilon_decay_duration", 1000, "Number of steps for epsilo
 flags.DEFINE_integer("seed", 1, "Seed.")
 flags.DEFINE_bool("local_launch", False, "Launch locally or not.")
 flags.DEFINE_bool("verbose", True, "Enables verbose printing and profiling.")
+
+def save_iteration_data(iteration_number, meta_probabilities, U, save_folder_path):
+      """ How to save the iteration data? """
+      date_time_string = str(datetime.now())
+      date_time_string = date_time_string.replace(':', '_')
+      save_data_path = save_folder_path + date_time_string + "_" + "iteration_{}.npy".format(iteration_number)
+
+      all_meta_probabilities = np.vstack(meta_probabilities)
+      array_list = [all_meta_probabilities, np.stack(U, axis=0)]
+      print("ARR", array_list)
+      object_array_list = np.empty(2, object)
+      object_array_list[:] = array_list
+
+      with open(save_data_path, "wb") as npy_file:
+          np.save(npy_file, object_array_list)
+      return
 
 
 def init_pg_responder(sess, env):
@@ -482,7 +499,7 @@ def gpsro_looper(env, oracle, agents):
       # env.game.display_policies_in_context(policies)
 
       save_folder_path = FLAGS.save_folder_path if FLAGS.save_folder_path[-1] == "/" else FLAGS.save_folder_path + "/"
-      # env.game.save_iteration_data(gpsro_iteration, meta_probabilities, meta_game, policies, save_folder_path)
+      save_iteration_data(gpsro_iteration, meta_probabilities, meta_game, save_folder_path)
 
     # The following lines only work for sequential games for the moment.
     if env.game.get_type().dynamics == pyspiel.GameType.Dynamics.SEQUENTIAL:
