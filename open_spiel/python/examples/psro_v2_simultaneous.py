@@ -174,7 +174,6 @@ def save_iteration_data(iteration_number, meta_probabilities, U, save_folder_pat
 
       all_meta_probabilities = np.vstack(meta_probabilities)
       array_list = [all_meta_probabilities, np.stack(U, axis=0)]
-      print("ARR", array_list)
       object_array_list = np.empty(2, object)
       object_array_list[:] = array_list
 
