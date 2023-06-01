@@ -23,8 +23,6 @@ import numpy as np
 
 import pyspiel
 
-from datetime import datetime
-
 _NUM_PLAYERS = 2
 _DEFAULT_PARAMS = {"max_game_length": 40, "grid_size": 5}
 _MAX_GRID_SIZE = 8  # we do this to keep the rewards scaled the same way between different grid sizes
@@ -100,20 +98,20 @@ class SimpleFireExtinguisherGame(pyspiel.Game):
     # TODO: Implement this
     return
 
-  def save_iteration_data(self, iteration_number, meta_probabilities, U, policies, save_folder_path):
-      """ How to save the iteration data? """
-      date_time_string = str(datetime.now())
-      date_time_string = date_time_string.replace(':', '_')
-      save_data_path = save_folder_path + date_time_string + "_" + "iteration_{}.npy".format(iteration_number)
+  # def save_iteration_data(self, iteration_number, meta_probabilities, U, policies, save_folder_path):
+  #     """ How to save the iteration data? """
+  #     date_time_string = str(datetime.now())
+  #     date_time_string = date_time_string.replace(':', '_')
+  #     save_data_path = save_folder_path + date_time_string + "_" + "iteration_{}.npy".format(iteration_number)
 
-      all_meta_probabilities = np.vstack(meta_probabilities)
-      array_list = [all_meta_probabilities, np.stack(U, axis=0)]
-      object_array_list = np.empty(2, object)
-      object_array_list[:] = array_list
+  #     all_meta_probabilities = np.vstack(meta_probabilities)
+  #     array_list = [all_meta_probabilities, np.stack(U, axis=0)]
+  #     object_array_list = np.empty(2, object)
+  #     object_array_list[:] = array_list
 
-      with open(save_data_path, "wb") as npy_file:
-          np.save(npy_file, object_array_list)
-      return
+  #     with open(save_data_path, "wb") as npy_file:
+  #         np.save(npy_file, object_array_list)
+  #     return
 
   def max_welfare_for_trajectory(self):
       # Does not account for collisions...assumes best path has no chance of collision
