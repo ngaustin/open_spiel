@@ -326,7 +326,7 @@ std::string HarvestState::ObservationString(Player player) const {
   return dummy;
 }
 
-std::pair<int,int> HarvestState::getHorizontalDirections(std::pair<int,int> direction) const {
+std::pair<int,int> HarvestState::getHorizontalDirections(std::pair<int,int>& direction) const {
   std::pair<int,int> newDirection;
   if (direction.first == 0) {
     newDirection.first = 1;
@@ -518,14 +518,14 @@ void HarvestState::DoApplyActions(const std::vector<Action>& moves) {
       continue;
     }
 
-    std::pair<int, int> currLoc = agentLocations_[i];
-    std::pair<int, int> delta;
-    if (a == kLEFT || a == kRIGHT || a == kFORWARD || a ==kBACKWARD){
+    std::pair<int, int>* currLoc = &agentLocations_[i];
+    std::pair<int, int>* delta;
+    if (a <= 3){ // when <= 3, corresponds to attempted movement
       std::pair<int, int> direction = agentDirections_[i];
-      delta = changeInPosition_[direction][a];
+      delta = &changeInPosition_[direction][a];
         
     } else {
-      delta = std::make_pair(0, 0);
+      delta = &noMovementPair;
       if (a == kTURN_C) {
         agentDirections_[i] = cTransition_[agentDirections_[i]];
       } else {
@@ -542,13 +542,13 @@ void HarvestState::DoApplyActions(const std::vector<Action>& moves) {
     }
 
 
-    std::pair<int, int> intended_next_pos = std::make_pair(currLoc.first + delta.first, currLoc.second + delta.second);
+    std::pair<int, int> intended_next_pos = std::make_pair((*currLoc).first + (*delta).first, (*currLoc).second + (*delta).second);
     intended_next_pos.first = std::min(std::max(intended_next_pos.first, 0), x_max_);
     intended_next_pos.second = std::min(std::max(intended_next_pos.second, 0), y_max_);
     bool collideWall = grid_[intended_next_pos.first][intended_next_pos.second] == kwall;
 
     if (collideWall) {
-      intended_next_pos = currLoc; 
+      intended_next_pos = std::make_pair((*currLoc).first, (*currLoc).second); 
     }
 
     intendedPositions[i] = intended_next_pos;
@@ -559,8 +559,8 @@ void HarvestState::DoApplyActions(const std::vector<Action>& moves) {
   for (int i = 0; i < numPlayers; i++) {
     // TODO: Add conditional about lasered here?? 
     if (!agentLasered_[i]) {
-      std::pair<int, int> prevPosition = agentLocations_[i];
-      grid_[prevPosition.first][prevPosition.second] = kempty;
+      std::pair<int, int>* prevPosition = &agentLocations_[i];
+      grid_[(*prevPosition).first][(*prevPosition).second] = kempty;
     }
   }
 
@@ -581,16 +581,16 @@ void HarvestState::DoApplyActions(const std::vector<Action>& moves) {
     std::pair<int, int> pos = intendedPositions[i]; 
 
     SPIEL_CHECK_TRUE(countIntendedPositions[pos] >= 1);
-    bool collideAgentOtherWay = false; 
-    for (int j = 0; j < numPlayers; j++) {
-      if (i != j) {
-        if (pos.first == intendedPositions[j].first && pos.second == intendedPositions[j].second) {
-          collideAgentOtherWay = true;
-        }
-      }
-    }
+    //bool collideAgentOtherWay = false; 
+    //for (int j = 0; j < numPlayers; j++) {
+    //  if (i != j) {
+    //    if (pos.first == intendedPositions[j].first && pos.second == intendedPositions[j].second) {
+    //      collideAgentOtherWay = true;
+    //    }
+    //  }
+    //}
     bool collideAgent = countIntendedPositions[pos] > 1;
-    SPIEL_CHECK_TRUE(collideAgentOtherWay == collideAgent);
+    // SPIEL_CHECK_TRUE(collideAgentOtherWay == collideAgent);
 
     std::pair<int, int> prevPos = agentLocations_[i]; 
 
@@ -598,50 +598,6 @@ void HarvestState::DoApplyActions(const std::vector<Action>& moves) {
       if (grid_[pos.first][pos.second] == kapple) {
         rewards_[i] += appleReward;
       }
-
-      // TODO: Do sanity check here. Check that the observation move's intention when moving corresponds to the change that was made 
-      // Only check for left, right, forward, backward (the others with delta=0,0 are irrelevant)
-      /*
-      int a = moves[i];
-      if ((a == kLEFT || a == kRIGHT || a == kFORWARD) && !(prevPos.first == pos.first && prevPos.second == pos.second)) {
-        std::vector<std::vector<int>> obs = getAgentObservations(i);
-        int obsValue;
-        switch(a) {
-          case (kLEFT):
-            obsValue = obs[0][(viewWidth / 2) + 1];
-            break; 
-          case (kRIGHT):
-            obsValue = obs[0][(viewWidth / 2) - 1];
-            break; 
-          case (kFORWARD):
-            obsValue = obs[1][(viewWidth / 2)]; 
-            break; 
-          default:
-            assert(a == kBACKWARD);
-        }
-
-        int mapValue = grid_[pos.first][pos.second];
-
-        std::string printHere = "RIGHT BEFORE ASSERT";
-        std::cout << printHere << std::endl;
-
-        if (obsValue != mapValue) {
-          for (int k = 0; k < viewLength; k++) {
-            std::vector<int> row = obs[k];
-            std::cout << row << std::endl;
-          }
-          std::cout << agentDirections_[i] << std::endl;
-          for (int k = 0; k < x_max_; k++) {
-            std::vector<int> row = grid_[k];
-            std::cout << row << std::endl;
-          }
-          std::cout << prevPos << std::endl;
-          std::cout << pos << std::endl;
-          std::cout << a << std::endl;
-        }
-        assert(obsValue == mapValue);
-      } */
-
 
       grid_[pos.first][pos.second] = i; 
       agentLocations_[i] = pos;
@@ -660,8 +616,8 @@ void HarvestState::DoApplyActions(const std::vector<Action>& moves) {
       std::vector<int> validIndices({});
 
       for (int j=0; j < agentSpawnPoints_.size(); j++){
-        std::pair<int, int> currPair = agentSpawnPoints_[j];
-        if (grid_[currPair.first][currPair.second] == kempty) {
+        std::pair<int, int>* currPair = &agentSpawnPoints_[j];
+        if (grid_[(*currPair).first][(*currPair).second] == kempty) {
           validIndices.push_back(j);
         } 
       }
@@ -681,7 +637,7 @@ void HarvestState::DoApplyActions(const std::vector<Action>& moves) {
 
   // TODO: Update the agentLasered_ tracker
   for (int i = 0; i < numPlayers; i++) {
-    printOut = "directions: "; 
+    //printOut = "directions: "; 
     // std::cout << printOut << std::endl;
     // std::cout << agentDirections_[i] << std::endl;
     agentLasered_[i] = std::max(0, agentLasered_[i] - 1);
@@ -689,10 +645,10 @@ void HarvestState::DoApplyActions(const std::vector<Action>& moves) {
       SPIEL_CHECK_TRUE(grid_[agentLocations_[i].first][agentLocations_[i].second] != i);
     }
   } 
-  printOut = "Lasered: ";
+  //printOut = "Lasered: ";
   // std::cout << printOut << agentLasered_ << std::endl;
 
-  printOut = "Grid:";
+  //printOut = "Grid:";
   // std::cout << printOut << std::endl;
   // for (int i = 0; i < x_max_; i++) {
   //   std::cout << grid_[i] << std::endl;
@@ -706,12 +662,12 @@ void HarvestState::DoApplyActions(const std::vector<Action>& moves) {
   printOut = "Returns: ";
   // std::cout << printOut << returns_ << std::endl << std::endl;
 
-  for (int i =0; i < numPlayers; i++) {
-    std::pair<int,int> loc = agentLocations_[i];
-    if (!agentLasered_[i]) {
-      SPIEL_CHECK_TRUE(grid_[loc.first][loc.second] == i);
-    }
-  }
+  //for (int i =0; i < numPlayers; i++) {
+  //  std::pair<int,int> loc = agentLocations_[i];
+  //  if (!agentLasered_[i]) {
+  //    SPIEL_CHECK_TRUE(grid_[loc.first][loc.second] == i);
+  //  }
+  //}
 
   // spawn apples 
   SpawnApples();
@@ -758,18 +714,19 @@ std::vector<int> HarvestState::LaserAction(Player player) {
 
 void HarvestState::SpawnApples() {
   for (int i = 0; i < appleSpawnPoints_.size(); i++) {
-    std::pair<int, int> spawnPoint = appleSpawnPoints_[i];
-    int row = spawnPoint.first, col = spawnPoint.second;
+    std::pair<int, int>* spawnPoint = &appleSpawnPoints_[i];
+    int row = (*spawnPoint).first, col = (*spawnPoint).second;
 
     if (grid_[row][col] == kempty) {
       int numApples = 0;
 
       for (int l = 0; l < appleCheck.size(); l++) {
-        std::pair<int, int> place = appleCheck[l];
-        int j = place.first, k = place.second;
-        int checkRow = row + j, checkCol = col + k; 
-        if ((0 <= checkRow && checkRow < x_max_) && (0 <= checkCol && checkCol < y_max_)) {
-          if (grid_[checkRow][checkCol] == kapple) {
+        std::pair<int, int>* place = &appleCheck[l];
+        int j = (*place).first, k = (*place).second;
+        j = row + j;
+        k = col + k; 
+        if ((0 <= j && j < x_max_) && (0 <= k && k < y_max_)) {
+          if (grid_[j][k] == kapple) {
             numApples += 1;
           }
         }

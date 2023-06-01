@@ -339,8 +339,10 @@ class DQN(rl_agent.AbstractAgent):
     else:
 
       info_state = np.reshape(info_state, [1, -1])
+      start = time.time()
       q_values = self._session.run(
           self._q_values, feed_dict={self._info_state_ph: info_state})[0]
+      # print("DQN network action: ", time.time() - start)
       legal_q_values = q_values[legal_actions]
       
       action = legal_actions[np.argmax(legal_q_values)]
@@ -385,6 +387,7 @@ class DQN(rl_agent.AbstractAgent):
     are_final_steps = [t.is_final_step for t in transitions]
     legal_actions_mask = [t.legal_actions_mask for t in transitions]
 
+    start = time.time()
     loss, _ = self._session.run(
         [self._loss, self._learn_step],
         feed_dict={
@@ -395,6 +398,7 @@ class DQN(rl_agent.AbstractAgent):
             self._next_info_state_ph: next_info_states,
             self._legal_actions_mask_ph: legal_actions_mask,
         })
+    # print("DQN learn step: ", time.time() - start)
     return loss
 
   def _full_checkpoint_name(self, checkpoint_dir, name):

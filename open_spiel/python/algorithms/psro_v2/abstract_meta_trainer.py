@@ -90,7 +90,7 @@ def sample_episode(state, policies):
     outcomes, probs = zip(*state.chance_outcomes())
   else:
     player = state.current_player()
-    state_policy = policies[player](state)
+    state_policy = policies[player](state, player)
     outcomes, probs = zip(*state_policy.items())
 
   state.apply_action(utils.random_choice(outcomes, probs))
@@ -239,7 +239,7 @@ class AbstractMetaTrainer(object):
     for ep in range(num_episodes):
       rets, _, _ = sample_episode(self._game.new_initial_state(),
                                         policies)
-      print("Episode returns: ", rets)
+      # print("Episode returns: ", rets)
       totals += rets.reshape(-1)
       all_returns.append(rets.reshape(-1))
     

@@ -21,10 +21,13 @@ import numpy as np
 import tensorflow.compat.v1 as tf
 from itertools import product
 import random
+import time
 
 from open_spiel.python import rl_agent
 from open_spiel.python import simple_nets
 from open_spiel.python.utils.replay_buffer import ReplayBuffer
+from open_spiel.python.algorithms.psro_v2 import utils
+from open_spiel.python.algorithms.imitation_fine_tune import ImitationFineTune
 
 # Temporarily disable TF2 behavior until code is updated.
 tf.disable_v2_behavior()
@@ -47,7 +50,6 @@ ILLEGAL_ACTION_LOGITS_PENALTY = -1e9
 # To get different marginalized Q-value for each action, start at different points: 0, num_actions ** i, 2 * (num_actions ** i), 3 * (num_actions ** i) etc.
 
 # To calculate the Q value for a particular joint action, just take indices of all of the players and calculate the number in base num_actions
-
 
 class Imitation(rl_agent.AbstractAgent):
     """Conservative Q-Learning Agent implementation in TensorFlow.
@@ -94,6 +96,14 @@ class Imitation(rl_agent.AbstractAgent):
         self.eta = consensus_kwargs["eta"]# .05 
         self.beta = consensus_kwargs["beta"]# .5
 
+        # BELOW is for R-BVE finetuning 
+        self.max_buffer_size_fine_tune = consensus_kwargs["max_buffer_size_fine_tune"]
+        self.min_buffer_size_fine_tune = consensus_kwargs["min_buffer_size_fine_tune"]
+
+        self.actor_loss_list = []
+        self.value_loss_list = []
+        self.entropy_list = []
+
         # Look at above note about marginalizing Q-values for the joint action
         self.player_marginal_indices = [[[] for _ in range(num_actions)] for _ in range(num_players)]  # action index -> list of indices for marginalization
         self.joint_index_to_joint_actions ={}  # maps joint_action_index -> all players' marginalized actions
@@ -130,6 +140,7 @@ class Imitation(rl_agent.AbstractAgent):
         # self._policy_variables = self.policy_net.variables[:] 
         self._q_variables = self._q_network.variables[:]
         self._target_q_variables = self._target_q_network.variables[:]
+        self.trained_once = False
         
         # Create placeholders
         self._info_state_ph = tf.placeholder(
@@ -187,9 +198,26 @@ class Imitation(rl_agent.AbstractAgent):
         ####### CQL/Double-CQL End #######
 
         ####### R-BVE/SARSA Start ########
+        self._fine_tune_mode_ph = tf.placeholder(
+            shape=(),
+            dtype=tf.bool,
+            name="fine_tune_mode_ph")
+        
+        self._fine_tune_steps = 0
+        self._fine_tune_learn_steps = 0
+        
         next_a_q =  tf.gather(tf.stop_gradient(self._target_q_values), self._next_action_ph, axis=1, batch_dims=1)
 
-        target = tf.reshape(self._reward_ph, [-1, 1]) + (1 - tf.reshape(self._is_final_step_ph, [-1, 1])) * self.discount_factor * next_a_q
+        # Double Q for fine-tuning
+        next_q_double = self._q_network(self._next_info_state_ph)
+        max_next_a = tf.math.argmax((tf.math.add(tf.stop_gradient(next_q_double), illegal_logits)), axis=-1)
+        max_next_q = tf.stop_gradient(tf.gather(self._target_q_values, max_next_a, axis=1, batch_dims=1))
+
+        next_a_q = tf.cond(self._fine_tune_mode_ph, 
+                            lambda: max_next_q, 
+                            lambda: next_a_q)
+
+        target = tf.reshape(self._reward_ph, [-1, 1]) + (1 - tf.reshape(self._is_final_step_ph, [-1, 1])) * self.discount_factor * tf.reshape(next_a_q, [-1, 1])
         ######## R-BVE/SARSA End #########
 
         target = tf.reshape(target, [-1, 1])
@@ -209,7 +237,6 @@ class Imitation(rl_agent.AbstractAgent):
         
         ##### R-BVE Regularization Start ######
         print("Start: ", self._q_values.get_shape(), predictions.get_shape())
-        # TODO: BUG. Need to detach predictions?
         minimize_q_function = self._q_values - predictions + self.eta  # [?, num_actions] - [?, 1] + scalar
         
         # Create a mask of ones 
@@ -237,12 +264,25 @@ class Imitation(rl_agent.AbstractAgent):
         self._bellman_loss = tf.reduce_mean(loss_class(labels=target, predictions=predictions))
 
         # NOTE: CQL multiples self._bellman_loss by .5
-        self._q_loss = self._bellman_loss + self.alpha * tf.reduce_mean(minimize_q_function - maximize_q_function)
+        self._q_loss = self._bellman_loss + tf.cond(self._fine_tune_mode_ph, lambda: 0.0, lambda: (self.alpha * tf.reduce_mean(minimize_q_function - maximize_q_function)))
 
         self._q_optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
+
         self._q_learn_step = self._q_optimizer.minimize(self._q_loss)
 
         self.running_not_seen_steps = 0
+
+        self._fine_tune_mode = False 
+
+        # Change step to query the policy network instead of the q network
+        # Change initialize method to include the new networks and the new optimizers
+
+        self._fine_tune_module = ImitationFineTune(self._q_network,
+                 player_id,
+                 consensus_kwargs,
+                 num_actions, 
+                 state_representation_size, 
+                 num_players)
 
         self._initialize()
 
@@ -283,6 +323,14 @@ class Imitation(rl_agent.AbstractAgent):
             indices = indices + diff
         return indices
 
+    def set_to_fine_tuning_mode(self):
+        self._replay_buffer.reset()
+        self._fine_tune_module.set_to_fine_tuning_mode()
+        self._fine_tune_mode = True
+    
+    def get_epsilon_fine_tune(self):
+        return max(.01, .2 - ((.2 - .01) * self._fine_tune_steps / 500000))
+
 
     def step(self, time_step, is_evaluation=False, add_transition_record=True):
         """Returns the action to be taken and updates the Q-network if needed.
@@ -295,6 +343,10 @@ class Imitation(rl_agent.AbstractAgent):
         Returns:
           A `rl_agent.StepOutput` containing the action probs and chosen action.
         """
+        if self._fine_tune_mode:
+            # Edge case: set the player_id for the fine tune mode to match this module 
+            self._fine_tune_module.player_id = self.player_id
+            return self._fine_tune_module.step(time_step, is_evaluation, add_transition_record)
 
         # Act step: don't act at terminal info states or if its not our turn.
         if (not time_step.last()) and (
@@ -312,19 +364,22 @@ class Imitation(rl_agent.AbstractAgent):
                 
             info_state = time_step.observations["info_state"][player]
             
-            with tf.device(self.device):
-                info_state = np.reshape(info_state, [1, -1])
+            # with tf.device(self.device):
+            info_state = np.reshape(info_state, [1, -1])
                 
 
             if self.joint_action:
-                with tf.device(self.device):
-                    if len(time_step.observations["global_state"] > 0):
-                        info_state =  np.reshape(time_step.observations["global_state"][0], [1, -1])
-                    else:
-                        info_state = np.reshape(np.concatenate(time_step.observations["info_state"]), [1, -1])
+                raise NotImplementedError 
+                """
+                # with tf.device(self.device):
+                if len(time_step.observations["global_state"]) > 0:
+                    info_state =  np.reshape(time_step.observations["global_state"][0], [1, -1])
+                else:
+                    info_state = np.reshape(np.concatenate(time_step.observations["info_state"]), [1, -1])
                 
-                
+                start = time.time()
                 joint_q_values = self.session.run(self._q_values, feed_dict={self._info_state_ph: info_state})[0]
+                # print("R-BVE network action: ", time.time() - start)
 
                 all_legal_actions = time_step.observations["legal_actions"]
                 for i in range(self._num_actions ** self.num_players):
@@ -346,29 +401,36 @@ class Imitation(rl_agent.AbstractAgent):
                 action = self.joint_index_to_joint_actions[np.argmax(joint_q_values)][player]
                 # print("Joint state has been seen: ", ''.join(map(str, time_step.observations["global_state"][0][:])) in self._seen_observations, "  Action outputted: ", action)
                 probs[action] = 1.0
-            else:
-                q_values = self.session.run(self._q_values, feed_dict={self._info_state_ph: info_state})[0]
-                # print("Q values for player {}".format(player), q_values)
-
-                legal_actions = time_step.observations["legal_actions"][player]
-
-                legal_q_values = q_values[legal_actions]
-                """                
-                centered_q = legal_q_values - np.mean(legal_q_values)
-                probs = np.exp(100 * legal_q_values) / np.sum(np.exp(100 * legal_q_values))
-                if not np.any(np.isnan(probs)):
-                    action = utils.random_choice(legal_actions, probs)
-                else:
                 """
-                action = legal_actions[np.argmax(legal_q_values)]
+            else:
                 probs = np.zeros(self._num_actions)
-                probs[action] = 1.0
+                legal_actions = time_step.observations["legal_actions"][player]
+                """
+                if not is_evaluation and np.random.rand() < self.get_epsilon_fine_tune: 
+                    # action = np.random.choice(legal_actions)
+                    probs[legal_actions] = 1.0 / len(legal_actions)
+                    action = utils.random_choice(list(range(self._num_actions)), probs)
+                else:
+                    q_values = self.session.run(self._q_values, feed_dict={self._info_state_ph: info_state})[0]
+                    # print("Q values for player {}".format(player), q_values)
 
+
+                    legal_q_values = q_values[legal_actions]
+
+                    # action_probs = np.exp(legal_q_values) / np.sum(np.exp(legal_q_values))
+                    # action = utils.random_choice(legal_actions, action_probs)
+
+                    action = legal_actions[np.argmax(legal_q_values)]
+                    probs[action] = 1.0
+                """ 
+                q_values = self.session.run(self._q_values, feed_dict={self._info_state_ph: info_state})[0]
+                legal_q_values = q_values[legal_actions]
+                action = legal_actions[np.argmax(legal_q_values)]
+
+                probs[action] = 1.0
             # TODO: Remove this. THis is for experiment 
             # if is_evaluation:
             #     self.states_seen_in_evaluation.append(''.join(map(str, time_step.observations["info_state"][self.player_id])))
-
-            return rl_agent.StepOutput(action, probs)
         else:
             action = None
             probs = []
@@ -386,7 +448,6 @@ class Imitation(rl_agent.AbstractAgent):
             *[var.initializer for var in self._q_optimizer.variables()])
         initialization_q_target_weights = tf.group(
             *[var.initializer for var in self._target_q_variables])
-        
     
         # initialization_weights,
         # initialization_opt,
@@ -394,7 +455,7 @@ class Imitation(rl_agent.AbstractAgent):
             tf.group(*[
                 initialization_q_weights, 
                 initialization_q_opt,
-                initialization_q_target_weights
+                initialization_q_target_weights,
             ]))
     
     def logits_to_action(self, logits):
@@ -407,8 +468,55 @@ class Imitation(rl_agent.AbstractAgent):
         action = np.random.choice(self._num_actions, p=action_probs)
         return action, action_probs
 
+    def cumsum(self, x, discount):
+        vals = [None for _ in range(len(x))]
+        curr = 0 
+        for i in range(len(x) - 1, -1, -1):
+            vals[i] = curr = x[i] + discount  * curr
+        return vals
 
-    def add_transition(self, prev_time_step, prev_action, time_step, action, ret):
+    def add_trajectory(self, trajectory, action_trajectory, override_symmetric=False):
+        if self._fine_tune_mode: 
+            self._fine_tune_module.add_trajectory(trajectory, action_trajectory, override_symmetric)
+            return 
+
+        rewards_to_go = [np.zeros(self.num_players) for _ in range(len(trajectory) - 1)]
+
+        for p in range(self.num_players):
+            rewards = np.reshape(np.array([timestep.rewards[p] for timestep in trajectory[1:]]), (-1, 1))
+            curr_rewards = self.cumsum(rewards, self.discount_factor)
+            assert len(rewards_to_go) == len(curr_rewards)
+            for i, val in enumerate(rewards_to_go):
+                val[p] = curr_rewards[i]
+
+        for i in range(len(trajectory) - 1):
+            if trajectory[i].is_simultaneous_move():
+                # NOTE: If is_symmetric, then add_transition will add observations/actions from BOTH players already
+                # NOTE: Also insert action_trajectory[i+1]. If it is the last i, then we let action be 0 because it won't be used anyway
+                next_action = action_trajectory[i+1] if (i+1) < len(action_trajectory) else [0 for _ in range(self.num_players)] 
+                self.add_transition(trajectory[i], action_trajectory[i], trajectory[i+1], next_action, ret=rewards_to_go[i], override_symmetric=override_symmetric) 
+            elif player == trajectory[i].observations["current_player"]:
+
+                # TODO: Figure out this later...
+
+                # Individual player's move 
+                action = [0 for _ in range(self.num_players)]
+                next_action = [0 for _ in range(self.num_players)]
+                
+                action[player] = action_trajectory[i][0]
+                
+                # Simply indexing i+1 is incorrect. No guarantees it is this player's move or the final 
+                next_player_timestep_index = None
+                for j in range(i+1, len(trajectory)):
+                    if trajectory[j].observations["current_player"] == player or trajectory[j].last():
+                        next_player_timestep_index = j 
+                        break 
+                if next_player_timestep_index:
+                    next_action[player] = action_trajectory[next_player_timestep_index][0] if next_player_timestep_index < len(action_trajectory) else 0
+
+                    curr_policy.add_transition(trajectory[i], action, trajectory[next_player_timestep_index], next_action, ret=rewards_to_go[i], override_symmetric=override_symmetric) 
+            
+    def add_transition(self, prev_time_step, prev_action, time_step, action, ret, override_symmetric=False):
         """Adds the new transition using `time_step` to the replay buffer.
 
         Adds the transition from `self._prev_timestep` to `time_step` by
@@ -419,7 +527,7 @@ class Imitation(rl_agent.AbstractAgent):
           prev_action: int, action taken at `prev_time_step`.
           time_step: current ts, an instance of rl_environment.TimeStep.
         """
-        player_list = [i for i in range(self.num_players)] if self.symmetric else [self.player_id]
+        player_list = [i for i in range(self.num_players)] if self.symmetric and not override_symmetric else [self.player_id]
 
         if self.joint_action: 
             o = prev_time_step.observations["global_state"][0][:] if len(prev_time_step.observations["global_state"]) > 0 else np.concatenate(prev_time_step.observations["info_state"])
@@ -455,6 +563,8 @@ class Imitation(rl_agent.AbstractAgent):
             for p in player_list:
                 o = prev_time_step.observations["info_state"][p][:]
 
+                assert not self.rewards_joint  # because gae is not valid
+
                 r = sum(time_step.rewards) if self.rewards_joint else time_step.rewards[p] # WELFARE
                 rewards_to_go = sum(ret) if self.rewards_joint else ret[p]
 
@@ -465,17 +575,8 @@ class Imitation(rl_agent.AbstractAgent):
                 # Since the step() function assumes by symmetry that observations come from player0, we need to make sure that all 
                 # transitions are from player0's perspective, meaning the action applied to the observed player's observation must come first
 
-                if p == 0: 
-                    a = prev_action 
-                    next_a = action 
-                elif p == 1:
-                    a = (prev_action[1], prev_action[0])
-                    next_a = (action[1], action[0])
-                else:
-                    raise NotImplemented
-
-                store_action = a if self.joint_action else a[0]
-                store_next_action = next_a if self.joint_action else next_a[0]
+                store_action = prev_action[p] if not isinstance(prev_action, int) else prev_action 
+                store_next_action = action[p] if not isinstance(action, int) else action
 
                 legal_actions = (time_step.observations["legal_actions"][p])
                 legal_actions_mask = np.zeros(self._num_actions)
@@ -490,7 +591,7 @@ class Imitation(rl_agent.AbstractAgent):
                     next_action = store_next_action,
                     is_final_step=float(time_step.last()),
                     legal_actions_mask=legal_actions_mask,
-                    rewards_to_go=rewards_to_go
+                    rewards_to_go=rewards_to_go, 
                 )
 
                 self._replay_buffer.add(transition)
@@ -505,14 +606,16 @@ class Imitation(rl_agent.AbstractAgent):
         Returns:
           The average loss obtaine d on this batch of transitions or `None`.
         """
+        assert not self._fine_tune_mode
+        loss = 0
         length = len(self._replay_buffer)
         dataset = self._replay_buffer.sample(length)  # samples without replacement so take the entire thing. Random order
         indices = list(range(length))
 
-        rtg_all = np.array([transition.rewards_to_go for transition in dataset])
-        rtg_mean = np.mean(rtg_all)
-        rtg_std = np.std(rtg_all)
-        normalize_rtg = (rtg_all - rtg_mean) / rtg_std
+        # rtg_all = np.array([transition.rewards_to_go for transition in dataset])
+        # rtg_mean = np.mean(rtg_all)
+        # rtg_std = np.std(rtg_all)
+        # normalize_rtg = (rtg_all - rtg_mean) / rtg_std
         # rtg_shift = min(normalize_rtg)  # subtract this value to get our target
 
         obs_to_actions = {}
@@ -526,23 +629,24 @@ class Imitation(rl_agent.AbstractAgent):
         # Train Q-values
         value_steps_total = 0 
         epoch = 0
-        while value_steps_total < self.training_steps:
+        while value_steps_total < (self.training_steps): # if not self._fine_tuning_mode else self.training_steps / 5):
             epoch += 1
             i, batch, bellman_loss_total, loss_total = 0, 0, 0, 0
             dataset = random.sample(dataset, len(dataset))
             while i < length:
                 transitions = dataset[i: min(length, i+self.batch)] 
                 
-                with tf.device(self.device):
-                    info_states = [t.info_state for t in transitions]
-                    actions = [[t.action] for t in transitions]
-                    rewards = [t.reward for t in transitions]
-                    next_info_states = [t.next_info_state for t in transitions]
-                    next_actions = [[t.next_action] for t in transitions]
-                    done = [t.is_final_step for t in transitions]
-                    legal_actions_mask = [t.legal_actions_mask for t in transitions]
-                    rewards_to_go = [((t.rewards_to_go - rtg_mean) / rtg_std) for t in transitions] # - rtg_shift for t in transitions] [t.rewards_to_go for t in transitions] #
+                # with tf.device(self.device):
+                info_states = [t.info_state for t in transitions]
+                actions = [[t.action] for t in transitions]
+                rewards = [t.reward for t in transitions]
+                next_info_states = [t.next_info_state for t in transitions]
+                next_actions = [[t.next_action] for t in transitions]
+                done = [t.is_final_step for t in transitions]
+                legal_actions_mask = [t.legal_actions_mask for t in transitions]
+                rewards_to_go = [t.rewards_to_go for t in transitions] # [((t.rewards_to_go - rtg_mean) / rtg_std) for t in transitions] # - rtg_shift for t in transitions] [t.rewards_to_go for t in transitions] #
 
+                start = time.time()
                 loss, bellman_loss, _, q_values = self.session.run(
                     [self._q_loss, self._bellman_loss, self._q_learn_step, self._q_values],
                     feed_dict={
@@ -553,8 +657,10 @@ class Imitation(rl_agent.AbstractAgent):
                         self._next_action_ph: next_actions,
                         self._is_final_step_ph: done, 
                         self._legal_actions_mask_ph: legal_actions_mask,
-                        self._rewards_to_go_ph: rewards_to_go
+                        self._rewards_to_go_ph: rewards_to_go,
+                        self._fine_tune_mode_ph: False
                     })
+                # print("R-BVE learn time: ", time.time() - start)
                 # print("Example check: ", obs_to_actions[''.join(map(str, info_states[0]))], q_values[0])
 
                 value_steps_total += 1
@@ -566,7 +672,7 @@ class Imitation(rl_agent.AbstractAgent):
                 if value_steps_total % self.update_target_network_every == 0 and value_steps_total != 0:
                     self.session.run(self._update_target_network)
 
-            if epoch % 20 == 0:
+            if epoch % 20 == 0 and batch > 0:
                 print("Epoch {} had average loss of {} and bellman loss of {} for value training of {} total steps".format(epoch, loss_total / float(batch), bellman_loss_total / float(batch), value_steps_total))
         
         return loss 

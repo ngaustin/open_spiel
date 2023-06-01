@@ -280,7 +280,9 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
       delta_now = delta / iterations_left 
 
       self.regret_lambda -= delta_now
-      print("NEW LAMBDA", self.regret_lambda)
+    else:
+      self.regret_lambda = 1e-3
+    print("NEW LAMBDA", self.regret_lambda)
   
   def update_explore_threshold(self, final_explore, iterations_left):
     if iterations_left > 0:
