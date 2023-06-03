@@ -107,7 +107,8 @@ flags.DEFINE_integer("min_buffer_size_fine_tune", 50000, "Minimum number of entr
 flags.DEFINE_bool("fine_tune", False, "Determines whether to fine tune the consensus policy")
 flags.DEFINE_bool("clear_trajectories", False, "Determines whether to clear the trajectory list after every iteration of PSRO")
 flags.DEFINE_float("psi", 1.0, "How much probability fine tune in joint space")
-flags.DEFINE_flat("eps_clip", .2, "PPO epsilon boundary clip")
+flags.DEFINE_float("eps_clip", .2, "PPO epsilon boundary clip")
+flags.DEFINE_float("ppo_entropy", .01, "PPO entropy regularization")
 
 # RRD and MSS 
 flags.DEFINE_float("regret_lambda_init", .7, "Lambda threshold for RRD initially")
@@ -308,6 +309,7 @@ def init_dqn_responder(sess, env):
     "clear_trajectories": FLAGS.clear_trajectories,
     "psi": FLAGS.psi,
     "eps_clip": FLAGS.eps_clip,
+    "ppo_entropy_regularization": FLAGS.ppo_entropy,
   }
 
   print("Agent Arguments: ")
@@ -543,7 +545,7 @@ def main(argv):
   if FLAGS.game_name=="harvest":
     game = pyspiel.load_game(FLAGS.game_name, {"rng_seed": FLAGS.seed})
   elif FLAGS.game_name=="bargaining":
-    game = pyspiel.load_game(FLAGS.game_name, {"discount": .95})
+    game = pyspiel.load_game(FLAGS.game_name, {"discount": 1.0})
   else:
     game = pyspiel.load_game(FLAGS.game_name)  # The iterated prisoners dilemma does not have "players" info type
 

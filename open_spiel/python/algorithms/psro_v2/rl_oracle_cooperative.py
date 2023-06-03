@@ -38,6 +38,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         """
         # TODO: add the number of simulations to take here
         self._env = env
+        self._is_turn_based = env.is_turn_based
 
         self._best_response_class = best_response_class
         self._best_response_kwargs = best_response_kwargs
@@ -58,6 +59,8 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         self._consensus_kwargs = consensus_kwargs
         self._fine_tune_bool = consensus_kwargs["fine_tune"]
         self._psi = consensus_kwargs["psi"]
+
+        # TODO: psi steps? 
 
         self._high_return_trajectories = []  # list of lists of trajectories
         self._high_return_actions = []
@@ -118,6 +121,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             new_policies = self.tune_consensus_policies(new_policies, is_symmetric, self._high_return_trajectories, self._high_return_actions)
             print("Finished offline training after {} seconds.".format(time.time() - start))
 
+            self._number_training_steps = 15000000
             if self._consensus_kwargs["clear_trajectories"]:
                 print("Clearing trajectories from previous iteration. ")
                 self._high_return_trajectories = []  # list of lists of trajectories
@@ -158,14 +162,14 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                 assert len(agents) == 1
                 agents = agents * self.num_players 
 
-                joint_wrapper_instance = joint_wrapper.JointWrapper(agents, symmetric=is_symmetric, discount=self._consensus_kwargs["discount"])
+                joint_wrapper_instance = joint_wrapper.JointWrapper(agents, symmetric=is_symmetric, discount=self._consensus_kwargs["discount"], turn_based=self._is_turn_based)
                 time_step = self._env.reset()
                 returns = 0.0 
                 steps = 0
                 trajectory = [time_step]
                 actions = []
                 while not time_step.last():
-                    if time_step.is_simultaneous_move():
+                    if not self._is_turn_based:
                         action_list = joint_wrapper_instance.step(time_step, is_evaluation=False)
                         time_step = self._env.step(action_list)
                         returns += np.array(time_step.rewards)
@@ -235,79 +239,6 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         # If a dummy is passed in for "policy," a new policy is created and not copied. Assumed that we create one
         # for every player
 
-        """
-        print("Creating Consensus Policies: ")
-        consensus_policies = self.create_consensus_policies(training_parameters)
-        self.update_trajectories(training_parameters, rollout_trajectories, rollout_actions, rollout_returns)
-
-        print("Training consensus policies on offline data from BR and previous joint simulations: ")
-        start = time.time()
-        consensus_policies = self.tune_consensus_policies(consensus_policies, rollout_trajectories, self._high_return_trajectories, self._high_return_actions)
-        print("Finished offline training after {} seconds.".format(time.time() - start))
-        
-        
-
-        # TODO: Create a training loop to fine tune the consensus policies using online IQL 
-        if self._consensus_kwargs["fine_tune"]:
-            print("Fine tuning the consensus policies using IQL: ")
-            past_returns = []
-            start = time.time()
-            new_rollout_trajectories, new_rollout_actions, new_returns, new_returns_for_tracking = [], [], [], []
-
-            agents = [consensus_policies[i][0] for i in range(len(consensus_policies))]
-            symmetric = len(agents) == 1
-            if symmetric: # symmetric
-                agents = agents * self.num_players 
-            joint_wrapper_instance = joint_wrapper.JointWrapper(agents, symmetric=symmetric, discount=self._consensus_kwargs["discount"])
-
-            start = time.time()
-            cutoff_returns = [self._high_returns[i][-1] if len(self._high_returns[i]) > 0 else -np.inf for i in range(self.num_players)]
-            for k in range(10000):
-                time_step = self._env.reset()
-                cumulative_rewards = 0.0 
-                steps = 0
-                episode_trajectory = [time_step]
-                action_trajectory = []
-                while not time_step.last():
-                    if time_step.is_simultaneous_move():
-                        action_list = joint_wrapper_instance.step(time_step, is_evaluation=False)
-                        time_step = self._env.step(action_list)
-                        cumulative_rewards += np.array(time_step.rewards)
-
-                        episode_trajectory.append(time_step)
-                        action_trajectory.append(action_list)
-                    else:
-                        raise NotImplementedError
-                
-                invalid_candidate = (cumulative_rewards[0] < cutoff_returns[0]) or (cumulative_rewards[1] < cutoff_returns[1]) if is_symmetric else (cumulative_rewards[0] < cutoff_returns[0]) and (cumulative_rewards[1] < cutoff_returns[1])
-
-                if not invalid_candidate:
-                    new_rollout_trajectories.append(episode_trajectory)
-                    new_rollout_actions.append(action_trajectory)
-                    new_returns.append(cumulative_rewards)
-                
-                new_returns_for_tracking.append(cumulative_rewards)
-
-                joint_wrapper_instance.step(time_step)
-                if k % 50 == 0:
-                    print("Iteration {} finished. Cumulative time: {} seconds ".format(k, time.time() - start))
-
-
-            print("Returns from fine tuning using R-BVE: ", new_returns_for_tracking)
-
-            new_rollout_trajectories, new_rollout_actions, new_returns = {(0, 0): new_rollout_trajectories}, {(0, 0): new_rollout_actions}, {(0, 0): new_returns}
-            self.update_trajectories(training_parameters, new_rollout_trajectories, new_rollout_actions, new_returns)
-            
-        if self._consensus_kwargs["clear_trajectories"]:
-            print("Clearing trajectories from previous iteration. ")
-            self._high_return_trajectories = []  # list of lists of trajectories
-            self._high_return_actions = []
-            self._high_returns = [[] for _ in range(self._env.num_players)]
-     
-
-        # After training, concatenate the best response and consensus policies together
-        new_policies_total = [new_policies[i] + consensus_policies[i] for i in range(len(new_policies))]
-        """ 
         # Freeze the new policies to keep their weights static. This allows us to
         # later not have to make the distinction between static and training
         # policies in training iterations.
@@ -329,10 +260,10 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             elif self._consensus_oracle == "q_learn":
                 curr._policy = imitation_q_learn.Imitation(**{"player_id": i, "consensus_kwargs": self._consensus_kwargs}, **new_arguments)
             elif self._consensus_oracle == "trajectory_deep":
-                new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"]}
+                new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based}
                 curr._policy = imitation_deep.Imitation(**{"player_id": i, "consensus_kwargs": self._consensus_kwargs}, **new_arguments)
             elif self._consensus_oracle == "cql_deep":
-                new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"]}
+                new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based}
                 curr._policy = imitation_q_learn_deep.Imitation(**{"player_id": i, "consensus_kwargs": self._consensus_kwargs}, **new_arguments)
             else:
                 raise NotImplementedError
@@ -436,44 +367,6 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             for trajectory, action_trajectory in zip(high_return_trajectories, high_return_actions):
                 # Calculate the discounted rewards to go for each and pass it in as well
                 curr_policy.add_trajectory(trajectory, action_trajectory)
-                """
-                rewards_to_go = [np.zeros(self.num_players) for _ in range(len(trajectory) - 1)]
-                curr_rtg = 0.0
-                for i in range(len(trajectory) - 1, 0, -1):
-                    curr_reward = np.array(trajectory[i].rewards)  # rewards for both players
-                    curr_rtg = curr_reward + self._consensus_kwargs["discount"] * curr_rtg
-                    rewards_to_go[i-1] = curr_rtg
-
-                for i in range(len(trajectory) - 1):
-                    # TODO: Need to account for simultaneous move vs player move here!!! 
-                    # If timestep is simultaneous move, then do original code
-                    # Otherwise, look at the player in the first for loop 
-                        # Only add the timestep to the curr_policy if the player is equal to the timestep's current player 
-                        # When adding the the action and next_action, create an array of length num_players and fill in the current player index with the action taken in the trajectory. This is for consistency with simultaneous games
-                    if trajectory[i].is_simultaneous_move():
-                        # NOTE: If is_symmetric, then add_transition will add observations/actions from BOTH players already
-
-                        # NOTE: Also insert action_trajectory[i+1]. If it is the last i, then we let action be 0 because it won't be used anyway
-                        next_action = action_trajectory[i+1] if (i+1) < len(action_trajectory) else [0 for _ in range(self.num_players)] 
-                        curr_policy.add_transition(trajectory[i], action_trajectory[i], trajectory[i+1], next_action, ret=rewards_to_go[i], override_symmetric=override_symmetric) 
-                    elif player == trajectory[i].observations["current_player"]:
-                        # Individual player's move 
-                        action = [0 for _ in range(self.num_players)]
-                        next_action = [0 for _ in range(self.num_players)]
-                        
-                        action[player] = action_trajectory[i][0]
-                        
-                        # Simply indexing i+1 is incorrect. No guarantees it is this player's move or the final 
-                        next_player_timestep_index = None
-                        for j in range(i+1, len(trajectory)):
-                            if trajectory[j].observations["current_player"] == player or trajectory[j].last():
-                                next_player_timestep_index = j 
-                                break 
-                        if next_player_timestep_index:
-                            next_action[player] = action_trajectory[next_player_timestep_index][0] if next_player_timestep_index < len(action_trajectory) else 0
-
-                            curr_policy.add_transition(trajectory[i], action, trajectory[next_player_timestep_index], next_action, ret=rewards_to_go[i], override_symmetric=override_symmetric) 
-                """
 
             print("Training Player {}'s consensus policy".format(player))
             curr_policy.learn()
@@ -495,7 +388,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         episode_trajectory = [time_step]
         episode_actions = []
         while not time_step.last():  # This is where the episode is rolled out
-            if time_step.is_simultaneous_move():
+            if not self._is_turn_based:
                 action_list = []
                 for i, agent in enumerate(agents):
                     # We update the player id here because of an issue with symmetric games. This ensures that the 

@@ -50,7 +50,8 @@ class Imitation(rl_agent.AbstractAgent):
                  consensus_kwargs, 
                  num_actions, 
                  state_representation_size,
-                 num_players):
+                 num_players, 
+                 turn_based):
         """Initialize the DQN agent."""
 
         # This call to locals() is used to store every argument used to initialize
@@ -58,6 +59,7 @@ class Imitation(rl_agent.AbstractAgent):
         self._kwargs = locals()
         self.session = consensus_kwargs["session"]
         self.device = consensus_kwargs["device"]
+        self._is_turn_based = turn_based
 
         self.player_id = player_id
         self.symmetric = consensus_kwargs["symmetric"]
@@ -146,7 +148,8 @@ class Imitation(rl_agent.AbstractAgent):
                  consensus_kwargs,
                  num_actions, 
                  state_representation_size, 
-                 num_players)
+                 num_players,
+                 self._is_turn_based)
 
 
         self._initialize()
@@ -264,6 +267,8 @@ class Imitation(rl_agent.AbstractAgent):
         return rl_agent.StepOutput(action=action, probs=probs)
     
     def add_trajectory(self, trajectory, action_trajectory, override_symmetric=False):
+        """Trajectory is a list of timesteps, Action_trajectory is a list of lists representing joint actions. If it is a single player playing an action, 
+            it will be a list of length 1 lists. """
         if self._fine_tune_mode:
             self._fine_tune_module.add_trajectory(trajectory, action_trajectory, override_symmetric)
             return 
@@ -276,13 +281,13 @@ class Imitation(rl_agent.AbstractAgent):
             rewards_to_go[i-1] = curr_rtg
 
         for i in range(len(trajectory) - 1):
-            if trajectory[i].is_simultaneous_move():
+            if not self._is_turn_based:
                 # NOTE: If is_symmetric, then add_transition will add observations/actions from BOTH players already
                 # NOTE: Also insert action_trajectory[i+1]. If it is the last i, then we let action be 0 because it won't be used anyway
                 next_action = action_trajectory[i+1] if (i+1) < len(action_trajectory) else [0 for _ in range(self.num_players)] 
                 self.add_transition(trajectory[i], action_trajectory[i], trajectory[i+1], next_action, ret=rewards_to_go[i], override_symmetric=override_symmetric) 
-            elif player == trajectory[i].observations["current_player"]:
-
+            else:
+                player = trajectory[i].observations["current_player"]
                 # TODO: Figure out this later...
 
                 # Individual player's move 
@@ -300,10 +305,10 @@ class Imitation(rl_agent.AbstractAgent):
                 if next_player_timestep_index:
                     next_action[player] = action_trajectory[next_player_timestep_index][0] if next_player_timestep_index < len(action_trajectory) else 0
 
-                    curr_policy.add_transition(trajectory[i], action, trajectory[next_player_timestep_index], next_action, ret=rewards_to_go[i], override_symmetric=override_symmetric) 
+                    curr_policy.add_transition(trajectory[i], action, trajectory[next_player_timestep_index], next_action, ret=rewards_to_go[i], override_player=[player]) 
             
 
-    def add_transition(self, prev_time_step, prev_action, time_step, action, ret, override_symmetric=False):
+    def add_transition(self, prev_time_step, prev_action, time_step, action, ret, override_symmetric=False, override_player=[]):
         """Adds the new transition using `time_step` to the replay buffer.
 
         Adds the transition from `self._prev_timestep` to `time_step` by
@@ -311,8 +316,11 @@ class Imitation(rl_agent.AbstractAgent):
 
         Args:
           prev_time_step: prev ts, an instance of rl_environment.TimeStep.
-          prev_action: tuple, action taken at `prev_time_step`.
+          prev_action: list of ints, joint action taken at `prev_time_step`.
           time_step: current ts, an instance of rl_environment.TimeStep.
+          action: list of ints, joint action taken at timestep 
+          ret: return of the trajectory associated with 
+          override_player: player this trajectory is associated with. If empty, then default.
         """
         # TODO: If symmetric, then add transitions from both players
         if self.joint_action:
@@ -327,6 +335,8 @@ class Imitation(rl_agent.AbstractAgent):
             self._replay_buffer.add(transition)
         else:
             player_list = [i for i in range(self.num_players)] if self.symmetric and not override_symmetric else [self.player_id]
+            if len(override_player) > 0:
+                player_list = override_player
 
             for p in player_list:
                 o = prev_time_step.observations["info_state"][p][:]
