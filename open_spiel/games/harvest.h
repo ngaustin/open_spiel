@@ -130,7 +130,7 @@ class HarvestState : public SimMoveState {
   std::shared_ptr<const HarvestGame> parent_game_;
   friend class HarvestObserver;
 
-  std::pair<int,int> getHorizontalDirections(std::pair<int,int> direction) const;
+  std::pair<int,int> getHorizontalDirections(std::pair<int,int>& direction) const;
   std::pair<int,int> addPairs(std::pair<int,int> pair1, std::pair<int,int> pair2) const;
   std::pair<int,int> subtractPairs(std::pair<int,int> pair1, std::pair<int,int> pair2) const;
   std::pair<int,int> scalarMultiplyPair(int scale, std::pair<int,int>pair);
@@ -151,6 +151,7 @@ class HarvestState : public SimMoveState {
                                           "WWWWWWWWW"};
   std::vector<std::pair<int, int>> agentLocations_;
   std::vector<std::pair<int, int>> agentDirections_;
+  std::pair<int,int> noMovementPair = std::make_pair(0, 0);
   std::vector<int> agentLasered_; 
 
   std::vector<std::pair<int, int>> agentSpawnPoints_;

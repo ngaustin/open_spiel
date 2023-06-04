@@ -105,13 +105,13 @@ def rl_policy_factory(rl_class):
       prob_dict = {action: p[action] for action in legal_actions}
       return prob_dict
 
-    def step(self, time_step, is_evaluation=False):
+    def step(self, time_step, is_evaluation=False, add_transition_record=True):
       # The _frozen attribute freezes the weights of the current policy. This
       # effect is achieved by considering that we always are evaluating when the
       # current policy's weights are frozen. For more details, see the freeze()
       # method.
       is_evaluation = (is_evaluation) or (self._frozen)
-      return self._policy.step(time_step, is_evaluation)
+      return self._policy.step(time_step, is_evaluation, add_transition_record=add_transition_record)
 
     def freeze(self):
       """This method freezes the policy's weights.

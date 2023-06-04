@@ -64,7 +64,7 @@ flags.DEFINE_string("meta_strategy_method", "alpharank",
                     "Name of meta strategy computation method.")
 flags.DEFINE_integer("number_policies_selected", 1,  # CHANGED THIS from 5
                      "Number of new strategies trained at each PSRO iteration.")
-flags.DEFINE_integer("sims_per_entry", 100, # 1000,  # CHANGED THIS from 1000
+flags.DEFINE_integer("sims_per_entry", 200, # 1000,  # CHANGED THIS from 1000
                      ("Number of simulations to run to estimate each element"
                       "of the game outcome matrix."))
 
@@ -80,7 +80,6 @@ flags.DEFINE_string("consensus_oracle", "q_learn", "Choice of oracle for explora
 flags.DEFINE_bool("joint_action", False, "Whether to train in joint state space when fitting exploration Q learning")
 flags.DEFINE_string("trajectory_mode", "prob_reward", "How to fit to a trajectory. Options are prob_reward and prob_action")
 flags.DEFINE_integer("n_top_trajectories", 1, "Number of trajectories to take from each of the BR simulations")
-flags.DEFINE_integer("past_simulations", 3, "Number of BR simulations to look in the past")
 flags.DEFINE_bool("rewards_joint", True, "Whether to select trajectories and optimize consensus policies on joint rewards")
 flags.DEFINE_float("proportion_uniform_trajectories", 0, "Proportion of taken trajectories that will be uniformly sampled across non-high return ones")
 
@@ -92,7 +91,7 @@ flags.DEFINE_float("consensus_deep_network_lr", 3e-4, "Learning Rate when traini
 flags.DEFINE_float("consensus_deep_policy_network_lr", 3e-4, "Separate learning rate for policy network in CQL ")
 flags.DEFINE_integer("consensus_update_target_every", 1, "Update target network")
 flags.DEFINE_integer("consensus_batch_size", 128, "Batch size when training consensus network offline")
-flags.DEFINE_integer("consensus_hidden_layer_size", 200, "Hidden layer size for consensus network")
+flags.DEFINE_integer("consensus_hidden_layer_size", 50, "Hidden layer size for consensus network")
 flags.DEFINE_integer("consensus_n_hidden_layers", 2, "Number of hidden layers in consensus network")
 flags.DEFINE_integer("consensus_training_epochs", 1, "Number of training epochs for offline BC training")
 flags.DEFINE_integer("consensus_training_steps", int(1e3), "Number of training steps for offline RL training")
@@ -103,10 +102,18 @@ flags.DEFINE_float("consensus_tau", 1e-3, "Soft update for target q network")
 flags.DEFINE_float("alpha", 5.0, "Hyperparameter for q value minimization")
 flags.DEFINE_float("eta", .05, "Gap between difference in values for regularization")
 flags.DEFINE_float("beta", .5, "Amount of weight put on difference between trajectory returns")
+flags.DEFINE_integer("max_buffer_size_fine_tune", 100000, "Fine tuning buffer size")
+flags.DEFINE_integer("min_buffer_size_fine_tune", 50000, "Minimum number of entries in buffer to fine tune")
+flags.DEFINE_bool("fine_tune", False, "Determines whether to fine tune the consensus policy")
+flags.DEFINE_bool("clear_trajectories", False, "Determines whether to clear the trajectory list after every iteration of PSRO")
+flags.DEFINE_float("psi", 1.0, "How much probability fine tune in joint space")
+flags.DEFINE_float("eps_clip", .2, "PPO epsilon boundary clip")
+flags.DEFINE_float("ppo_entropy", .01, "PPO entropy regularization")
 
 # RRD and MSS 
 flags.DEFINE_float("regret_lambda_init", .7, "Lambda threshold for RRD initially")
 flags.DEFINE_float("regret_lambda_final", 0, "Lambda threshold decay every iteration")
+flags.DEFINE_integer("regret_steps", 20, "Number of PSRO iterations to take to decrease regret")
 flags.DEFINE_float("minimum_exploration_init", 0, "Minimum amount of profile weight on exploration policies")
 flags.DEFINE_float("final_exploration", 0, "After annealing, the minimum amount of profile weight on exploration policies")
 
@@ -277,7 +284,6 @@ def init_dqn_responder(sess, env):
     "consensus_oracle":FLAGS.consensus_oracle,
     "imitation_mode":FLAGS.trajectory_mode, 
     "num_simulations_fit":FLAGS.n_top_trajectories,
-    "num_iterations_fit":FLAGS.past_simulations,
     "proportion_uniform_trajectories":FLAGS.proportion_uniform_trajectories,
     "joint_action": FLAGS.joint_action,
     "rewards_joint": FLAGS.rewards_joint,
@@ -296,7 +302,14 @@ def init_dqn_responder(sess, env):
     "tau": FLAGS.consensus_tau, 
     "discount": FLAGS.discount_factor, 
     "eta": FLAGS.eta, 
-    "beta": FLAGS.beta
+    "beta": FLAGS.beta,
+    "max_buffer_size_fine_tune": FLAGS.max_buffer_size_fine_tune,
+    "min_buffer_size_fine_tune": FLAGS.min_buffer_size_fine_tune, 
+    "fine_tune": FLAGS.fine_tune, 
+    "clear_trajectories": FLAGS.clear_trajectories,
+    "psi": FLAGS.psi,
+    "eps_clip": FLAGS.eps_clip,
+    "ppo_entropy_regularization": FLAGS.ppo_entropy,
   }
 
   print("Agent Arguments: ")
@@ -358,7 +371,6 @@ def init_tabular_q_responder(sess, env):
     "consensus_oracle":FLAGS.consensus_oracle,
     "imitation_mode":FLAGS.trajectory_mode, 
     "num_simulations_fit":FLAGS.n_top_trajectories,
-    "num_iterations_fit":FLAGS.past_simulations,
     "proportion_uniform_trajectories":FLAGS.proportion_uniform_trajectories,
     "joint_action": FLAGS.joint_action,
     "rewards_joint": FLAGS.rewards_joint,
@@ -376,7 +388,13 @@ def init_tabular_q_responder(sess, env):
     "tau": FLAGS.consensus_tau, 
     "discount": FLAGS.discount_factor, 
     "eta": FLAGS.eta, 
-    "beta": FLAGS.beta
+    "beta": FLAGS.beta,
+    "max_buffer_size_fine_tune": FLAGS.max_buffer_size_fine_tune,
+    "min_buffer_size_fine_tune": FLAGS.min_buffer_size_fine_tune, 
+    "fine_tune": FLAGS.fine_tune, 
+    "clear_trajectories": FLAGS.clear_trajectories,
+    "psi": FLAGS.psi,
+    "eps_clip": FLAGS.eps_clip
   }
 
   if FLAGS.consensus_imitation:
@@ -483,8 +501,8 @@ def gpsro_looper(env, oracle, agents):
     meta_probabilities = g_psro_solver.get_meta_strategies()
     policies = g_psro_solver.get_policies()
 
-    g_psro_solver.update_regret_threshold(FLAGS.regret_lambda_final, FLAGS.gpsro_iterations - gpsro_iteration - 1)
-    g_psro_solver.update_explore_threshold(FLAGS.final_exploration, FLAGS.gpsro_iterations - gpsro_iteration - 1)
+    g_psro_solver.update_regret_threshold(FLAGS.regret_lambda_final, FLAGS.regret_steps - gpsro_iteration - 1)
+    g_psro_solver.update_explore_threshold(FLAGS.final_exploration, FLAGS.regret_steps - gpsro_iteration - 1)
 
     if FLAGS.verbose:
       utils.display_meta_game(meta_game)
@@ -501,6 +519,7 @@ def gpsro_looper(env, oracle, agents):
       save_iteration_data(gpsro_iteration, meta_probabilities, meta_game, save_folder_path)
 
     # The following lines only work for sequential games for the moment.
+    """
     if env.game.get_type().dynamics == pyspiel.GameType.Dynamics.SEQUENTIAL:
       aggregator = policy_aggregator.PolicyAggregator(env.game)
       aggr_policies = aggregator.aggregate(
@@ -513,7 +532,7 @@ def gpsro_looper(env, oracle, agents):
       if FLAGS.verbose:
         print("Exploitabilities : {}".format(exploitabilities))
         print("Exploitabilities per player : {}".format(expl_per_player))
-
+    """
 
 def main(argv):
   if len(argv) > 1:
@@ -525,13 +544,23 @@ def main(argv):
 
   if FLAGS.game_name=="harvest":
     game = pyspiel.load_game(FLAGS.game_name, {"rng_seed": FLAGS.seed})
+  elif FLAGS.game_name=="bargaining":
+    game = pyspiel.load_game(FLAGS.game_name, {"discount": 1.0})
   else:
     game = pyspiel.load_game(FLAGS.game_name)  # The iterated prisoners dilemma does not have "players" info type
 
   env = rl_environment.Environment(game, observation_type=rl_environment.ObservationType.OBSERVATION)
 
+  import os 
+  num_cpus = os.cpu_count()
+  print("Num cpu cores: ", num_cpus)
+  os.environ["OMP_NUM_THREADS"] = "16"
+  session_conf = tf.ConfigProto(
+        intra_op_parallelism_threads=1,
+        inter_op_parallelism_threads=1)
+
   # Initialize oracle and agents
-  with tf.Session() as sess:
+  with tf.Session(config=session_conf) as sess:
     if FLAGS.oracle_type == "DQN":
       oracle, agents = init_dqn_responder(sess, env)   
     elif FLAGS.oracle_type == "PG":

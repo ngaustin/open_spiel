@@ -122,6 +122,7 @@ class RLOracle(optimization_oracle.AbstractOracle):
           action_list.append(output.action)
         time_step = self._env.step(action_list)
         cumulative_rewards += np.array(time_step.rewards)
+        steps += 1
       else:
         player_id = time_step.observations["current_player"]
 
@@ -137,7 +138,10 @@ class RLOracle(optimization_oracle.AbstractOracle):
         action_list = [agent_output.action]
         time_step = self._env.step(action_list)
         cumulative_rewards += np.array(time_step.rewards)
-      steps += 1
+
+        # Only train the ones that aren't frozen
+        if not agents[player_id].is_frozen:
+          steps += 1
 
     if not is_evaluation:
       for agent in agents:
