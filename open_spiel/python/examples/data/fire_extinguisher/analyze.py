@@ -58,7 +58,7 @@ def main(argv):
   if len(argv) > 1:
     raise app.UsageError("Too many command-line arguments.")
 
-  data_directory_paths = ["open_spiel/python/examples/data/fire_extinguisher/game_data/"]
+  data_directory_paths = ["open_spiel/python/examples/data/fire_extinguisher/imitation_game_data/"]
   iterations = len(os.listdir(data_directory_paths[0]))
   num_players = 2
   corresponding_dictionaries = []
@@ -113,12 +113,11 @@ def main(argv):
         if i > 0:
           #Individual table best response 
           if num_player == 0:
-            #Get column corresponding to best_response utilities
-            best_response_payoffs = utilities[num_player][:, index_best_response_utilities]
+            # Row corresponding to best_response utilities
+            best_response_payoffs = utilities[num_player][index_best_response_utilities]
           else:
-            best_response_payoffs = []
-            for row in utilities[num_player]:
-              best_response_payoffs.append(row[index_best_response_utilities])
+            # Column corresponding to best_response utilities
+            best_response_payoffs = utilities[num_player][:, index_best_response_utilities]
           prev_player_profile = player_profile_history[num_player][i-1]
           best_response_trunc = best_response_payoffs[:len(prev_player_profile)]
           best_response_expected_payoff = np.dot(prev_player_profile, best_response_trunc)
