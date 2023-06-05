@@ -112,12 +112,16 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         num_policies_total = len(training_parameters[0][0]["total_policies"][0])
         train_best_response = num_policies_total % 2 == 1 
 
-        if train_best_response:
+        # NOTE: this is a tester to make sure our comparison with other algorithms is fair
+        if train_best_response:  # False: 
             new_policies = self.generate_new_policies(training_parameters)
         else:
             new_policies = self.create_consensus_policies(training_parameters)
             print("\nTraining consensus policies on offline data from BR and previous joint simulations: ")
             start = time.time()
+
+            # NOTE: Changed here for fair comparison 
+            # if not train_best_response:
             new_policies = self.tune_consensus_policies(new_policies, is_symmetric, self._high_return_trajectories, self._high_return_actions)
             print("Finished offline training after {} seconds.".format(time.time() - start))
 
@@ -129,12 +133,14 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                 self._high_returns = [[] for _ in range(self._env.num_players)]
 
             # Prepares the policies for fine tuning
-            if self._fine_tune_bool:
+            # NOTE: Changed here for fair comparison
+            if self._fine_tune_bool: # or not train_best_response:
                 for i in range(len(new_policies)):
                     new_policies[i][0]._policy.set_to_fine_tuning_mode()
                     print("Setting to fine tune mode: ")
                 
-            if not self._fine_tune_bool:
+            # NOTE: Changed here for fair comparison
+            if (not self._fine_tune_bool): # and not train_best_response:
                 rl_oracle.freeze_all(new_policies)
                 return new_policies
 
@@ -206,7 +212,8 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                 # Store the episode's trajectory and returns and map it to the correct agent + agent's policy we're training
 
                 trajectory, actions, returns = self._rollout(game, agents, **oracle_specific_execution_kwargs)
-            print("Finished episode with returns: ", returns)
+            if not train_best_response:
+                print("Finished episode with returns: ", returns)
 
             # To save space, we get rid of the decentralized observations or the joint observations if not needed for consensus training
             for timestep in trajectory:

@@ -537,9 +537,10 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                     val[p] = vals[j] 
             
             # Denormalize the values, normalize the rewards to go
-            values = [self.reward_scaler.denormalize(val) for val in values]
+            # NOTE: found performance to be much better without this normalization
+            # values = [self.reward_scaler.denormalize(val) for val in values]
 
-            all_rewards_to_go[i] = [self.reward_scaler.normalize(rtg) for rtg in all_rewards_to_go[i]]
+            # all_rewards_to_go[i] = [self.reward_scaler.normalize(rtg) for rtg in all_rewards_to_go[i]]
 
             reward_arrays = [np.array(timestep.rewards) for timestep in trajectory[1:]]
             deltas = [reward_arrays[j] + self.discount_factor * values[j+1] - values[j] for j in range(len(reward_arrays))]
