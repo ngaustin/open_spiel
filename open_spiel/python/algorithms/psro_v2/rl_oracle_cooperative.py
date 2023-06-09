@@ -58,7 +58,6 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         self._consensus_training_epochs = consensus_kwargs["training_epochs"]
         self._consensus_kwargs = consensus_kwargs
         self._fine_tune_bool = consensus_kwargs["fine_tune"]
-        self._psi = consensus_kwargs["psi"]
 
         # TODO: psi steps? 
 
@@ -110,43 +109,42 @@ class RLOracleCooperative(rl_oracle.RLOracle):
 
         # TODO: Check the number of policies in total_policies of training parameters. If odd, then do BR. If even, do consensus policies 
         num_policies_total = len(training_parameters[0][0]["total_policies"][0])
-        train_best_response = num_policies_total % 2 == 1 
+        train_best_response = not (num_policies_total % 2 == 0 and self._consensus_kwargs['consensus_imitation'])
 
         # NOTE: this is a tester to make sure our comparison with other algorithms is fair
-        if train_best_response:  # False: 
-            new_policies = self.generate_new_policies(training_parameters)
-        else:
-            new_policies = self.create_consensus_policies(training_parameters)
+        # if False: 
+        #     new_policies = self.generate_new_policies(training_parameters)
+        # else:
+        new_policies = self.create_consensus_policies(training_parameters)
+
+        # NOTE: Changed here for fair comparison 
+        if not train_best_response:
             print("\nTraining consensus policies on offline data from BR and previous joint simulations: ")
             start = time.time()
-
-            # NOTE: Changed here for fair comparison 
-            # if not train_best_response:
             new_policies = self.tune_consensus_policies(new_policies, is_symmetric, self._high_return_trajectories, self._high_return_actions)
             print("Finished offline training after {} seconds.".format(time.time() - start))
 
-            self._number_training_steps = 15000000
             if self._consensus_kwargs["clear_trajectories"]:
                 print("Clearing trajectories from previous iteration. ")
                 self._high_return_trajectories = []  # list of lists of trajectories
                 self._high_return_actions = []
                 self._high_returns = [[] for _ in range(self._env.num_players)]
 
-            # Prepares the policies for fine tuning
-            # NOTE: Changed here for fair comparison
-            if self._fine_tune_bool: # or not train_best_response:
-                for i in range(len(new_policies)):
-                    new_policies[i][0]._policy.set_to_fine_tuning_mode()
-                    print("Setting to fine tune mode: ")
-                
-            # NOTE: Changed here for fair comparison
-            if (not self._fine_tune_bool): # and not train_best_response:
-                rl_oracle.freeze_all(new_policies)
-                return new_policies
+        # Prepares the policies for fine tuning
+        # NOTE: Changed here for fair comparison
+        if self._fine_tune_bool or train_best_response:
+            for i in range(len(new_policies)):
+                new_policies[i][0]._policy.set_to_fine_tuning_mode(train_best_response)
+                print("Setting to fine tune mode: ")
+            
+        # NOTE: Changed here for fair comparison
+        if (not self._fine_tune_bool) and not train_best_response:
+            rl_oracle.freeze_all(new_policies)
+            return new_policies
 
 
         all_policies = [old_pol + new_pol for old_pol, new_pol in zip(training_parameters[0][0]["total_policies"], new_policies)]
-        
+
         rollout_trajectories, rollout_actions, rollout_returns = [], [], []
         cutoff_returns = [self._high_returns[i][-1] if len(self._high_returns[i]) > 0 else -np.inf for i in range(self.num_players)]
 
@@ -159,9 +157,10 @@ class RLOracleCooperative(rl_oracle.RLOracle):
 
             # TODO: Insert if statement to see if we are training consensus policies. If we are, we need additional sampling to happen
             # Sample number between 0 and 1. Check against self.psi
-            train_consensus_joint = np.random.random() < self._psi
+            # train_consensus_joint = np.random.random() < self._psi
 
             # If we are training conseusus policies AND it is symmetric AND the sampled number is less than psi
+            """
             if not train_best_response and is_symmetric and train_consensus_joint:
                 # We need to use the joint wrapper to manually train 
                 agents = [new_policies[i][0] for i in range(len(new_policies))]
@@ -194,26 +193,18 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                     assert not is_symmetric 
                     agents = [new_pol_list[0] for new_pol_list in new_policies]
                     indexes = [(p, 0) for p in range(self.num_players)]
-                else:
-                    agents, indexes = self.sample_policies_for_episode(
-                        new_policies, training_parameters, steps_per_oracle,
-                        strategy_sampler)
-
-                """
-                agents, indexes = self.sample_policies_for_episode(
+                else:"""
+            agents, indexes = self.sample_policies_for_episode(
                     new_policies, training_parameters, steps_per_oracle,
                     strategy_sampler)
-                """
 
-                assert len(indexes) == 1  # we are tailoring this code for one agent training at a time. Make sure true
-                assert len(indexes[0]) == 2  # make sure player index and policy index
-                assert indexes[0][1] == 0 # make sure this is true because we FIXED it so that PSRO only trains 1 strategy for each player each iteration
+            assert len(indexes) == 1  # we are tailoring this code for one agent training at a time. Make sure true
+            assert len(indexes[0]) == 2  # make sure player index and policy index
+            assert indexes[0][1] == 0 # make sure this is true because we FIXED it so that PSRO only trains 1 strategy for each player each iteration
 
-                # Store the episode's trajectory and returns and map it to the correct agent + agent's policy we're training
+            # Store the episode's trajectory and returns and map it to the correct agent + agent's policy we're training
 
-                trajectory, actions, returns = self._rollout(game, agents, **oracle_specific_execution_kwargs)
-            if not train_best_response:
-                print("Finished episode with returns: ", returns)
+            trajectory, actions, returns = self._rollout(game, agents, **oracle_specific_execution_kwargs)
 
             # To save space, we get rid of the decentralized observations or the joint observations if not needed for consensus training
             for timestep in trajectory:
@@ -236,6 +227,22 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                 rollout_trajectories.append(trajectory)
                 rollout_returns.append(returns)
                 rollout_actions.append(actions)
+
+                ############## This is just for space saving on the first iteration ####################
+                if len(rollout_returns) > self._num_simulations_fit and is_symmetric: 
+                    ret_0 = [ret[0] for ret in rollout_returns]
+                    ret_1 = [ret[1] for ret in rollout_returns]
+
+                    min_0 = min(ret_0)
+                    min_1 = min(ret_1)
+                    if min_0 < min_1: 
+                        take_out_index = ret_0.index(min_0)
+                    else:
+                        take_out_index = ret_1.index(min_1)
+                    
+                    rollout_trajectories.pop(take_out_index)
+                    rollout_returns.pop(take_out_index)
+                    rollout_actions.pop(take_out_index)
 
             # Update the number of episodes we have trained per oracle
 

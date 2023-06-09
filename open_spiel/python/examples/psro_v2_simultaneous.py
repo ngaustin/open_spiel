@@ -109,6 +109,7 @@ flags.DEFINE_bool("clear_trajectories", False, "Determines whether to clear the 
 flags.DEFINE_float("psi", 1.0, "How much probability fine tune in joint space")
 flags.DEFINE_float("eps_clip", .2, "PPO epsilon boundary clip")
 flags.DEFINE_float("ppo_entropy", .01, "PPO entropy regularization")
+flags.DEFINE_float("policy_constraint", .1, "Policy constraint regularization in PPO fine tuning")
 
 # RRD and MSS 
 flags.DEFINE_float("regret_lambda_init", .7, "Lambda threshold for RRD initially")
@@ -141,8 +142,6 @@ flags.DEFINE_string("training_strategy_selector", "probabilistic",
                     "probability strategy available to each player.")
 
 # General (RL) agent parameters
-flags.DEFINE_string("oracle_type", "BR", "Choices are DQN, PG (Policy "
-                    "Gradient) TAB_Q (tabular q learning) or BR (exact Best Response)")
 flags.DEFINE_integer("number_training_steps", int(1e6), "Number of environment " 
                      "steps per RL policy. Used for PG, DQN, and Tabular Q")
 flags.DEFINE_float("self_play_proportion", 0.0, "Self play proportion")
@@ -187,56 +186,6 @@ def save_iteration_data(iteration_number, meta_probabilities, U, save_folder_pat
       with open(save_data_path, "wb") as npy_file:
           np.save(npy_file, object_array_list)
       return
-
-
-def init_pg_responder(sess, env):
-  """Initializes the Policy Gradient-based responder and agents."""
-  info_state_size = env.observation_spec()["info_state"][0]
-  num_actions = env.action_spec()["num_actions"]
-
-  agent_class = rl_policy.PGPolicy
-
-  agent_kwargs = {
-      "session": sess,
-      "info_state_size": info_state_size,
-      "num_actions": num_actions,
-      "loss_str": FLAGS.loss_str,
-      "loss_class": False,
-      "hidden_layers_sizes": [FLAGS.hidden_layer_size] * FLAGS.n_hidden_layers,
-      "batch_size": FLAGS.batch_size,
-      "entropy_cost": FLAGS.entropy_cost,
-      "critic_learning_rate": FLAGS.critic_learning_rate,
-      "pi_learning_rate": FLAGS.pi_learning_rate,
-      "num_critic_before_pi": FLAGS.num_q_before_pi,
-      "optimizer_str": FLAGS.optimizer_str
-  }
-  oracle = rl_oracle.RLOracle(
-      env,
-      agent_class,
-      agent_kwargs,
-      number_training_steps=FLAGS.number_training_steps,
-      self_play_proportion=FLAGS.self_play_proportion,
-      sigma=FLAGS.sigma)
-
-  agents = [
-      agent_class(  # pylint: disable=g-complex-comprehension
-          env,
-          player_id,
-          **agent_kwargs)
-      for player_id in range(FLAGS.n_players)
-  ]
-  for agent in agents:
-    agent.freeze()
-  return oracle, agents
-
-
-def init_br_responder(env):
-  """Initializes the tabular best-response based responder and agents."""
-  random_policy = policy.TabularPolicy(env.game)
-  oracle = best_response_oracle.BestResponseOracle(
-      game=env.game, policy=random_policy)
-  agents = [random_policy.__copy__() for _ in range(FLAGS.n_players)]
-  return oracle, agents
 
 
 def init_dqn_responder(sess, env):
@@ -310,6 +259,7 @@ def init_dqn_responder(sess, env):
     "psi": FLAGS.psi,
     "eps_clip": FLAGS.eps_clip,
     "ppo_entropy_regularization": FLAGS.ppo_entropy,
+    "policy_constraint": FLAGS.policy_constraint
   }
 
   print("Agent Arguments: ")
@@ -350,82 +300,6 @@ def init_dqn_responder(sess, env):
   for agent in agents:
     agent.freeze()
   return oracle, agents
-
-def init_tabular_q_responder(sess, env):
-  """Initializes the Policy Gradient-based responder and agents."""
-  # state_representation_size = env.observation_spec()["info_state"][0]
-  # print("Rep size: ", state_representation_size)
-  num_actions = env.action_spec()["num_actions"]
-  state_representation_size = env.observation_spec()["info_state"][0]  # TODO: CHECK THIS IS NON-ZERO
-
-  agent_class = rl_policy.TabularQPolicy
-  agent_kwargs = {
-      "num_actions": num_actions,
-      "step_size": FLAGS.step_size,
-      "discount_factor": FLAGS.discount_factor,
-  }
-  consensus_kwargs={
-    "session": sess,
-    "alpha": FLAGS.alpha,
-    "state_representation_size": state_representation_size,
-    "consensus_oracle":FLAGS.consensus_oracle,
-    "imitation_mode":FLAGS.trajectory_mode, 
-    "num_simulations_fit":FLAGS.n_top_trajectories,
-    "proportion_uniform_trajectories":FLAGS.proportion_uniform_trajectories,
-    "joint_action": FLAGS.joint_action,
-    "rewards_joint": FLAGS.rewards_joint,
-    "boltzmann": FLAGS.boltzmann, 
-    "training_epochs": FLAGS.consensus_training_epochs,
-    "training_steps": FLAGS.consensus_training_steps,
-    "update_target_every": FLAGS.consensus_update_target_every,
-    "minimum_entropy":FLAGS.consensus_minimum_entropy,
-    "deep_network_lr": FLAGS.consensus_deep_network_lr,
-    "deep_policy_network_lr": FLAGS.consensus_deep_policy_network_lr,
-    "batch_size": FLAGS.consensus_batch_size,
-    "hidden_layer_size": FLAGS.consensus_hidden_layer_size,
-    "n_hidden_layers": FLAGS.consensus_n_hidden_layers,
-    "num_players": FLAGS.n_players,
-    "tau": FLAGS.consensus_tau, 
-    "discount": FLAGS.discount_factor, 
-    "eta": FLAGS.eta, 
-    "beta": FLAGS.beta,
-    "max_buffer_size_fine_tune": FLAGS.max_buffer_size_fine_tune,
-    "min_buffer_size_fine_tune": FLAGS.min_buffer_size_fine_tune, 
-    "fine_tune": FLAGS.fine_tune, 
-    "clear_trajectories": FLAGS.clear_trajectories,
-    "psi": FLAGS.psi,
-    "eps_clip": FLAGS.eps_clip
-  }
-
-  if FLAGS.consensus_imitation:
-      oracle = rl_oracle_cooperative.RLOracleCooperative(
-          env,
-          agent_class,
-          agent_kwargs,
-          consensus_kwargs=consensus_kwargs,
-          number_training_steps=FLAGS.number_training_steps,
-          self_play_proportion=FLAGS.self_play_proportion,
-          sigma=FLAGS.sigma)
-  else:
-      oracle = rl_oracle.RLOracle(
-          env,
-          agent_class,
-          agent_kwargs,
-          number_training_steps=FLAGS.number_training_steps,
-          self_play_proportion=FLAGS.self_play_proportion,
-          sigma=FLAGS.sigma)
-
-  agents = [
-      agent_class(  # pylint: disable=g-complex-comprehension
-          env,
-          player_id,
-          **agent_kwargs)
-      for player_id in range(FLAGS.n_players)
-  ]
-  for agent in agents:
-    agent.freeze()
-  return oracle, agents
-
 
 def print_policy_analysis(policies, game, verbose=False):
   """Function printing policy diversity within game's known policies.
@@ -561,6 +435,8 @@ def main(argv):
 
   # Initialize oracle and agents
   with tf.Session(config=session_conf) as sess:
+    oracle, agents = init_dqn_responder(sess, env)
+    """
     if FLAGS.oracle_type == "DQN":
       oracle, agents = init_dqn_responder(sess, env)   
     elif FLAGS.oracle_type == "PG":
@@ -568,7 +444,7 @@ def main(argv):
     elif FLAGS.oracle_type == "BR":
       oracle, agents = init_br_responder(env)
     elif FLAGS.oracle_type == "TAB_Q":
-      oracle, agents = init_tabular_q_responder(sess, env)
+      oracle, agents = init_tabular_q_responder(sess, env)"""
     sess.run(tf.global_variables_initializer())
     gpsro_looper(env, oracle, agents)
 
