@@ -70,6 +70,28 @@ def main(argv):
     os.makedirs(save_graph_path)
     print("Graph directory created.")
 
+  def graph_training_returns(training_returns, num_iteration, average_grouping = 50):
+    """
+      Graph training returns for BR training
+        training_returns: 2D array with n arrays containing training returns for players
+        num_iteration: # of current iteration
+        average_grouping: Size of episode grouping (for cleaner graphing purposes)
+        axis_normalization: Normalizes y-axis scale across the iterations for easier trend comparisons
+    """
+    grouped_rets = []
+    for i in range(len(training_returns)):
+      grouped_rets.append([])
+      for j in range(0, len(training_returns[i]), average_grouping):
+        grouped_rets[i].append(np.mean(training_returns[i][j: j + average_grouping]))
+    for i in range(num_players):
+      training_returns_fig, ax = plt.subplots()
+      ax.plot(np.arange(0, len(grouped_rets[i])), grouped_rets[i])
+      ax.set_title("BR Training Returns Player {}".format(i + 1))
+      ax.set_xlabel("Iteration (Grouped by {} episodes)".format(average_grouping))
+      ax.set_ylabel("Expected Returns")
+      training_returns_fig.savefig(save_graph_path + "training_returns/" + "iteration_{}_player_{}.jpg".format(num_iteration, i+1))
+
+
   def get_data(folder_path):
     """
       Displays game analytics like regret, expected utility, player profiles, and other analytics for 2-player games.
@@ -95,7 +117,9 @@ def main(argv):
       print("Save_data_path", save_data_path)
       with open(save_data_path, "rb") as npy_file:
           array_list = np.load(npy_file, allow_pickle=True)
-      meta_probabilities, utilities = array_list
+      print(array_list)
+      meta_probabilities, utilities, training_returns = array_list
+      graph_training_returns(training_returns, i)
       print("Utilities:", utilities)
       # meta_probabilities was vstacked at first dimension for each player
       # utilities were vstacked at the first dimension for each player as well

@@ -3,6 +3,8 @@ Cooperative oracle for PSRO where we take into account simulation data when addi
 """
 
 import numpy as np
+import matplotlib.pyplot as plt
+import os
 from open_spiel.python.algorithms.psro_v2 import rl_oracle
 from open_spiel.python.algorithms.psro_v2 import utils
 from open_spiel.python.algorithms import imitation
@@ -65,6 +67,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         self._high_return_trajectories = []  # list of lists of trajectories
         self._high_return_actions = []
         self._high_returns = [[] for _ in range(env.num_players)]
+        self._train_br_returns = []
 
         self._all_seen_observations = set()
 
@@ -121,7 +124,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             new_policies = self.tune_consensus_policies(new_policies, is_symmetric, self._high_return_trajectories, self._high_return_actions)
             print("Finished offline training after {} seconds.".format(time.time() - start))
 
-            self._number_training_steps = 15000000
+            self._number_training_steps = 70000
             if self._consensus_kwargs["clear_trajectories"]:
                 print("Clearing trajectories from previous iteration. ")
                 self._high_return_trajectories = []  # list of lists of trajectories
@@ -142,6 +145,8 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         all_policies = [old_pol + new_pol for old_pol, new_pol in zip(training_parameters[0][0]["total_policies"], new_policies)]
         
         rollout_trajectories, rollout_actions, rollout_returns = [], [], []
+        self._train_br_returns = []
+
         cutoff_returns = [self._high_returns[i][-1] if len(self._high_returns[i]) > 0 else -np.inf for i in range(self.num_players)]
 
         print("\nTraining each of the policies for {} steps. ".format(self._number_training_steps))
@@ -224,7 +229,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             ###########################################################################################################################
             """
             invalid_candidate = (returns[0] < cutoff_returns[0]) or (returns[1] < cutoff_returns[1]) if is_symmetric else (returns[0] < cutoff_returns[0]) and (returns[1] < cutoff_returns[1])
-
+            self._train_br_returns.append(returns)
             if not invalid_candidate:
                 rollout_trajectories.append(trajectory)
                 rollout_returns.append(returns)
@@ -243,10 +248,32 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         # later not have to make the distinction between static and training
         # policies in training iterations.
         self.update_trajectories(training_parameters, rollout_trajectories, rollout_actions, rollout_returns)
-        
         rl_oracle.freeze_all(new_policies)
-
         return new_policies
+
+    def get_training_returns(self):
+        returns = np.array(self._train_br_returns)
+        player1_returns = returns[:, 0]
+        player2_returns = returns[:, 1]
+        return np.array([player1_returns, player2_returns])
+
+    def _graph_returns(self, returns):
+        """
+            returns: Array with tuples for rewards for each player (r1, r2)
+        """
+        save_path = os.getcwd() + "/data/fire_extinguisher/output_plots/return_plots/"
+        returns = np.array(returns)
+        player1_returns = returns[:, 0]
+        player2_returns = returns[:, 1]
+        fig1, ax = plt.subplots()
+        fig2, ax2 = plt.subplots()
+        ax.plot(np.arange(0, len(player1_returns)), player1_returns) 
+        ax2.plot(np.arange(0, len(player2_returns)), player2_returns) 
+        ax.autoscale()
+        ax2.autoscale()
+        fig1.savefig(save_path + "figureTest.jpg")
+        fig2.savefig(save_path + "figureTest2.jpg")
+        input("Enter to continue...")
 
     def create_consensus_policies(self, training_parameters):
         consensus_training_parameters = [[{"policy": None}] for _ in range(len(training_parameters))]

@@ -370,6 +370,23 @@ class Imitation(rl_agent.AbstractAgent):
 
                 self._replay_buffer.add(transition)
 
+    def _return_normalization(self, rets, temp = 1):
+        """
+            Softmax normalization to compute the relative weightings of the trajectories.
+            Params: 
+                rets: array of tuples: (player 0 future returns, player 1 future returns)
+                temp: temperature hyperparameter: Can reduce/increase the power of the weighting
+
+        """
+        rets = np.array(rets)
+        player_0_sum = np.sum(np.exp(rets[:, 0]))
+        player_1_sum = np.sum(np.exp(rets[:, 1]))
+        weighted_trajectories = [[np.exp(p0_rets / temp) / player_0_sum, np.exp(p1_rets / temp) / player_1_sum] for p0_rets, p1_rets in rets]
+        average_weighted = [np.mean(trajectory_weight) for trajectory_weight in weighted_trajectories]
+        # print("AVERAGE", average_weighted)
+        # print("CHECK", np.sum(average_weighted))
+        return average_weighted
+
     def learn(self):
         """Compute the loss on sampled transitions and perform a Q-network update.
 
@@ -444,7 +461,6 @@ class Imitation(rl_agent.AbstractAgent):
 
     def get_weights(self):
         #   : Implement this
-        print(self._returns)
         return [0]
 
     def copy_with_noise(self, sigma=0.0, copy_weights=False):
