@@ -334,10 +334,10 @@ class DQN(rl_agent.AbstractAgent):
     probs = np.zeros(self._num_actions)
     if not self.trained_at_least_once or np.random.rand() < epsilon: # If this is a newly initialized policy, enforce that it is a uniform
       # action = np.random.choice(legal_actions)
+      start = time.time()
       probs[legal_actions] = 1.0 / len(legal_actions)
       action = utils.random_choice(list(range(self._num_actions)), probs)
     else:
-
       info_state = np.reshape(info_state, [1, -1])
       start = time.time()
       q_values = self._session.run(

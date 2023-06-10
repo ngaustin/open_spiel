@@ -82,7 +82,6 @@ class Imitation(rl_agent.AbstractAgent):
         self.training_steps = consensus_kwargs["training_steps"]
         self.minimum_entropy = consensus_kwargs["minimum_entropy"]
         self.lr = consensus_kwargs["deep_network_lr"]
-        self.policy_lr = consensus_kwargs["deep_policy_network_lr"]
         self.batch = consensus_kwargs["batch_size"]
         self.hidden_layer_size = consensus_kwargs["hidden_layer_size"]
         self.n_hidden_layers = consensus_kwargs["n_hidden_layers"]
@@ -138,6 +137,9 @@ class Imitation(rl_agent.AbstractAgent):
 
         self._target_q_network = simple_nets.MLP(state_representation_size,
                                              self.layer_sizes, num_outputs)
+
+        self._output_policy = simple_nets.MLP(state_representation_size, 
+                                    self.layer_sizes, num_outputs)
 
         # self._policy_variables = self.policy_net.variables[:] 
         self._q_variables = self._q_network.variables[:]
@@ -279,13 +281,26 @@ class Imitation(rl_agent.AbstractAgent):
         # Change step to query the policy network instead of the q network
         # Change initialize method to include the new networks and the new optimizers
 
-        self._fine_tune_module = ImitationFineTune(self._q_network,
+        self._fine_tune_module = ImitationFineTune(self._output_policy,
                  player_id,
                  consensus_kwargs,
                  num_actions, 
                  state_representation_size, 
                  num_players,
                  self._is_turn_based)
+        
+        # This is for policy extraction 
+        log_probs = self._output_policy(self._info_state_ph)
+        loss_class = tf.losses.softmax_cross_entropy 
+
+        # Convert the actions to one hot vectors 
+        one_hot_vectors = tf.one_hot(tf.reshape(self._action_ph, [-1]), depth=num_outputs)
+
+        # Plug into cross entropy class 
+        self._policy_extraction_loss = tf.reduce_mean(loss_class(one_hot_vectors, log_probs))
+
+        self._policy_extraction_optimizer = tf.train.AdamOptimizer(learning_rate=1e-3)
+        self._policy_extraction_step = self._policy_extraction_optimizer.minimize(self._policy_extraction_loss)
 
         self._initialize()
 
@@ -326,9 +341,52 @@ class Imitation(rl_agent.AbstractAgent):
             indices = indices + diff
         return indices
 
-    def set_to_fine_tuning_mode(self):
+    def set_to_fine_tuning_mode(self, is_train_best_response):
+        if not is_train_best_response: # Only do this if we had pretrained the policy on something else and we want to transfer this to PPO 
+            print("Extracting policy from q function: ")
+
+            length = len(self._replay_buffer)
+            dataset = self._replay_buffer.sample(length)  # samples without replacement so take the entire thing. Random order
+            indices = list(range(length))
+
+            all_info_states = [t.info_state for t in dataset]
+            print("All info states: ", len(all_info_states))
+
+            all_q_values = self.session.run([self._q_values], feed_dict={self._info_state_ph: all_info_states})[0]
+            all_action_labels = np.reshape(np.argmax(all_q_values, axis=1), [-1, 1])
+
+            epoch = 0
+            average_loss = np.inf
+            while epoch < (50) and (not average_loss < .1): # if not self._fine_tuning_mode else self.training_steps / 5):
+                epoch += 1
+                i, batch, loss_total = 0, 0, 0
+                randomized_indices = np.arange(length)
+                np.random.shuffle(randomized_indices)
+                while i < length:
+                    chosen_indices = randomized_indices[i: min(length, i+self.batch)] 
+                    
+                    curr_info_states = [all_info_states[i] for i in chosen_indices]
+                    curr_actions = [all_action_labels[i] for i in chosen_indices]
+
+                    start = time.time()
+                    loss, _= self.session.run(
+                        [self._policy_extraction_loss, self._policy_extraction_step],
+                        feed_dict={
+                            self._info_state_ph: curr_info_states,
+                            self._action_ph: curr_actions, 
+                        })
+                    # print("R-BVE learn time: ", time.time() - start)
+                    # print("Example check: ", obs_to_actions[''.join(map(str, info_states[0]))], q_values[0])
+
+                    i += self.batch
+                    batch += 1
+                    loss_total += loss
+
+                average_loss = loss_total / float(batch)
+                print("Average loss in policy extraction: ", average_loss)
+
         self._replay_buffer.reset()
-        self._fine_tune_module.set_to_fine_tuning_mode()
+        self._fine_tune_module.set_to_fine_tuning_mode(is_train_best_response)
         self._fine_tune_mode = True
     
     def get_epsilon_fine_tune(self):
@@ -451,6 +509,12 @@ class Imitation(rl_agent.AbstractAgent):
             *[var.initializer for var in self._q_optimizer.variables()])
         initialization_q_target_weights = tf.group(
             *[var.initializer for var in self._target_q_variables])
+        initialization_policy_weights =tf.group(
+            *[var.initializer for var in self._output_policy.variables[:]]
+        )
+        initialization_policy_opt = tf.group(
+            *[var.initializer for var in self._policy_extraction_optimizer.variables()]
+        )
     
         # initialization_weights,
         # initialization_opt,
@@ -459,6 +523,8 @@ class Imitation(rl_agent.AbstractAgent):
                 initialization_q_weights, 
                 initialization_q_opt,
                 initialization_q_target_weights,
+                initialization_policy_weights,
+                initialization_policy_opt
             ]))
     
     def logits_to_action(self, logits):
@@ -621,9 +687,9 @@ class Imitation(rl_agent.AbstractAgent):
         dataset = self._replay_buffer.sample(length)  # samples without replacement so take the entire thing. Random order
         indices = list(range(length))
 
-        # rtg_all = np.array([transition.rewards_to_go for transition in dataset])
-        # rtg_mean = np.mean(rtg_all)
-        # rtg_std = np.std(rtg_all)
+        rtg_all = np.array([transition.rewards_to_go for transition in dataset])
+        rtg_mean = np.mean(rtg_all)
+        rtg_std = np.std(rtg_all)
         # normalize_rtg = (rtg_all - rtg_mean) / rtg_std
         # rtg_shift = min(normalize_rtg)  # subtract this value to get our target
 
@@ -652,8 +718,9 @@ class Imitation(rl_agent.AbstractAgent):
                 next_info_states = [t.next_info_state for t in transitions]
                 next_actions = [[t.next_action] for t in transitions]
                 done = [t.is_final_step for t in transitions]
-                legal_actions_mask = [t.legal_actions_mask for t in transitions]
-                rewards_to_go = [t.rewards_to_go for t in transitions] # [((t.rewards_to_go - rtg_mean) / rtg_std) for t in transitions] # - rtg_shift for t in transitions] [t.rewards_to_go for t in transitions] #
+                legal_actions_mask = [t.legal_actions_mask for t in transitions]\
+                # We normalize these rewards go to for training offline (as we have acccess to all rtg). Fine-tuning uses a different buffer and is NOT normalized
+                rewards_to_go = [((t.rewards_to_go - rtg_mean) / rtg_std) for t in transitions] # [t.rewards_to_go for t in transitions] #  - rtg_shift for t in transitions] [t.rewards_to_go for t in transitions] #
 
                 start = time.time()
                 loss, bellman_loss, _, q_values = self.session.run(
