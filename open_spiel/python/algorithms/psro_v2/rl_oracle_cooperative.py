@@ -65,6 +65,9 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         self._high_return_actions = []
         self._high_returns = [[] for _ in range(env.num_players)]
 
+        self._prev_name_ppo_policy = "ppo_best_response_pretrain_starting_point_temp/br_1"
+        self._curr_name_ppo_policy = ""
+
         self._all_seen_observations = set()
 
         super(RLOracleCooperative, self).__init__(env, best_response_class, best_response_kwargs,
@@ -115,7 +118,16 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         # if False: 
         #     new_policies = self.generate_new_policies(training_parameters)
         # else:
+
+        # TODO: Reset the old and new policy names 
+        self._curr_name_ppo_policy = "ppo_best_response_pretrain_starting_point_temp/ppo_policy_time_{}_randint_{}".format(time.time(), np.random.randint(1000))
+        # self._curr_name_ppo_policy = "ppo_best_response_pretrain_starting_point_temp/br_1"
+
+        # Generate one new policy for each agent to train imitation
+        # If a dummy is passed in for "policy," a new policy is created and not copied. Assumed that we create one
+        # for every player
         new_policies = self.create_consensus_policies(training_parameters)
+        self._prev_name_ppo_policy = self._curr_name_ppo_policy 
 
         # NOTE: Changed here for fair comparison 
         if not train_best_response:
@@ -154,46 +166,6 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             use sample_policies_for_episode to determine which agent's new policy to train and what policies each of the 
             player targets will use. Then, it will do the rollout where it trains the new policy for an episode. Then, 
             update the number of episodes each new policy has been trained. """
-
-            # TODO: Insert if statement to see if we are training consensus policies. If we are, we need additional sampling to happen
-            # Sample number between 0 and 1. Check against self.psi
-            # train_consensus_joint = np.random.random() < self._psi
-
-            # If we are training conseusus policies AND it is symmetric AND the sampled number is less than psi
-            """
-            if not train_best_response and is_symmetric and train_consensus_joint:
-                # We need to use the joint wrapper to manually train 
-                agents = [new_policies[i][0] for i in range(len(new_policies))]
-                assert len(agents) == 1
-                agents = agents * self.num_players 
-
-                joint_wrapper_instance = joint_wrapper.JointWrapper(agents, symmetric=is_symmetric, discount=self._consensus_kwargs["discount"], turn_based=self._is_turn_based)
-                time_step = self._env.reset()
-                returns = 0.0 
-                steps = 0
-                trajectory = [time_step]
-                actions = []
-                while not time_step.last():
-                    if not self._is_turn_based:
-                        action_list = joint_wrapper_instance.step(time_step, is_evaluation=False)
-                        time_step = self._env.step(action_list)
-                        returns += np.array(time_step.rewards)
-
-                        trajectory.append(time_step)
-                        actions.append(action_list)
-                    else:
-                        raise NotImplementedError
-                
-                # This is to train on the last timestep for joint wrapper
-                joint_wrapper_instance.step(time_step, is_evaluation=False)
-                
-                indexes = [(0, 0)]
-            else:
-                if not train_best_response and train_consensus_joint:
-                    assert not is_symmetric 
-                    agents = [new_pol_list[0] for new_pol_list in new_policies]
-                    indexes = [(p, 0) for p in range(self.num_players)]
-                else:"""
             agents, indexes = self.sample_policies_for_episode(
                     new_policies, training_parameters, steps_per_oracle,
                     strategy_sampler)
@@ -223,7 +195,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             """
             invalid_candidate = (returns[0] < cutoff_returns[0]) or (returns[1] < cutoff_returns[1]) if is_symmetric else (returns[0] < cutoff_returns[0]) and (returns[1] < cutoff_returns[1])
 
-            if not invalid_candidate:
+            if not invalid_candidate and self._consensus_kwargs["consensus_imitation"]:
                 rollout_trajectories.append(trajectory)
                 rollout_returns.append(returns)
                 rollout_actions.append(actions)
@@ -249,15 +221,13 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             # TODO: This is an invalid way of calculating number of steps for NON-simultaneous games
             steps_per_oracle = rl_oracle.update_steps_per_oracles(steps_per_oracle, indexes, len(actions))
 
-        # Generate one new policy for each agent to train imitation
-        # If a dummy is passed in for "policy," a new policy is created and not copied. Assumed that we create one
-        # for every player
+        if self._consensus_kwargs["consensus_imitation"]:
+            self.update_trajectories(training_parameters, rollout_trajectories, rollout_actions, rollout_returns)
+
 
         # Freeze the new policies to keep their weights static. This allows us to
         # later not have to make the distinction between static and training
         # policies in training iterations.
-        self.update_trajectories(training_parameters, rollout_trajectories, rollout_actions, rollout_returns)
-        
         rl_oracle.freeze_all(new_policies)
 
         return new_policies
@@ -274,10 +244,10 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             elif self._consensus_oracle == "q_learn":
                 curr._policy = imitation_q_learn.Imitation(**{"player_id": i, "consensus_kwargs": self._consensus_kwargs}, **new_arguments)
             elif self._consensus_oracle == "trajectory_deep":
-                new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based}
+                new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based, "old_policy_name": self._prev_name_ppo_policy, "new_policy_name": self._curr_name_ppo_policy}
                 curr._policy = imitation_deep.Imitation(**{"player_id": i, "consensus_kwargs": self._consensus_kwargs}, **new_arguments)
             elif self._consensus_oracle == "cql_deep":
-                new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based}
+                new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based, "old_policy_name": self._prev_name_ppo_policy, "new_policy_name": self._curr_name_ppo_policy}
                 curr._policy = imitation_q_learn_deep.Imitation(**{"player_id": i, "consensus_kwargs": self._consensus_kwargs}, **new_arguments)
             else:
                 raise NotImplementedError

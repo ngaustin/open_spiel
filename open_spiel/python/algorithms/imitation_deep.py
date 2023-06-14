@@ -79,6 +79,9 @@ class Imitation(rl_agent.AbstractAgent):
         self.n_hidden_layers = consensus_kwargs["n_hidden_layers"]
         self.discount_factor = consensus_kwargs["discount"]
 
+        self.old_policy_name = old_policy_name
+        self.new_policy_name = new_policy_name
+
         self.layer_sizes = [self.hidden_layer_size] * self.n_hidden_layers
 
         # For joint space stuff
@@ -149,7 +152,9 @@ class Imitation(rl_agent.AbstractAgent):
                  num_actions, 
                  state_representation_size, 
                  num_players,
-                 self._is_turn_based)
+                 self._is_turn_based,
+                 self.old_policy_name,
+                 self.new_policy_name)
 
 
         self._initialize()

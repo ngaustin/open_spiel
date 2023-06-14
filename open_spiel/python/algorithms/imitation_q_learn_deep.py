@@ -63,7 +63,9 @@ class Imitation(rl_agent.AbstractAgent):
                  num_actions, 
                  state_representation_size, 
                  num_players,
-                 turn_based):
+                 turn_based, 
+                 old_policy_name,
+                 new_policy_name):
         """Initialize the DQN agent."""
 
         # This call to locals() is used to store every argument used to initialize
@@ -100,6 +102,8 @@ class Imitation(rl_agent.AbstractAgent):
         # BELOW is for R-BVE finetuning 
         self.max_buffer_size_fine_tune = consensus_kwargs["max_buffer_size_fine_tune"]
         self.min_buffer_size_fine_tune = consensus_kwargs["min_buffer_size_fine_tune"]
+        self.old_policy_name = old_policy_name
+        self.new_policy_name = new_policy_name
 
         self.actor_loss_list = []
         self.value_loss_list = []
@@ -287,7 +291,9 @@ class Imitation(rl_agent.AbstractAgent):
                  num_actions, 
                  state_representation_size, 
                  num_players,
-                 self._is_turn_based)
+                 self._is_turn_based,
+                 self.old_policy_name,
+                 self.new_policy_name)
         
         # This is for policy extraction 
         log_probs = self._output_policy(self._info_state_ph)

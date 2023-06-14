@@ -141,7 +141,9 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                  num_actions, 
                  state_representation_size, 
                  num_players, 
-                 turn_based):
+                 turn_based, 
+                 old_policy_name,
+                 new_policy_name):
         """Initialize the DQN agent."""
 
         # This call to locals() is used to store every argument used to initialize
@@ -171,6 +173,9 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         self.min_buffer_size_fine_tune = consensus_kwargs["min_buffer_size_fine_tune"]
         self.fine_tune_bool = consensus_kwargs["fine_tune"]
         self.consensus_kwargs = consensus_kwargs
+
+        self.old_policy_name = old_policy_name
+        self.new_policy_name = new_policy_name
 
         self.actor_loss_list = []
         self.value_loss_list = []
@@ -354,31 +359,18 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         self._replay_buffer = ReplayBuffer(self.max_buffer_size_fine_tune)
         self.session.run(self._initialize_policy_network)
         self.session.run(self._initialize_old_policy_network)
+        self.is_train_best_response = is_train_best_response
 
-        self.epochs = 10  # consider using 30 epochs here as well
-        self.minibatches = 50
-        if is_train_best_response:
-            new_checkpoint = tf.train.Checkpoint(model=self._policy_network)
-            new_checkpoint.restore("ppo_best_response_pretrain_starting_point")
-            print('Pre-trained best response PPO policy network checkpoint restored.')
-
-            # self.epochs = 10  # consider using 30 epochs here as well
-            # self.minibatches = 50
-
+        self.epochs = self.consensus_kwargs["epochs_ppo"]
+        self.minibatches = self.consensus_kwargs["minibatches_ppo"]
+        if self.is_train_best_response:
+            if self.old_policy_name != "":
+                new_checkpoint = tf.train.Checkpoint(model=self._policy_network)
+                new_checkpoint.restore(self.old_policy_name)
+                print('Pre-trained best response PPO policy network checkpoint restored.')
             self.policy_constraint_weight = 0
         else:
-            # self.epochs = 5
-            # self.minibatches = 1
-            # self.min_buffer_size_fine_tune = 6000
-
-            # self.epochs = 30
-            # self.minibatches = 30 
-            # self.min_buffer_size_fine_tune = 120000
-
             self.policy_constraint_weight = self.consensus_kwargs["policy_constraint"]
-
-            # Consider making minibatches = 30, self.min_buffer_size_fine_tune = 120000, and self.epochs = 30
-            # self.min_buffer_size_fine_tune *= 2
 
     def step(self, time_step, is_evaluation=False, add_transition_record=True):
         """Returns the action to be taken and updates the Q-network if needed.
@@ -460,15 +452,6 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         transitions = self._replay_buffer.sample(len(self._replay_buffer))
         info_states = [t.info_state for t in transitions]
         actions = [[t.action] for t in transitions]
-        """
-        next_actions = [[t.next_action] for t in transitions]
-        rewards = [t.reward for t in transitions]
-        next_info_states = [t.next_info_state for t in transitions]
-        are_final_steps = [t.is_final_step for t in transitions]
-        legal_actions_mask = [t.legal_actions_mask for t in transitions]
-        rewards_to_go = [t.rewards_to_go for t in transitions]
-        gae = [[t.gae] for t in transitions]
-        """
 
         old_log_probs = self.session.run(
             [self.log_probs],
@@ -495,10 +478,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                 info_states = [transitions[j].info_state for j in subset]
                 actions = [[transitions[j].action] for j in subset]
                 next_actions =[[transitions[j].next_action] for j in subset]
-                rewards = [transitions[j].reward for j in subset]
                 next_info_states = [transitions[j].next_info_state for j in subset]
-                are_final_steps = [transitions[j].is_final_step for j in subset]
-                legal_actions_mask = [transitions[j].legal_actions_mask for j in subset]
                 rewards_to_go = [transitions[j].rewards_to_go for j in subset]
                 gae = [[transitions[j].gae] for j in subset]
                 old_log_probs_subset = [old_log_probs[j] for j in subset]
@@ -541,40 +521,13 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                         self._fine_tune_mode_ph: True
                     })
             self.value_loss_list.append(value_loss)
-        """
-
-        # NOTE: In multi-agent settings, having one minibatch tends to work better in Independent PPO: https://arxiv.org/pdf/2103.01955.pdf . Also, having 5 or less epochs seems to work best
-        for _ in range(15):
-            actor_loss, _, entropy, probs, log_probs = self.session.run(
-                [self.actor_loss, self._ppo_policy_learn_step, self.entropy, self.probs, self.log_probs],
-                feed_dict={
-                    self._info_state_ph: info_states,
-                    self._action_ph: actions,
-                    self._rewards_to_go_ph: rewards_to_go,
-                    self._old_log_probs_ph: old_log_probs,
-                    self._fine_tune_mode_ph: True,
-                    self._gae_ph: gae,
-                })
-
-            if self._fine_tune_learn_steps == 1:
-                print("Actor loss and entropy and log probs/probs on first fine tune steps: ", actor_loss, entropy, log_probs, probs)
-                
-        for _ in range(15):
-            value_loss, _ = self.session.run(
-                [self.critic_loss, self._ppo_value_learn_step],
-                feed_dict={
-                    self._info_state_ph: info_states,
-                    self._rewards_to_go_ph: rewards_to_go,
-                    self._fine_tune_mode_ph: True
-                })
-        """
         
         if (len(self.actor_loss_list) > 100 and self._fine_tune_print_counter > 100):
             self.actor_loss_list = self.actor_loss_list[-100:]
             self.value_loss_list = self.value_loss_list[-100:]
             self.entropy_list = self.entropy_list[-100:]
             self.kl_list = self.kl_list[-100:]
-            print("Mean PPO Actor + Value losses, entropy, and kl last 100 updates...and num env steps: ", sum(self.actor_loss_list) / len(self.actor_loss_list), sum(self.value_loss_list) / len(self.value_loss_list), sum(self.entropy_list) / len(self.entropy_list), sum(self.kl_list) / len(self.kl_list), self._env_steps)
+            print("Mean PPO Actor + Value losses, entropy, and kl last 100 updates...and num env steps...and policy constraint weight: ", sum(self.actor_loss_list) / len(self.actor_loss_list), sum(self.value_loss_list) / len(self.value_loss_list), sum(self.entropy_list) / len(self.entropy_list), sum(self.kl_list) / len(self.kl_list), self._env_steps, self.policy_constraint_weight)
             # print("Reward scaling mean, std: ", self.reward_scaler.rs.mean, self.reward_scaler.rs.std)
             self._fine_tune_print_counter = 0
 
@@ -585,9 +538,10 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         self._all_override_symmetrics = []
         self._curr_size_batch = 0
 
-        # Save the model if we want to...comment out if necessary 
-        # checkpoint = tf.train.Checkpoint(model=self._policy_network)
-        # checkpoint.write("ppo_best_response_pretrain_starting_point")
+        # Save the model for the next PSRO iteration can take
+        if self.is_train_best_response and self.new_policy_name != "":
+            checkpoint = tf.train.Checkpoint(model=self._policy_network)
+            checkpoint.write(self.new_policy_name)
         return
 
     def _initialize(self):

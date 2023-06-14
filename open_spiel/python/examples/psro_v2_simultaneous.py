@@ -109,6 +109,8 @@ flags.DEFINE_bool("clear_trajectories", False, "Determines whether to clear the 
 flags.DEFINE_float("psi", 1.0, "How much probability fine tune in joint space")
 flags.DEFINE_float("eps_clip", .2, "PPO epsilon boundary clip")
 flags.DEFINE_float("ppo_entropy", .01, "PPO entropy regularization")
+flags.DEFINE_integer("epochs_ppo", 80, "PPO epochs")
+flags.DEFINE_integer("minibatches_ppo", 5, "PPO minibatches")
 flags.DEFINE_float("policy_constraint", .1, "Policy constraint regularization in PPO fine tuning")
 
 # RRD and MSS 
@@ -231,6 +233,7 @@ def init_dqn_responder(sess, env):
     "state_representation_size": global_state_representation_size if FLAGS.joint_action else state_representation_size,
     "alpha": FLAGS.alpha,
     "consensus_oracle":FLAGS.consensus_oracle,
+    "consensus_imitation": FLAGS.consensus_imitation,
     "imitation_mode":FLAGS.trajectory_mode, 
     "num_simulations_fit":FLAGS.n_top_trajectories,
     "proportion_uniform_trajectories":FLAGS.proportion_uniform_trajectories,
@@ -259,7 +262,9 @@ def init_dqn_responder(sess, env):
     "psi": FLAGS.psi,
     "eps_clip": FLAGS.eps_clip,
     "ppo_entropy_regularization": FLAGS.ppo_entropy,
-    "policy_constraint": FLAGS.policy_constraint
+    "policy_constraint": FLAGS.policy_constraint,
+    "epochs_ppo": FLAGS.epochs_ppo,
+    "minibatches_ppo": FLAGS.minibatches_ppo,
   }
 
   print("Agent Arguments: ")
@@ -272,15 +277,16 @@ def init_dqn_responder(sess, env):
     print("{}: {}".format(key, value))
   print('\n')
 
-  if FLAGS.consensus_imitation:
-      oracle = rl_oracle_cooperative.RLOracleCooperative(
-          env,
-          agent_class,
-          agent_kwargs,
-          consensus_kwargs=consensus_kwargs,
-          number_training_steps=FLAGS.number_training_steps,
-          self_play_proportion=FLAGS.self_play_proportion,
-          sigma=FLAGS.sigma)
+  # if FLAGS.consensus_imitation:
+  oracle = rl_oracle_cooperative.RLOracleCooperative(
+      env,
+      agent_class,
+      agent_kwargs,
+      consensus_kwargs=consensus_kwargs,
+      number_training_steps=FLAGS.number_training_steps,
+      self_play_proportion=FLAGS.self_play_proportion,
+      sigma=FLAGS.sigma)
+  """
   else:
       oracle = rl_oracle.RLOracle(
           env,
@@ -288,7 +294,7 @@ def init_dqn_responder(sess, env):
           agent_kwargs,
           number_training_steps=FLAGS.number_training_steps,
           self_play_proportion=FLAGS.self_play_proportion,
-          sigma=FLAGS.sigma)
+          sigma=FLAGS.sigma)"""
 
   agents = [
       agent_class(  # pylint: disable=g-complex-comprehension
