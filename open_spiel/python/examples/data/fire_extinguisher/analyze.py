@@ -58,7 +58,7 @@ def main(argv):
   if len(argv) > 1:
     raise app.UsageError("Too many command-line arguments.")
 
-  data_directory_paths = ["open_spiel/python/examples/data/fire_extinguisher/game_data/"]
+  data_directory_paths = ["open_spiel/python/examples/data/fire_extinguisher/imitation_game_data/"]
   iterations = len(os.listdir(data_directory_paths[0]))
   num_players = 2
   corresponding_dictionaries = []
@@ -69,6 +69,28 @@ def main(argv):
     # Create directory
     os.makedirs(save_graph_path)
     print("Graph directory created.")
+
+  def graph_training_returns(training_returns, num_iteration, average_grouping = 50):
+    """
+      Graph training returns for BR training
+        training_returns: 2D array with n arrays containing training returns for players
+        num_iteration: # of current iteration
+        average_grouping: Size of episode grouping (for cleaner graphing purposes)
+        axis_normalization: Normalizes y-axis scale across the iterations for easier trend comparisons
+    """
+    grouped_rets = []
+    for i in range(len(training_returns)):
+      grouped_rets.append([])
+      for j in range(0, len(training_returns[i]), average_grouping):
+        grouped_rets[i].append(np.mean(training_returns[i][j: j + average_grouping]))
+    for i in range(num_players):
+      training_returns_fig, ax = plt.subplots()
+      ax.plot(np.arange(0, len(grouped_rets[i])), grouped_rets[i])
+      ax.set_title("BR Training Returns Player {}".format(i + 1))
+      ax.set_xlabel("Iteration (Grouped by {} episodes)".format(average_grouping))
+      ax.set_ylabel("Expected Returns")
+      training_returns_fig.savefig(save_graph_path + "training_returns/" + "iteration_{}_player_{}.jpg".format(num_iteration, i+1))
+
 
   def get_data(folder_path):
     """
@@ -95,7 +117,9 @@ def main(argv):
       print("Save_data_path", save_data_path)
       with open(save_data_path, "rb") as npy_file:
           array_list = np.load(npy_file, allow_pickle=True)
-      meta_probabilities, utilities = array_list
+      print(array_list)
+      meta_probabilities, utilities, training_returns = array_list
+      graph_training_returns(training_returns, i)
       print("Utilities:", utilities)
       # meta_probabilities was vstacked at first dimension for each player
       # utilities were vstacked at the first dimension for each player as well
@@ -113,12 +137,11 @@ def main(argv):
         if i > 0:
           #Individual table best response 
           if num_player == 0:
-            #Get column corresponding to best_response utilities
-            best_response_payoffs = utilities[num_player][:, index_best_response_utilities]
+            # Row corresponding to best_response utilities
+            best_response_payoffs = utilities[num_player][index_best_response_utilities]
           else:
-            best_response_payoffs = []
-            for row in utilities[num_player]:
-              best_response_payoffs.append(row[index_best_response_utilities])
+            # Column corresponding to best_response utilities
+            best_response_payoffs = utilities[num_player][:, index_best_response_utilities]
           prev_player_profile = player_profile_history[num_player][i-1]
           best_response_trunc = best_response_payoffs[:len(prev_player_profile)]
           best_response_expected_payoff = np.dot(prev_player_profile, best_response_trunc)

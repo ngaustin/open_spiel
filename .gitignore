@@ -16,6 +16,8 @@ ENV/
 
  # data 
 *.npy
+*.jpg
+*.sh
 
  # OSX specific
 .DS_Store
@@ -57,7 +59,6 @@ Manifest.toml
 .vscode/
 .vs/
 *~
-
 
 open_spiel/cmake-build-debug/
 

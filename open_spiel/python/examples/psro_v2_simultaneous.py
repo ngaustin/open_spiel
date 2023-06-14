@@ -174,15 +174,15 @@ flags.DEFINE_integer("seed", 1, "Seed.")
 flags.DEFINE_bool("local_launch", False, "Launch locally or not.")
 flags.DEFINE_bool("verbose", True, "Enables verbose printing and profiling.")
 
-def save_iteration_data(iteration_number, meta_probabilities, U, save_folder_path):
+def save_iteration_data(iteration_number, meta_probabilities, U, save_folder_path, training_returns):
       """ How to save the iteration data? """
       date_time_string = str(datetime.now())
       date_time_string = date_time_string.replace(':', '_')
       save_data_path = save_folder_path + date_time_string + "_" + "iteration_{}.npy".format(iteration_number)
 
       all_meta_probabilities = np.vstack(meta_probabilities)
-      array_list = [all_meta_probabilities, np.stack(U, axis=0)]
-      object_array_list = np.empty(2, object)
+      array_list = [all_meta_probabilities, np.stack(U, axis=0), training_returns]
+      object_array_list = np.empty(3, object)
       object_array_list[:] = array_list
 
       with open(save_data_path, "wb") as npy_file:
@@ -350,7 +350,8 @@ def gpsro_looper(env, oracle, agents):
   """Initializes and executes the GPSRO training loop."""
   sample_from_marginals = True  # TODO(somidshafiei) set False for alpharank
   training_strategy_selector = FLAGS.training_strategy_selector or strategy_selectors.probabilistic
-  
+  training_returns = []
+
   g_psro_solver = psro_v2.PSROSolver(
       env.game,
       oracle,
@@ -377,6 +378,9 @@ def gpsro_looper(env, oracle, agents):
 
 
     g_psro_solver.iteration()
+    if (FLAGS.consensus_imitation):
+      training_returns = oracle.get_training_returns()
+
     meta_game = g_psro_solver.get_meta_game()
     meta_probabilities = g_psro_solver.get_meta_strategies()
     policies = g_psro_solver.get_policies()
@@ -396,7 +400,7 @@ def gpsro_looper(env, oracle, agents):
       # env.game.display_policies_in_context(policies)
 
       save_folder_path = FLAGS.save_folder_path if FLAGS.save_folder_path[-1] == "/" else FLAGS.save_folder_path + "/"
-      save_iteration_data(gpsro_iteration, meta_probabilities, meta_game, save_folder_path)
+      save_iteration_data(gpsro_iteration, meta_probabilities, meta_game, save_folder_path, training_returns)
 
     # The following lines only work for sequential games for the moment.
     """

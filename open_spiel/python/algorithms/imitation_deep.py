@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""DQN agent implemented in TensorFlow."""
-
 import collections
 import os
 from absl import logging
@@ -40,19 +38,19 @@ ILLEGAL_ACTION_LOGITS_PENALTY = -1e9
 
 
 class Imitation(rl_agent.AbstractAgent):
-    """DQN Agent implementation in TensorFlow.
+    """
 
-    See open_spiel/python/examples/breakthrough_dqn.py for an usage example.
+    Behavior Cloning implemented with FF network
+
     """
 
     def __init__(self,
                  player_id,
-                 consensus_kwargs, 
-                 num_actions, 
+                 consensus_kwargs,
+                 num_actions,
                  state_representation_size,
-                 num_players, 
+                 num_players,
                  turn_based):
-        """Initialize the DQN agent."""
 
         # This call to locals() is used to store every argument used to initialize
         # the class instance, so it can be copied with no hyperparameter change.
@@ -68,6 +66,7 @@ class Imitation(rl_agent.AbstractAgent):
         self.joint_action = consensus_kwargs["joint_action"]
         self.num_players = num_players
 
+        # Controls temperature that can shift action selection towards greedy or towards random
         self.boltzmann = consensus_kwargs["boltzmann"]
         self.mode = consensus_kwargs["imitation_mode"]
 
@@ -85,63 +84,82 @@ class Imitation(rl_agent.AbstractAgent):
         self.layer_sizes = [self.hidden_layer_size] * self.n_hidden_layers
 
         # For joint space stuff
-        # Look at above note about marginalizing Q-values for the joint action
+        # For training in joint space
+
+        '''
+            Assumptions: 2-player game in which each player has access to the same action set.
+        '''
+        # Given decentralized, local action --> get joint actions that have that individual action
+        # e.g. player 1 action 1 is in joint actions 1,8,16 etc.
         self.player_marginal_indices = [[[] for _ in range(num_actions)] for _ in range(num_players)]  # action index -> list of indices for marginalization
-        self.joint_index_to_joint_actions ={}  # maps joint_action_index -> all players' marginalized actions
+        # joint action index --> Individual action indices
+        # e.g. Joint action 14, is composed of player 0 action 4 and player 1 action 2
+        self.joint_index_to_joint_actions = {}  # maps joint_action_index -> all players' marginalized actions
         max_num_actions = self._num_actions ** num_players
 
         all_actions = list(product(list(range(num_actions)), repeat=num_players))
-        # print("THERE ARE A TOTAL OF {} ACTIONS IN JOINT SPACE".format(len(all_actions)))
-        # print("Actions here: {}".format(all_actions))
+        print("THERE ARE A TOTAL OF {} ACTIONS IN JOINT SPACE".format(len(all_actions)))
+        print("Actions here: {}".format(all_actions))
 
+        # Initializes player_marginal indices and joint_index_to_joint_actions
         for joint_action in all_actions:
             joint_action_index = self._calculate_joint_action_index(np.array(joint_action).reshape(1, -1))
             for p in range(num_players):
                 marginalized_action = joint_action[p]  # in symmetric case, self.player_id will ALWAYS be 0
                 self.player_marginal_indices[p][marginalized_action].append(int(joint_action_index[0][0]))
             self.joint_index_to_joint_actions[joint_action_index[0][0]] = joint_action
-        
+
         self.player_marginal_indices = np.array(self.player_marginal_indices, dtype=np.dtype(int))
 
-        # Initialize replay
+        # Just holds labeled data - think of the same as an array
         self._replay_buffer = ReplayBuffer(np.inf)
 
-        # Initialize the FF network 
-        num_outputs = self._num_actions ** num_players if self.joint_action else self._num_actions 
+        # Initialize the FF network
+        num_outputs = self._num_actions ** num_players if self.joint_action else self._num_actions
+        # Idea of FF Net: Map an optimal joint/independent action to every state
+        # input size: num states
+        # # hidden layers: layer_sizes
+        # output_size: If joint actions, then num output is the total # action combinations
         self.net = simple_nets.MLP(self.state_representation_size,
                                    self.layer_sizes, num_outputs)
-        
+
         self._fine_tune_mode = False
 
         self._variables = self.net.variables[:]
 
+        # (observation, action) for training
+        # testing: not using OOD d.p.
         if self.mode == "prob_action":
+            # Allows you to pass in data later on
             self._info_state_ph = tf.placeholder(
                 shape=[None, self.state_representation_size],
                 dtype=tf.float32,
                 name="info_state_ph")
             self._action_ph = tf.placeholder(
                 shape=[None], dtype=tf.int32, name="action_ph")
-            
+
             # self._return_ph = tf.placeholder(
             #     shape=[None], dtype=tf.float32, name="return_ph"
             # )
 
             self.log_probs = self.net(self._info_state_ph)
-            loss_class = tf.losses.softmax_cross_entropy 
+            loss_class = tf.losses.softmax_cross_entropy
 
-            # Convert the actions to one hot vectors 
+            # Convert the actions to one hot vectors
             self.one_hot_vectors = tf.one_hot(self._action_ph, depth=num_outputs)
 
-            # Plug into cross entropy class 
+            # Plug into cross entropy class
             self._loss = tf.reduce_mean(loss_class(self.one_hot_vectors, self.log_probs))# weights=tf.math.exp(self._return_ph)))
 
+        # Ignore
         elif self.mode == "prob_reward":
             raise NotImplementedError
         else:
             raise NotImplementedError
 
-        # Initialize Adam Optimizer 
+        # FINE-TUNING
+
+        # Initialize Adam Optimizer
         self._optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
         self._learn_step = self._optimizer.minimize(self._loss)
 
@@ -149,8 +167,8 @@ class Imitation(rl_agent.AbstractAgent):
         self._fine_tune_module = ImitationFineTune(self.net,
                  player_id,
                  consensus_kwargs,
-                 num_actions, 
-                 state_representation_size, 
+                 num_actions,
+                 state_representation_size,
                  num_players,
                  self._is_turn_based,
                  self.old_policy_name,
@@ -158,15 +176,15 @@ class Imitation(rl_agent.AbstractAgent):
 
 
         self._initialize()
-    
+
         self.states_seen_in_evaluation = []
 
     def clear_state_tracking(self):
         self.states_seen_in_evaluation = []
-        return 
+        return
 
     def _calculate_joint_action_index(self, joint_action):
-        # Joint_action batch. Return the action index for each 
+        # Joint_action batch. Return the action index for each
         # print(joint_action)
         indices = np.zeros((joint_action.shape[0], 1), dtype=np.int32)
         for i in range(joint_action.shape[1]):
@@ -191,9 +209,10 @@ class Imitation(rl_agent.AbstractAgent):
                 initialization_weights,
                 initialization_opt,
             ]))
+    # FINE-TUNING END
 
     def step(self, time_step, is_evaluation=False, add_transition_record=True):
-        """Returns the action to be taken and updates the Q-network if needed.
+        """Applying trained FF network to test data
 
         Args:
           time_step: an instance of rl_environment.TimeStep.
@@ -207,30 +226,30 @@ class Imitation(rl_agent.AbstractAgent):
         # This is a weird issue with the current code framework
 
         if self._fine_tune_mode:
-            # Edge case: set the player_id for the fine tune mode to match this module 
+            # Edge case: set the player_id for the fine tune mode to match this module
             self._fine_tune_module.player_id = self.player_id
             return self._fine_tune_module.step(time_step, is_evaluation, add_transition_record)
 
         if self.symmetric:
-            # If symmetric, then having a NOT simultaneous move implies that it is updating the empirical game. Time_step.current_player is correctly set corresponding to the player 
+            # If symmetric, then having a NOT simultaneous move implies that it is updating the empirical game. Time_step.current_player is correctly set corresponding to the player
             # However, if it is a simultaneous move, then we are working with BR. self.player_id is set manually from rl_oracle.py's sample_episode to make sure we get the right observation
             player = (time_step.current_player() if not time_step.is_simultaneous_move() else self.player_id)
         else:
             # If it's not symmetric, then each agent is given one policy corresponding to player_id
-            player = self.player_id 
+            player = self.player_id
 
         # Act step: don't act at terminal info states or if its not our turn.
         if (not time_step.last()) and (
                 time_step.is_simultaneous_move() or
                 self.player_id == time_step.current_player() or self.symmetric):
 
-            
+
             legal_actions = time_step.observations["legal_actions"][player]
 
             if self.joint_action:
                 with tf.device(self.device):
                     info_state = np.reshape(time_step.observations["global_state"][0], [1, -1])
-                
+
                 logits = self.session.run(self.log_probs, feed_dict={self._info_state_ph: info_state})[0]
 
                 all_legal_actions = time_step.observations["legal_actions"]
@@ -251,12 +270,12 @@ class Imitation(rl_agent.AbstractAgent):
                 probs[action] = 1.0
             else:
                 info_state = time_step.observations["info_state"][player]
-                with tf.device(self.device):    
+                with tf.device(self.device):
                     info_state = np.reshape(info_state, [1, -1])
 
                 # Run session to get logits. Then, softmax over them
                 logits = self.session.run(self.log_probs, feed_dict={self._info_state_ph: info_state})[0]
-                
+
                 legal_logits = logits[legal_actions]
                 action_probs = np.exp(self.boltzmann * legal_logits) / np.sum(np.exp(self.boltzmann * legal_logits))
 
@@ -270,13 +289,13 @@ class Imitation(rl_agent.AbstractAgent):
             probs = []
 
         return rl_agent.StepOutput(action=action, probs=probs)
-    
+
     def add_trajectory(self, trajectory, action_trajectory, override_symmetric=False):
-        """Trajectory is a list of timesteps, Action_trajectory is a list of lists representing joint actions. If it is a single player playing an action, 
+        """Trajectory is a list of timesteps, Action_trajectory is a list of lists representing joint actions. If it is a single player playing an action,
             it will be a list of length 1 lists. """
         if self._fine_tune_mode:
             self._fine_tune_module.add_trajectory(trajectory, action_trajectory, override_symmetric)
-            return 
+            return
 
         rewards_to_go = [np.zeros(self.num_players) for _ in range(len(trajectory) - 1)]
         curr_rtg = 0.0
@@ -289,29 +308,29 @@ class Imitation(rl_agent.AbstractAgent):
             if not self._is_turn_based:
                 # NOTE: If is_symmetric, then add_transition will add observations/actions from BOTH players already
                 # NOTE: Also insert action_trajectory[i+1]. If it is the last i, then we let action be 0 because it won't be used anyway
-                next_action = action_trajectory[i+1] if (i+1) < len(action_trajectory) else [0 for _ in range(self.num_players)] 
-                self.add_transition(trajectory[i], action_trajectory[i], trajectory[i+1], next_action, ret=rewards_to_go[i], override_symmetric=override_symmetric) 
+                next_action = action_trajectory[i+1] if (i+1) < len(action_trajectory) else [0 for _ in range(self.num_players)]
+                self.add_transition(trajectory[i], action_trajectory[i], trajectory[i+1], next_action, ret=rewards_to_go[i], override_symmetric=override_symmetric)
             else:
                 player = trajectory[i].observations["current_player"]
                 # TODO: Figure out this later...
 
-                # Individual player's move 
+                # Individual player's move
                 action = [0 for _ in range(self.num_players)]
                 next_action = [0 for _ in range(self.num_players)]
-                
+
                 action[player] = action_trajectory[i][0]
-                
-                # Simply indexing i+1 is incorrect. No guarantees it is this player's move or the final 
+
+                # Simply indexing i+1 is incorrect. No guarantees it is this player's move or the final
                 next_player_timestep_index = None
                 for j in range(i+1, len(trajectory)):
                     if trajectory[j].observations["current_player"] == player or trajectory[j].last():
-                        next_player_timestep_index = j 
-                        break 
+                        next_player_timestep_index = j
+                        break
                 if next_player_timestep_index:
                     next_action[player] = action_trajectory[next_player_timestep_index][0] if next_player_timestep_index < len(action_trajectory) else 0
 
-                    curr_policy.add_transition(trajectory[i], action, trajectory[next_player_timestep_index], next_action, ret=rewards_to_go[i], override_player=[player]) 
-            
+                    curr_policy.add_transition(trajectory[i], action, trajectory[next_player_timestep_index], next_action, ret=rewards_to_go[i], override_player=[player])
+
 
     def add_transition(self, prev_time_step, prev_action, time_step, action, ret, override_symmetric=False, override_player=[]):
         """Adds the new transition using `time_step` to the replay buffer.
@@ -323,8 +342,8 @@ class Imitation(rl_agent.AbstractAgent):
           prev_time_step: prev ts, an instance of rl_environment.TimeStep.
           prev_action: list of ints, joint action taken at `prev_time_step`.
           time_step: current ts, an instance of rl_environment.TimeStep.
-          action: list of ints, joint action taken at timestep 
-          ret: return of the trajectory associated with 
+          action: list of ints, joint action taken at timestep
+          ret: return of the trajectory associated with
           override_player: player this trajectory is associated with. If empty, then default.
         """
         # TODO: If symmetric, then add transitions from both players
@@ -335,7 +354,7 @@ class Imitation(rl_agent.AbstractAgent):
             transition = Transition(
                     info_state=o,
                     action=store_action,
-                    reward=r, 
+                    reward=r,
                     ret=ret)
             self._replay_buffer.add(transition)
         else:
@@ -351,10 +370,27 @@ class Imitation(rl_agent.AbstractAgent):
                     info_state=(
                         prev_time_step.observations["info_state"][p][:]),
                     action=prev_action[p],
-                    reward=r, 
+                    reward=r,
                     ret=ret)
 
                 self._replay_buffer.add(transition)
+
+    def _return_normalization(self, rets, temp = 1):
+        """
+            Softmax normalization to compute the relative weightings of the trajectories.
+            Params: 
+                rets: array of tuples: (player 0 future returns, player 1 future returns)
+                temp: temperature hyperparameter: Can reduce/increase the power of the weighting
+
+        """
+        rets = np.array(rets)
+        player_0_sum = np.sum(np.exp(rets[:, 0]))
+        player_1_sum = np.sum(np.exp(rets[:, 1]))
+        weighted_trajectories = [[np.exp(p0_rets / temp) / player_0_sum, np.exp(p1_rets / temp) / player_1_sum] for p0_rets, p1_rets in rets]
+        average_weighted = [np.mean(trajectory_weight) for trajectory_weight in weighted_trajectories]
+        # print("AVERAGE", average_weighted)
+        # print("CHECK", np.sum(average_weighted))
+        return average_weighted
 
     def learn(self):
         """Compute the loss on sampled transitions and perform a Q-network update.
@@ -369,21 +405,24 @@ class Imitation(rl_agent.AbstractAgent):
         length = len(self._replay_buffer)
         dataset = self._replay_buffer.sample(length)  # samples without replacement so take the entire thing. Random order
         indices = list(range(length))
-
         for ep in range(self.epochs):
             i, batches, loss_total, entropy_total = 0, 0, 0, 0  # entropy_total is just an estimate
             dataset = random.sample(dataset, len(dataset))
+            rets = [d.ret for d in dataset]
+            weights = self._return_normalization(rets,temp=1)
             while i < length:
-                transitions = dataset[i: min(length, i+self.batch)] 
-
+                #transitions = dataset[i: min(length, i+self.batch)]
+                transitions = random.choices(population=dataset, weights=weights, k=min(length, i+self.batch) - i)
                 with tf.device(self.device):
                     info_states = [t.info_state for t in transitions]
                     actions = [t.action for t in transitions]
                     rewards = [t.reward for t in transitions]
-                # rets = [t.ret for t in transitions]
-                # rets = [return_normalization(r) for r in rets]
+                rets = [t.ret for t in transitions]
+                #print("RETS", rets)
+                # rets = [self._return_normalization(r) for r in rets]
 
                 if self.mode == "prob_action":
+                    # Session is for the FF net to learn
                     loss, _, log_probs, one_hots = self.session.run(
                     [self._loss, self._learn_step, self.log_probs, self.one_hot_vectors],
                     feed_dict={
@@ -409,21 +448,21 @@ class Imitation(rl_agent.AbstractAgent):
                         feed_dict={
                             self._info_state_ph: info_states,
                             self._action_ph: actions,
-                            self._reward_ph: rewards,
+                            #self._reward_ph: rewards,
                         })
 
                 else:
-                    raise NotImplemented 
+                    raise NotImplemented
                 loss_total += loss
                 i += self.batch
-                batches +=1 
+                batches +=1
             if ep % 100 == 0:
                 print("Average loss for epoch {}: {} ".format(ep, loss_total / float(batches)))
 
             if loss_total / float(batches) < self.minimum_entropy:
                 print("Exiting training after {} epochs with loss of {}".format(ep, loss_total / float(batches)))
-                break 
-        return loss 
+                break
+        return loss
 
     def get_weights(self):
         #   : Implement this
