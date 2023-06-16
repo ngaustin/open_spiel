@@ -68,7 +68,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         self._high_returns = [[] for _ in range(env.num_players)]
         self._train_br_returns = []
 
-        self._prev_name_ppo_policy = "ppo_best_response_pretrain_starting_point_temp/br_1"
+        self._prev_name_ppo_policy = ""
         self._curr_name_ppo_policy = ""
 
         self._all_seen_observations = set()
@@ -123,8 +123,8 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         # else:
 
         # TODO: Reset the old and new policy names 
-        self._curr_name_ppo_policy = "ppo_best_response_pretrain_starting_point_temp/ppo_policy_time_{}_randint_{}".format(time.time(), np.random.randint(1000))
-        # self._curr_name_ppo_policy = "ppo_best_response_pretrain_starting_point_temp/br_1"
+        # self._curr_name_ppo_policy = "ppo_best_response_pretrain_starting_point_temp/time_{}_randint_{}_ppo_policy".format(time.time(), np.random.randint(1000))
+        self._curr_name_ppo_policy = "ppo_best_response_pretrain_starting_point_temp/br_1"
 
         # Generate one new policy for each agent to train imitation
         # If a dummy is passed in for "policy," a new policy is created and not copied. Assumed that we create one
