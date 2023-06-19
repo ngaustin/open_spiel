@@ -108,7 +108,6 @@ def main(argv):
     player_profile_history = [[], []]
     average_regret = []
     #We add best response and an exploration strategy's utility every iteration. Specifies index of best response utility. 
-    index_best_response_utilities = -2
     print("Folder path: ", folder_path)
     for i in range(iterations):
       # save_folder_path + specific_string.format(i)
@@ -117,9 +116,10 @@ def main(argv):
       print("Save_data_path", save_data_path)
       with open(save_data_path, "rb") as npy_file:
           array_list = np.load(npy_file, allow_pickle=True)
-      print(array_list)
+      #print(array_list)
       meta_probabilities, utilities, training_returns = array_list
-      graph_training_returns(training_returns, i)
+      if len(array_list[-1]) > 0:
+        graph_training_returns(training_returns, i)
       print("Utilities:", utilities)
       # meta_probabilities was vstacked at first dimension for each player
       # utilities were vstacked at the first dimension for each player as well
@@ -135,26 +135,31 @@ def main(argv):
         print("Expected utility individual {}: ".format(num_player), expected_utility)
         
         if i > 0:
-          #Individual table best response 
-          if num_player == 0:
-            # Row corresponding to best_response utilities
-            best_response_payoffs = utilities[num_player][index_best_response_utilities]
+          #TODO: Add regret calculations for consensus policy iterations (i.e. odd iterations)
+          #Even iterations add a BR, so only calc regret for those iterations
+          if i % 2 == 0:
+            #Row player 
+            if num_player == 0:
+              # Row corresponding to best_response utilities
+              best_response_payoffs = utilities[num_player][-1]
+            else:
+              # Column corresponding to best_response utilities
+              best_response_payoffs = utilities[num_player][:, -1]
+            prev_player_profile = player_profile_history[num_player][i-1]
+            best_response_trunc = best_response_payoffs[:len(prev_player_profile)]
+            best_response_expected_payoff = np.dot(prev_player_profile, best_response_trunc)
+            #Truncated to the length of the previous player profile
+            print("Best response utilities truncated: ", best_response_trunc)
+            #Dotted utilities with player profile
+            print("Best response payoff: ", best_response_expected_payoff)
+            #Previous iteration expected payoff
+            print("Previous expected payoff: ", expected_payoff_individual_players[num_player][i - 1])
+            regret_individuals[num_player].append(best_response_expected_payoff - expected_payoff_individual_players[num_player][i - 1])
+            print("Individual regret vector: ", regret_individuals)
           else:
-            # Column corresponding to best_response utilities
-            best_response_payoffs = utilities[num_player][:, index_best_response_utilities]
-          prev_player_profile = player_profile_history[num_player][i-1]
-          best_response_trunc = best_response_payoffs[:len(prev_player_profile)]
-          best_response_expected_payoff = np.dot(prev_player_profile, best_response_trunc)
-          #Truncated to the length of the previous player profile
-          print("Best response utilities truncated: ", best_response_trunc)
-          #Dotted utilities with player profile
-          print("Best response payoff: ", best_response_expected_payoff)
-          #Previous iteration expected payoff
-          print("Previous expected payoff: ", expected_payoff_individual_players[num_player][i - 1])
-          regret_individuals[num_player].append(best_response_expected_payoff - expected_payoff_individual_players[num_player][i - 1])
-        print("Individual regret vector: ", regret_individuals)
-        #Gap for readability
-        print()
+            print("NO REGRET CALCULATION FOR ODD ITERATIONS.")
+          #Gap for readability
+          print()
 
       social_welfare = np.sum(utilities, axis=0)
       max_social_welfare_over_iterations.append(np.max(social_welfare))
@@ -229,7 +234,8 @@ def main(argv):
   regret_fig, ax = plt.subplots()
   for i, curr_dict in enumerate(corresponding_dictionaries):
     for player_index in range(len(regret_individuals)):
-        ax.scatter(x=[ind + 1 for ind in range(len(curr_dict["regret_individuals"][0]))],
+        #TODO: Fix when we figure out regret calculations for odd iterations
+        ax.scatter(x=[ind * 2 + 2 for ind in range(len(curr_dict["regret_individuals"][0]))],
           y=regret_individuals[player_index], 
           label="{}: Player {}".format(name_of_method[i], player_index))
   ax.set_title("Individual Regret Over Iterations")
