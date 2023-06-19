@@ -61,15 +61,12 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         self._consensus_kwargs = consensus_kwargs
         self._fine_tune_bool = consensus_kwargs["fine_tune"]
 
-        # TODO: psi steps?
+        self._most_recent_br_policies = None
 
         self._high_return_trajectories = []  # list of lists of trajectories
         self._high_return_actions = []
         self._high_returns = [[] for _ in range(env.num_players)]
         self._train_br_returns = []
-
-        self._prev_name_ppo_policy = ""
-        self._curr_name_ppo_policy = ""
 
         self._all_seen_observations = set()
 
@@ -107,9 +104,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
           A list of list, one for each member of training_parameters, of (epsilon)
           best responses.
         """
-        steps_per_oracle = [[0
-                                for _ in range(len(player_params))]
-                               for player_params in training_parameters]
+        steps_per_oracle = [[0 for _ in range(len(player_params))] for player_params in training_parameters]
         steps_per_oracle = np.array(steps_per_oracle)
         is_symmetric = len(training_parameters) == 1 and len(training_parameters) < self.num_players
 
@@ -123,14 +118,11 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         # else:
 
         # TODO: Reset the old and new policy names 
-        # self._curr_name_ppo_policy = "ppo_best_response_pretrain_starting_point_temp/time_{}_randint_{}_ppo_policy".format(time.time(), np.random.randint(1000))
-        self._curr_name_ppo_policy = "ppo_best_response_pretrain_starting_point_temp/br_1"
 
         # Generate one new policy for each agent to train imitation
         # If a dummy is passed in for "policy," a new policy is created and not copied. Assumed that we create one
         # for every player
         new_policies = self.create_consensus_policies(training_parameters)
-        self._prev_name_ppo_policy = self._curr_name_ppo_policy 
 
         # NOTE: Changed here for fair comparison
         if not train_best_response:
@@ -144,15 +136,15 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                 self._high_return_trajectories = []  # list of lists of trajectories
                 self._high_return_actions = []
                 self._high_returns = [[] for _ in range(self._env.num_players)]
+        else:
+            self._most_recent_br_policies = [lst[0] for lst in new_policies]
 
         # Prepares the policies for fine tuning
-        # NOTE: Changed here for fair comparison
         if self._fine_tune_bool or train_best_response:
             for i in range(len(new_policies)):
                 new_policies[i][0]._policy.set_to_fine_tuning_mode(train_best_response)
                 print("Setting to fine tune mode: ")
 
-        # NOTE: Changed here for fair comparison
         if (not self._fine_tune_bool) and not train_best_response:
             rl_oracle.freeze_all(new_policies)
             return new_policies
@@ -229,7 +221,6 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         if self._consensus_kwargs["consensus_imitation"]:
             self.update_trajectories(training_parameters, rollout_trajectories, rollout_actions, rollout_returns)
 
-
         # Freeze the new policies to keep their weights static. This allows us to
         # later not have to make the distinction between static and training
         # policies in training iterations.
@@ -272,10 +263,10 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             elif self._consensus_oracle == "q_learn":
                 curr._policy = imitation_q_learn.Imitation(**{"player_id": i, "consensus_kwargs": self._consensus_kwargs}, **new_arguments)
             elif self._consensus_oracle == "trajectory_deep":
-                new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based, "old_policy_name": self._prev_name_ppo_policy, "new_policy_name": self._curr_name_ppo_policy}
+                new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based, "prev_policy":self._most_recent_br_policies[i] if self._most_recent_br_policies else None}
                 curr._policy = imitation_deep.Imitation(**{"player_id": i, "consensus_kwargs": self._consensus_kwargs}, **new_arguments)
             elif self._consensus_oracle == "cql_deep":
-                new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based, "old_policy_name": self._prev_name_ppo_policy, "new_policy_name": self._curr_name_ppo_policy}
+                new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based, "prev_policy":self._most_recent_br_policies[i] if self._most_recent_br_policies else None}
                 curr._policy = imitation_q_learn_deep.Imitation(**{"player_id": i, "consensus_kwargs": self._consensus_kwargs}, **new_arguments)
             else:
                 raise NotImplementedError

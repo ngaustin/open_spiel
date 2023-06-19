@@ -382,8 +382,8 @@ def gpsro_looper(env, oracle, agents):
 
 
     g_psro_solver.iteration()
-    if (FLAGS.consensus_imitation):
-      training_returns = oracle.get_training_returns()
+    # if (FLAGS.consensus_imitation):
+    training_returns = oracle.get_training_returns()
 
     meta_game = g_psro_solver.get_meta_game()
     meta_probabilities = g_psro_solver.get_meta_strategies()

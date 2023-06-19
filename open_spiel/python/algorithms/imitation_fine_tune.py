@@ -142,8 +142,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                  state_representation_size, 
                  num_players, 
                  turn_based, 
-                 old_policy_name,
-                 new_policy_name):
+                 prev_policy):
         """Initialize the DQN agent."""
 
         # This call to locals() is used to store every argument used to initialize
@@ -173,9 +172,6 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         self.min_buffer_size_fine_tune = consensus_kwargs["min_buffer_size_fine_tune"]
         self.fine_tune_bool = consensus_kwargs["fine_tune"]
         self.consensus_kwargs = consensus_kwargs
-
-        self.old_policy_name = old_policy_name
-        self.new_policy_name = new_policy_name
 
         self.actor_loss_list = []
         self.value_loss_list = []
@@ -284,6 +280,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         # Create a method that copies parameters from Q network to policy network 
         self._initialize_policy_network = self._create_policy_network(self._policy_network, pre_trained_network)
         self._initialize_old_policy_network = self._create_policy_network(self._old_policy_network, pre_trained_network)
+        self._prev_policy_copy_from = prev_policy
 
         # Pass observations to policy 
         logits = self._policy_network(self._info_state_ph) # [?, num_actions]
@@ -390,8 +387,8 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         """
 
         # Create separate optimizers for the policy and value network 
-        self._ppo_policy_optimizer = tf.train.AdamOptimizer(learning_rate=3e-4)
-        self._ppo_value_optimizer = tf.train.AdamOptimizer(learning_rate=1e-3)
+        self._ppo_policy_optimizer = tf.train.AdamOptimizer(learning_rate=3e-5)
+        self._ppo_value_optimizer = tf.train.AdamOptimizer(learning_rate=1e-4)
         # self._alpha_optimizer = tf.train.AdamOptimizer(learning_rate=3e-4)
 
         # Learn step
@@ -447,14 +444,26 @@ class ImitationFineTune(rl_agent.AbstractAgent):
 
         self.epochs = self.consensus_kwargs["epochs_ppo"]
         self.minibatches = self.consensus_kwargs["minibatches_ppo"]
+
+        if self._prev_policy_copy_from:
+            print("Loading previous PPO policy and value networks: ")
+            ref_object = self._prev_policy_copy_from._policy._fine_tune_module 
+            ref_policy_network = getattr(ref_object, "_policy_network")
+            ref_value_network = getattr(ref_object, "_value_network")
+
+            copy_weights = tf.group(*[
+                vb.assign(va)
+                for va, vb in zip(ref_policy_network.variables, self._policy_network.variables)
+            ])
+            self.session.run(copy_weights)
+
+            copy_value_weights = tf.group(*[
+                vb.assign(va)
+                for va, vb in zip(ref_value_network.variables, self._value_network.variables)
+            ])
+            self.session.run(copy_value_weights)
+        
         if self.is_train_best_response:
-            if self.old_policy_name != "":
-                new_checkpoint = tf.train.Checkpoint(model=self._policy_network)
-                new_checkpoint.restore(self.old_policy_name)
-                print('Pre-trained best response PPO policy network checkpoint restored: ', self.old_policy_name)
-                new_checkpoint_value = tf.train.Checkpoint(model=self._value_network)
-                new_checkpoint_value.restore(self.old_policy_name + "_value")
-                print("Pre-trained best response PPO value network checkpoint restored: ", self.old_policy_name + "_value")
             self.policy_constraint_weight = 0
         else:
             self.policy_constraint_weight = self.consensus_kwargs["policy_constraint"]
@@ -535,6 +544,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
     def fine_tune(self):
         self._env_steps += len(self._replay_buffer)
         self._fine_tune_counter += 1
+        self._fine_tune_print_counter += 1
 
         epochs = self.epochs
         minibatches = self.minibatches
@@ -617,21 +627,15 @@ class ImitationFineTune(rl_agent.AbstractAgent):
             self.entropy_list = self.entropy_list[-100:]
             self.kl_list = self.kl_list[-100:]
     
-        if (self._fine_tune_print_counter > 1000):
+        if (self._fine_tune_print_counter > 100):
             print("Mean PPO Actor + Value losses, entropy, and kl last 100 updates...and num env steps...and policy constraint weight: ", sum(self.actor_loss_list) / len(self.actor_loss_list), sum(self.value_loss_list) / len(self.value_loss_list), sum(self.entropy_list) / len(self.entropy_list), sum(self.kl_list) / len(self.kl_list), self._env_steps, self.policy_constraint_weight)
             # print("Reward scaling mean, std: ", self.reward_scaler.rs.mean, self.reward_scaler.rs.std)
             self._fine_tune_print_counter = 0
-
-        # Save the model every so often for the next PSRO iteration to take
-        if self.is_train_best_response and self.new_policy_name != "" and self._fine_tune_counter % 20 == 0:
-            checkpoint = tf.train.Checkpoint(model=self._policy_network)
-            checkpoint.write(self.new_policy_name)
-            checkpoint_value = tf.train.Checkpoint(model=self._value_network)
-            checkpoint_value.write(self.new_policy_name + "_value")
         
         self._replay_buffer.reset()
         
         return
+
 
     def _initialize(self):
         initialization_policy = tf.group(

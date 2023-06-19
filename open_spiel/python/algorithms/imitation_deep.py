@@ -50,7 +50,8 @@ class Imitation(rl_agent.AbstractAgent):
                  num_actions,
                  state_representation_size,
                  num_players,
-                 turn_based):
+                 turn_based,
+                 prev_policy):
 
         # This call to locals() is used to store every argument used to initialize
         # the class instance, so it can be copied with no hyperparameter change.
@@ -78,8 +79,6 @@ class Imitation(rl_agent.AbstractAgent):
         self.n_hidden_layers = consensus_kwargs["n_hidden_layers"]
         self.discount_factor = consensus_kwargs["discount"]
 
-        self.old_policy_name = old_policy_name
-        self.new_policy_name = new_policy_name
 
         self.layer_sizes = [self.hidden_layer_size] * self.n_hidden_layers
 
@@ -170,9 +169,8 @@ class Imitation(rl_agent.AbstractAgent):
                  num_actions,
                  state_representation_size,
                  num_players,
-                 self._is_turn_based,
-                 self.old_policy_name,
-                 self.new_policy_name)
+                 self._is_turn_based, 
+                 prev_policy)
 
 
         self._initialize()
