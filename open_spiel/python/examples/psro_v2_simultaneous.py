@@ -112,6 +112,8 @@ flags.DEFINE_float("ppo_entropy", .01, "PPO entropy regularization")
 flags.DEFINE_integer("epochs_ppo", 80, "PPO epochs")
 flags.DEFINE_integer("minibatches_ppo", 5, "PPO minibatches")
 flags.DEFINE_float("policy_constraint", .1, "Policy constraint regularization in PPO fine tuning")
+flags.DEFINE_float("sac_target_entropy", .9, "SAC target entropy")
+flags.DEFINE_float('sac_alpha', .2, "SAC alpha value for entropy regularization")
 
 # RRD and MSS 
 flags.DEFINE_float("regret_lambda_init", .7, "Lambda threshold for RRD initially")
@@ -265,6 +267,8 @@ def init_dqn_responder(sess, env):
     "policy_constraint": FLAGS.policy_constraint,
     "epochs_ppo": FLAGS.epochs_ppo,
     "minibatches_ppo": FLAGS.minibatches_ppo,
+    "sac_target_entropy": FLAGS.sac_target_entropy,
+    "sac_alpha": FLAGS.sac_alpha
   }
 
   print("Agent Arguments: ")
@@ -378,8 +382,8 @@ def gpsro_looper(env, oracle, agents):
 
 
     g_psro_solver.iteration()
-    if (FLAGS.consensus_imitation):
-      training_returns = oracle.get_training_returns()
+    # if (FLAGS.consensus_imitation):
+    training_returns = oracle.get_training_returns()
 
     meta_game = g_psro_solver.get_meta_game()
     meta_probabilities = g_psro_solver.get_meta_strategies()
