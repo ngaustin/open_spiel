@@ -105,10 +105,6 @@ def rl_policy_factory(rl_class):
       prob_dict = {action: p[action] for action in legal_actions}
       return prob_dict
 
-    def get_fine_tuning_data(self):
-      if isinstance(self._policy, imitation_deep.Imitation):
-        return self._policy.get_fine_tuning_data()
-
     def step(self, time_step, is_evaluation=False, add_transition_record=True):
       # The _frozen attribute freezes the weights of the current policy. This
       # effect is achieved by considering that we always are evaluating when the
