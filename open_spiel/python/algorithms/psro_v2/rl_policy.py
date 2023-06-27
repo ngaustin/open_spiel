@@ -24,7 +24,7 @@ from open_spiel.python import rl_environment
 from open_spiel.python.algorithms import dqn
 from open_spiel.python.algorithms import policy_gradient
 from open_spiel.python.algorithms import tabular_qlearner
-
+from open_spiel.python.algorithms import imitation_deep
 
 def rl_policy_factory(rl_class):
   """Transforms an RL Agent into an OpenSpiel policy.
@@ -104,6 +104,10 @@ def rl_policy_factory(rl_class):
       p = self._policy.step(time_step, is_evaluation=True).probs
       prob_dict = {action: p[action] for action in legal_actions}
       return prob_dict
+
+    def get_fine_tuning_data(self):
+      if isinstance(self._policy, imitation_deep.Imitation):
+        return self._policy.get_fine_tuning_data()
 
     def step(self, time_step, is_evaluation=False, add_transition_record=True):
       # The _frozen attribute freezes the weights of the current policy. This

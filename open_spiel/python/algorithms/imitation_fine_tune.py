@@ -27,6 +27,8 @@ from open_spiel.python import rl_agent
 from open_spiel.python import simple_nets
 from open_spiel.python.utils.replay_buffer import ReplayBuffer
 from open_spiel.python.algorithms.psro_v2 import utils
+#Config.py for ppo training data
+from open_spiel.python.algorithms import config
 
 # Temporarily disable TF2 behavior until code is updated.
 tf.disable_v2_behavior()
@@ -171,11 +173,6 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         self.min_buffer_size_fine_tune = consensus_kwargs["min_buffer_size_fine_tune"]
         self.fine_tune_bool = consensus_kwargs["fine_tune"]
         self.consensus_kwargs = consensus_kwargs
-
-        self.actor_loss_list = []
-        self.value_loss_list = []
-        self.entropy_list = []
-        self.kl_list = []
 
         self.layer_sizes = [self.hidden_layer_size] * self.n_hidden_layers
 
@@ -337,7 +334,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
     def clear_state_tracking(self):
         self.states_seen_in_evaluation = []
         return 
-    
+
     # TODO: Make sure this transitions is smooth
     def _create_policy_network(self, policy_network, source_network):
         self._variables = source_network.variables[:]
@@ -391,7 +388,6 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         Returns:
           A `rl_agent.StepOutput` containing the action probs and chosen action.
         """
-
         # Act step: don't act at terminal info states or if its not our turn.
         if (not time_step.last()) and (
                 time_step.is_simultaneous_move() or
@@ -437,13 +433,11 @@ class ImitationFineTune(rl_agent.AbstractAgent):
             if action != None:
                 self.action_trajectory.append([action])
 
-            
             if time_step.last():
                 if add_transition_record:
                     self.add_trajectory(self.curr_trajectory, self.action_trajectory, override_symmetric=True)  # we want to override symmetric because we are now training individually against other targets that are not ourselves
                 self.curr_trajectory = []
                 self.action_trajectory = []
-
                 if self._curr_size_batch > self.min_buffer_size_fine_tune:
                     self._fine_tune_steps += 1
                     self.insert_transitions()
@@ -453,7 +447,6 @@ class ImitationFineTune(rl_agent.AbstractAgent):
     
     def fine_tune(self):
         self._env_steps += len(self._replay_buffer)
-
         epochs = self.epochs
         minibatches = self.minibatches
 
@@ -514,10 +507,9 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                     self._gae_ph: gae,
                     self._policy_constraint_weight_ph: self.policy_constraint_weight
                 })
-            
-            self.actor_loss_list.append(actor_loss)
-            self.entropy_list.append(entropy)
-            self.kl_list.append(kl)
+            config.actor_loss_list.append(actor_loss)
+            config.entropy_list.append(entropy)
+            config.kl_list.append(kl)
 
         # For number of minibatches 
         for _ in range(epochs):
@@ -540,9 +532,9 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                         self._rewards_to_go_ph: rewards_to_go,
                         self._fine_tune_mode_ph: True
                     })
-            self.value_loss_list.append(value_loss)
-        """
+            config.value_loss_list.append(value_loss)
 
+        """
         # NOTE: In multi-agent settings, having one minibatch tends to work better in Independent PPO: https://arxiv.org/pdf/2103.01955.pdf . Also, having 5 or less epochs seems to work best
         for _ in range(15):
             actor_loss, _, entropy, probs, log_probs = self.session.run(
@@ -568,13 +560,8 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                     self._fine_tune_mode_ph: True
                 })
         """
-        
-        if (len(self.actor_loss_list) > 100 and self._fine_tune_print_counter > 100):
-            self.actor_loss_list = self.actor_loss_list[-100:]
-            self.value_loss_list = self.value_loss_list[-100:]
-            self.entropy_list = self.entropy_list[-100:]
-            self.kl_list = self.kl_list[-100:]
-            print("Mean PPO Actor + Value losses, entropy, and kl last 100 updates...and num env steps: ", sum(self.actor_loss_list) / len(self.actor_loss_list), sum(self.value_loss_list) / len(self.value_loss_list), sum(self.entropy_list) / len(self.entropy_list), sum(self.kl_list) / len(self.kl_list), self._env_steps)
+        if (len(config.actor_loss_list) > 100 and self._fine_tune_print_counter > 100):
+            print("Mean PPO Actor + Value losses, entropy, and kl last 100 updates...and num env steps: ", sum(config.actor_loss_list[-100:]) / len(config.actor_loss_list[-100:]), sum(config.value_loss_list[-100:]) / len(config.value_loss_list[-100:]), sum(config.entropy_list[-100:]) / len(config.entropy_list[-100:]), sum(config.kl_list[-100:]) / len(config.kl_list[-100:]), self._env_steps)
             # print("Reward scaling mean, std: ", self.reward_scaler.rs.mean, self.reward_scaler.rs.std)
             self._fine_tune_print_counter = 0
 

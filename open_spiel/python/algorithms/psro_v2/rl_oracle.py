@@ -183,7 +183,6 @@ class RLOracle(optimization_oracle.AbstractOracle):
     # Prioritizing players that haven't had as much training as the others.
     steps_per_player = [sum(steps) for steps in steps_per_oracle]
     chosen_player = random_count_weighted_choice(steps_per_player)
-
     # Uniformly choose among the sampled player.
     agent_chosen_ind = np.random.randint(
         0, len(training_parameters[chosen_player]))
@@ -221,6 +220,7 @@ class RLOracle(optimization_oracle.AbstractOracle):
     return episode_policies, live_agents_player_index
 
   def _rollout(self, game, agents, **oracle_specific_execution_kwargs):
+    #This calls the sample_episode in rl_oracle_cooperative
     return self.sample_episode(None, agents, is_evaluation=False)
 
   def generate_new_policies(self, training_parameters):

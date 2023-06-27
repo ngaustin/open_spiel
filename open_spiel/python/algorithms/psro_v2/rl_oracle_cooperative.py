@@ -13,6 +13,7 @@ from open_spiel.python.algorithms import imitation_deep
 from open_spiel.python.algorithms import imitation_q_learn_deep
 from open_spiel.python.algorithms import dqn
 from open_spiel.python.algorithms import joint_wrapper
+from open_spiel.python.algorithms import config
 import time
 
 class RLOracleCooperative(rl_oracle.RLOracle):
@@ -49,7 +50,6 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         self._self_play_proportion = self_play_proportion
         self._number_training_steps = number_training_steps
         self.num_players = env.num_players
-
         self._consensus_oracle = consensus_kwargs["consensus_oracle"]
         self._imitation_mode = consensus_kwargs["imitation_mode"]
         self._rewards_joint = consensus_kwargs["rewards_joint"]
@@ -63,10 +63,12 @@ class RLOracleCooperative(rl_oracle.RLOracle):
 
         # TODO: psi steps?
 
+        config.ppo_training_data = [[[], [], [], []] for _ in range(env.num_players)]
+
         self._high_return_trajectories = []  # list of lists of trajectories
         self._high_return_actions = []
         self._high_returns = [[] for _ in range(env.num_players)]
-        self._train_br_returns = []
+        self._train_br_returns = [[] for _ in range(env.num_players)]
 
         self._all_seen_observations = set()
 
@@ -149,7 +151,6 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         all_policies = [old_pol + new_pol for old_pol, new_pol in zip(training_parameters[0][0]["total_policies"], new_policies)]
 
         rollout_trajectories, rollout_actions, rollout_returns = [], [], []
-        self._train_br_returns = []
 
         cutoff_returns = [self._high_returns[i][-1] if len(self._high_returns[i]) > 0 else -np.inf for i in range(self.num_players)]
 
@@ -199,18 +200,16 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                     agents = [new_pol_list[0] for new_pol_list in new_policies]
                     indexes = [(p, 0) for p in range(self.num_players)]
                 else:"""
+            #indexes: [(agent num, should be 0)]
             agents, indexes = self.sample_policies_for_episode(
                     new_policies, training_parameters, steps_per_oracle,
                     strategy_sampler)
-
             assert len(indexes) == 1  # we are tailoring this code for one agent training at a time. Make sure true
             assert len(indexes[0]) == 2  # make sure player index and policy index
             assert indexes[0][1] == 0 # make sure this is true because we FIXED it so that PSRO only trains 1 strategy for each player each iteration
 
             # Store the episode's trajectory and returns and map it to the correct agent + agent's policy we're training
-
             trajectory, actions, returns = self._rollout(game, agents, **oracle_specific_execution_kwargs)
-
             # To save space, we get rid of the decentralized observations or the joint observations if not needed for consensus training
             for timestep in trajectory:
                 if self._consensus_kwargs["joint_action"]:
@@ -227,7 +226,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             ###########################################################################################################################
             """
             invalid_candidate = (returns[0] < cutoff_returns[0]) or (returns[1] < cutoff_returns[1]) if is_symmetric else (returns[0] < cutoff_returns[0]) and (returns[1] < cutoff_returns[1])
-            self._train_br_returns.append(returns)
+            self._train_br_returns[indexes[0][0]].append(np.array(returns))
             if not invalid_candidate:
                 rollout_trajectories.append(trajectory)
                 rollout_returns.append(returns)
@@ -250,10 +249,9 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                     rollout_actions.pop(take_out_index)
 
             # Update the number of episodes we have trained per oracle
-
+            
             # TODO: This is an invalid way of calculating number of steps for NON-simultaneous games
             steps_per_oracle = rl_oracle.update_steps_per_oracles(steps_per_oracle, indexes, len(actions))
-
         # Generate one new policy for each agent to train imitation
         # If a dummy is passed in for "policy," a new policy is created and not copied. Assumed that we create one
         # for every player
@@ -266,28 +264,8 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         return new_policies
 
     def get_training_returns(self):
-        returns = np.array(self._train_br_returns)
-        player1_returns = returns[:, 0]
-        player2_returns = returns[:, 1]
-        return np.array([player1_returns, player2_returns])
-
-    def _graph_returns(self, returns):
-        """
-            returns: Array with tuples for rewards for each player (r1, r2)
-        """
-        save_path = os.getcwd() + "/data/fire_extinguisher/output_plots/return_plots/"
-        returns = np.array(returns)
-        player1_returns = returns[:, 0]
-        player2_returns = returns[:, 1]
-        fig1, ax = plt.subplots()
-        fig2, ax2 = plt.subplots()
-        ax.plot(np.arange(0, len(player1_returns)), player1_returns)
-        ax2.plot(np.arange(0, len(player2_returns)), player2_returns)
-        ax.autoscale()
-        ax2.autoscale()
-        fig1.savefig(save_path + "figureTest.jpg")
-        fig2.savefig(save_path + "figureTest2.jpg")
-        input("Enter to continue...")
+        #return [np.array(rets) for rets in self._train_br_returns if rets]
+        return [np.array(rets) for rets in self._train_br_returns]
 
     def create_consensus_policies(self, training_parameters):
         consensus_training_parameters = [[{"policy": None}] for _ in range(len(training_parameters))]
@@ -303,6 +281,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             elif self._consensus_oracle == "trajectory_deep":
                 new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based}
                 curr._policy = imitation_deep.Imitation(**{"player_id": i, "consensus_kwargs": self._consensus_kwargs}, **new_arguments)
+
             elif self._consensus_oracle == "cql_deep":
                 new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based}
                 curr._policy = imitation_q_learn_deep.Imitation(**{"player_id": i, "consensus_kwargs": self._consensus_kwargs}, **new_arguments)
@@ -313,7 +292,6 @@ class RLOracleCooperative(rl_oracle.RLOracle):
     def update_trajectories(self, training_parameters, rollout_trajectories, rollout_actions, rollout_returns):
         # If the number of training parameters is 1 and we are working in a multi-agent gamge, we are training in the symmetric setting
         is_symmetric = len(training_parameters) == 1 and len(training_parameters) < self.num_players
-
         # Add the most recently found trajectories
         self._high_return_trajectories.extend(rollout_trajectories)
         self._high_return_actions.extend(rollout_actions)
@@ -351,7 +329,6 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         sorted_indices = sorted(range(len(rankings)), key=lambda i: rankings[i])
         selected_trajectory_indices = sorted(range(len(rankings)), key=lambda i: rankings[i])[-num_simulations_take:]
 
-
         # TODO: This is a test to analyze state coverage manually. Remove when done
         incremental_seen_observations_joint = []
         incremental_seen_observations = []
@@ -370,6 +347,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                         curr_seen_observations.add(''.join(map(str, curr_obs)))
             incremental_seen_observations.append(len(curr_seen_observations))
             # incremental_seen_observations_joint.append(len(seen_joint_observations))
+
         self._all_seen_observations = self._all_seen_observations.union(curr_seen_observations)
         if not self._consensus_kwargs["joint_action"]:
             # print("Cumulative seen decentralized observations: ", [float(num) / incremental_seen_observations[-1] for num in incremental_seen_observations])
@@ -377,7 +355,6 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         # if self._consensus_kwargs["joint_action"] and len(timestep.observations["global_state"]) > 0:
         #     # print("Cumulative seen joint observations: ", [float(num) / incremental_seen_observations_joint[-1] for num in incremental_seen_observations_joint] )
         #     print("Covered joint observations given the number of trajectories taken (assuming BR had complete coverage): ", float(incremental_seen_observations_joint[num_simulations_take - 1]) / incremental_seen_observations_joint[-1])
-
 
         # only take the selected trajectories and reassign self._high_return_trajectories
         self._high_return_trajectories = [self._high_return_trajectories[i] for i in selected_trajectory_indices]
@@ -417,7 +394,6 @@ class RLOracleCooperative(rl_oracle.RLOracle):
     def sample_episode(self, unused_time_step, agents, is_evaluation=False):
         time_step = self._env.reset()
         cumulative_rewards = 0.0
-
         """  For saving trajectories, save a list of timesteps for every episode. A timestep includes:
             observation: list of dicts containing one observations per player, each
               corresponding to `observation_spec()`.
@@ -436,8 +412,12 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                     # correct player observation is retrieved even when only one policy is used for all players
                     agent.update_player_id(i)
                     output = agent.step(time_step, is_evaluation=is_evaluation)
+                    if config.check_new_training_rets():
+                        config.ppo_training_data[i] = [config.kl_list, config.entropy_list, config.actor_loss_list, config.value_loss_list]
+                        config.kl_list, config.entropy_list, config.actor_loss_list, config.value_loss_list = [], [], [], []
                     action_list.append(output.action)
                 episode_actions.append(action_list)
+                #Game taking a step to the next timestep with input being the actions that each player takes
                 time_step = self._env.step(action_list)  # This is a new timestep that is returned. Replace every time
                 episode_trajectory.append(time_step)
                 cumulative_rewards += np.array(time_step.rewards)
@@ -460,12 +440,9 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                 episode_trajectory.append(time_step)
                 episode_actions.append(action_list)
 
-
-
         if not is_evaluation:
             for i, agent in enumerate(agents):
                 # Update player_id here
                 agent.update_player_id(i)
                 agent.step(time_step)  # This is where agents are trained on the last step
-
         return episode_trajectory, episode_actions, cumulative_rewards
