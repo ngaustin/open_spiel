@@ -183,7 +183,7 @@ def main(argv):
         if len(training_returns[num_player]) > 0:
           print("Training Returns BR {} for Individual {}: ".format(num_player, num_player), training_returns[num_player][:, num_player])
         else:
-          print("Training Returns: N/A - MAY BE A SYMMETRIC GAME: NOT EVERY PLAYER HAS BR")
+          print("Training Returns BR {} for Individual {}: N/A - MAY BE A SYMMETRIC GAME: NOT EVERY PLAYER HAS BR".format(num_player, num_player))
         print()
         
         #PPO Training Returns
