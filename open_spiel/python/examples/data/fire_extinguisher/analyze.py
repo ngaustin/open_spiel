@@ -65,6 +65,10 @@ def main(argv):
   name_of_method = ["Fire Extinguisher"]
   save_graph_path = "open_spiel/python/examples/data/fire_extinguisher/output_plots/"
   graphPathExists = os.path.exists(save_graph_path)
+  # For truncating printed training rets and ppo rets for readability
+  TRUNCATED_MODE = True
+  NUM_TRUNCATED_VALS = 50
+
   if not graphPathExists:
     # Create directory
     os.makedirs(save_graph_path)
@@ -79,26 +83,32 @@ def main(argv):
         axis_normalization: Normalizes y-axis scale across the iterations for easier trend comparisons
     """
     grouped_rets = []
+    curr_player = 0
+    #Entire training returns dataset
     for i in range(len(training_returns)):
       grouped_rets.append([])
+      #Each BR Policy
       for j in range(0, len(training_returns[i]), average_grouping):
-        grouped_rets[i].append(np.mean(training_returns[i][j: j + average_grouping]))
-    for i in range(num_players):
-      training_returns_fig, ax = plt.subplots()
-      ax.plot(np.arange(0, len(grouped_rets[i])), grouped_rets[i])
-      ax.set_title("BR Training Returns Player {}".format(i + 1))
-      ax.set_xlabel("Iteration (Grouped by {} episodes)".format(average_grouping))
-      ax.set_ylabel("Expected Returns")
-      training_returns_fig.savefig(save_graph_path + "training_returns/" + "iteration_{}_player_{}.jpg".format(num_iteration, i+1))
+        #Breakdown of BR policy returns for each player
+        grouped_rets[i].append(np.mean(training_returns[i][j: j + average_grouping, curr_player]))
+      curr_player += 1
+    curr_player = 0
+    for i in range(len(grouped_rets)):
+        training_returns_fig, ax = plt.subplots()
+        ax.plot(np.arange(0, len(grouped_rets[i])), grouped_rets[i])
+        ax.set_title("Iteration {}: BR Policy {} Training Returns Player {}".format(num_iteration, i + 1, curr_player + 1))
+        ax.set_xlabel("Iteration (Grouped by {} episodes)".format(average_grouping))
+        ax.set_ylabel("Expected Returns")
+        training_returns_fig.savefig(save_graph_path + "training_returns/" + "policy_{}_iteration_{}_player_{}.jpg".format(i + 1, num_iteration, curr_player + 1))
 
 
   def get_data(folder_path):
     """
       Displays game analytics like regret, expected utility, player profiles, and other analytics for 2-player games.
         folder_path: defines the directory where the game data is stored.
-      
-      Note that the utility matrix corresponding to player 0 is to be read in rows, 
-        and player 1's should be read column-wise.  
+
+      Note that the utility matrix corresponding to player 0 is to be read in rows,
+        and player 1's should be read column-wise.
     """
     max_social_welfare_over_iterations = []
     expected_payoff_individual_players = [[], []]
@@ -107,7 +117,7 @@ def main(argv):
     regret_individuals = [[],[]]
     player_profile_history = [[], []]
     average_regret = []
-    #We add best response and an exploration strategy's utility every iteration. Specifies index of best response utility. 
+    #We add best response and an exploration strategy's utility every iteration. Specifies index of best response utility.
     print("Folder path: ", folder_path)
     for i in range(iterations):
       # save_folder_path + specific_string.format(i)
@@ -116,11 +126,12 @@ def main(argv):
       print("Save_data_path", save_data_path)
       with open(save_data_path, "rb") as npy_file:
           array_list = np.load(npy_file, allow_pickle=True)
-      #print(array_list)
-      meta_probabilities, utilities, training_returns = array_list
-      if len(array_list[-1]) > 0:
+      meta_probabilities, utilities, training_returns, ppo_training_data = array_list
+      if training_returns:
         graph_training_returns(training_returns, i)
       print("Utilities:", utilities)
+      #Gap for readability
+      print()
       # meta_probabilities was vstacked at first dimension for each player
       # utilities were vstacked at the first dimension for each player as well
       list_of_meta_probabilities = [meta_probabilities[i] for i in range(meta_probabilities.shape[0])]
@@ -133,12 +144,12 @@ def main(argv):
         expected_utility = np.dot(player_profile, expected_payoff_vector)
         expected_payoff_individual_players[num_player].append(expected_utility)
         print("Expected utility individual {}: ".format(num_player), expected_utility)
-        
+
         if i > 0:
           #TODO: Add regret calculations for consensus policy iterations (i.e. odd iterations)
           #Even iterations add a BR, so only calc regret for those iterations
           if i % 2 == 0:
-            #Row player 
+            #Row player
             if num_player == 0:
               # Row corresponding to best_response utilities
               best_response_payoffs = utilities[num_player][-1]
@@ -157,9 +168,32 @@ def main(argv):
             regret_individuals[num_player].append(best_response_expected_payoff - expected_payoff_individual_players[num_player][i - 1])
             print("Individual regret vector: ", regret_individuals)
           else:
-            print("NO REGRET CALCULATION FOR ODD ITERATIONS.")
-          #Gap for readability
-          print()
+            print("PLAYER {}: NO REGRET CALCULATION FOR ODD ITERATIONS.".format(num_player))
+
+        #Gap for readability
+        print()
+
+        #Truncation
+        if TRUNCATED_MODE:
+            training_returns[num_player] = training_returns[num_player][:NUM_TRUNCATED_VALS]
+            for k in range(len(ppo_training_data)):
+              ppo_training_data[num_player][k] = ppo_training_data[num_player][k][:NUM_TRUNCATED_VALS]
+
+        #Training Returns
+        if len(training_returns[num_player]) > 0:
+          print("Training Returns BR {} for Individual {}: ".format(num_player, num_player), training_returns[num_player][:, num_player])
+        else:
+          print("Training Returns BR {} for Individual {}: N/A - MAY BE A SYMMETRIC GAME: NOT EVERY PLAYER HAS BR".format(num_player, num_player))
+        print()
+
+        #PPO Training Returns
+        print("KL Divergence Data Individual {}: ".format(num_player), ppo_training_data[num_player][0])
+        print("Entropy Values Individual {}: ".format(num_player), ppo_training_data[num_player][1])
+        print("Actor Loss Individual {}: ".format(num_player), ppo_training_data[num_player][2])
+        print("Value-Loss Individual {}: ".format(num_player), ppo_training_data[num_player][3])
+        #Gap for readability
+        print()
+
 
       social_welfare = np.sum(utilities, axis=0)
       max_social_welfare_over_iterations.append(np.max(social_welfare))
@@ -167,8 +201,8 @@ def main(argv):
       expected_welfare_player_0 = _partial_multi_dot(social_welfare, list_of_meta_probabilities, 0)
       expected_welfare_iteration = np.dot(list_of_meta_probabilities[0], expected_welfare_player_0)
       expected_welfare.append(expected_welfare_iteration)
-    
-    #Average regret of both players in each iteration 
+
+    #Average regret of both players in each iteration
     for i in range(len(regret_individuals[0])):
       avg_regret_iter = 0
       for num_player in range(num_players):
@@ -193,8 +227,8 @@ def main(argv):
   welfare_fig, ax = plt.subplots()
   for i, curr_dict in enumerate(corresponding_dictionaries):
     #Optional TODO: Fill in label with name of data
-    ax.scatter(x=[ind + 1 for ind in range(len(curr_dict["max_social_welfare"]))], 
-      y=curr_dict["max_social_welfare"], 
+    ax.scatter(x=[ind + 1 for ind in range(len(curr_dict["max_social_welfare"]))],
+      y=curr_dict["max_social_welfare"],
       label="{}: max welfare".format(name_of_method[i]))
   ax.set_title("Max Welfare Over Iterations")
   ax.set_xlabel("Iteration")
@@ -206,7 +240,7 @@ def main(argv):
   # Graph the expected welfare over iterations
   welfare_fig, ax = plt.subplots()
   for i, curr_dict in enumerate(corresponding_dictionaries):
-    ax.scatter(x=[ind + 1 for ind in range(len(curr_dict["expected_welfare"]))], 
+    ax.scatter(x=[ind + 1 for ind in range(len(curr_dict["expected_welfare"]))],
       y=curr_dict["expected_welfare"], label="{}: expected welfare".format(name_of_method[i]))
   ax.set_title("Expected Welfare Over Iterations")
   ax.set_xlabel("Iteration")
@@ -219,8 +253,8 @@ def main(argv):
   expected_payoff_fig, ax = plt.subplots()
   for i, curr_dict in enumerate(corresponding_dictionaries):
     for player_index in range(num_players):
-      ax.scatter(x=[ind + 1 for ind in range(len(curr_dict["expected_payoff_individual"][0]))], 
-        y=curr_dict["expected_payoff_individual"][player_index], 
+      ax.scatter(x=[ind + 1 for ind in range(len(curr_dict["expected_payoff_individual"][0]))],
+        y=curr_dict["expected_payoff_individual"][player_index],
         label= "{}: Player {}".format(name_of_method[i], player_index))
   ax.set_title("Expected Individual Payoff Over Iterations")
   ax.set_xlabel("Iteration")
@@ -236,7 +270,7 @@ def main(argv):
     for player_index in range(len(regret_individuals)):
         #TODO: Fix when we figure out regret calculations for odd iterations
         ax.scatter(x=[ind * 2 + 2 for ind in range(len(curr_dict["regret_individuals"][0]))],
-          y=regret_individuals[player_index], 
+          y=regret_individuals[player_index],
           label="{}: Player {}".format(name_of_method[i], player_index))
   ax.set_title("Individual Regret Over Iterations")
   ax.set_xlabel("Iteration")

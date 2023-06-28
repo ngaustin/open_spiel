@@ -27,6 +27,8 @@ from open_spiel.python import rl_agent
 from open_spiel.python import simple_nets
 from open_spiel.python.utils.replay_buffer import ReplayBuffer
 from open_spiel.python.algorithms.psro_v2 import utils
+#Config.py for ppo training data
+from open_spiel.python.algorithms import config
 
 # Temporarily disable TF2 behavior until code is updated.
 tf.disable_v2_behavior()
@@ -37,13 +39,13 @@ Transition = collections.namedtuple(
 
 ILLEGAL_ACTION_LOGITS_PENALTY = -1e9
 
-# Since we are working in joint action space, the output of the Q network will be exponential in the number of players 
-# We index it so that for a player with player index of i, their action will change every (num_actions) ** i indices in the action output 
-# For example, if a game has an action space size of 2, for player index 0, their action will be different for every 1 of the outputs 
-# For player index 1, their action will be different every 2 outputs 
+# Since we are working in joint action space, the output of the Q network will be exponential in the number of players
+# We index it so that for a player with player index of i, their action will change every (num_actions) ** i indices in the action output
+# For example, if a game has an action space size of 2, for player index 0, their action will be different for every 1 of the outputs
+# For player index 1, their action will be different every 2 outputs
 # For player index 2, their action will be different every 4 outputs
 
-# To marginalize a player's action, take slices of size (num_actions) ** i every (num_actions) ** (i + 1) indices. 
+# To marginalize a player's action, take slices of size (num_actions) ** i every (num_actions) ** (i + 1) indices.
 # Then, take the max of them. That represents the marginalized max Q-value of that actions
 
 # To get different marginalized Q-value for each action, start at different points: 0, num_actions ** i, 2 * (num_actions ** i), 3 * (num_actions ** i) etc.
@@ -97,7 +99,7 @@ class RewardScaler(object):
         self.center = center
         self.scale = scale
         self.rs = RunningStat(shape)
-    
+
     def push(self, x):
         self.rs.push(x)
 
@@ -112,19 +114,19 @@ class RewardScaler(object):
                 diff = diff/(self.rs.std + 1e-8)
                 x = diff + self.rs.mean
         return x
-    
+
     def denormalize(self, x):
         if self.scale:
             if not self.center:
-                diff = x - self.rs.mean 
+                diff = x - self.rs.mean
                 diff = diff * (self.rs.std + 1e-8)
-                x = diff + self.rs.mean 
+                x = diff + self.rs.mean
             else:
                 x = x * (self.rs.std + 1e-8)
         if self.center:
             x = x + self.rs.mean
-    
-        return x 
+
+        return x
 
 
 
@@ -138,10 +140,10 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                  pre_trained_network,
                  player_id,
                  consensus_kwargs,
-                 num_actions, 
-                 state_representation_size, 
-                 num_players, 
-                 turn_based, 
+                 num_actions,
+                 state_representation_size,
+                 num_players,
+                 turn_based,
                  prev_policy):
         """Initialize the DQN agent."""
 
@@ -167,16 +169,11 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         self.discount_factor = consensus_kwargs["discount"]
         self.entropy_regularization = consensus_kwargs["ppo_entropy_regularization"]
 
-        # BELOW is for R-BVE finetuning 
+        # BELOW is for R-BVE finetuning
         self.max_buffer_size_fine_tune = consensus_kwargs["max_buffer_size_fine_tune"]
         self.min_buffer_size_fine_tune = consensus_kwargs["min_buffer_size_fine_tune"]
         self.fine_tune_bool = consensus_kwargs["fine_tune"]
         self.consensus_kwargs = consensus_kwargs
-
-        self.actor_loss_list = []
-        self.value_loss_list = []
-        self.entropy_list = []
-        self.kl_list = []
 
         self.layer_sizes = [self.hidden_layer_size] * self.n_hidden_layers
 
@@ -188,12 +185,12 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         self._curr_size_batch = 0
         self._seen_observations = set()
 
-        # Initialize the FF network 
+        # Initialize the FF network
 
-        num_outputs = self._num_actions ** num_players if self.joint_action else self._num_actions 
+        num_outputs = self._num_actions ** num_players if self.joint_action else self._num_actions
 
         self.trained_once = False
-        
+
         # Create placeholders
         self._info_state_ph = tf.placeholder(
             shape=[None, state_representation_size],
@@ -222,7 +219,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
 
 
         ####### R-BVE/SARSA Start ########
-        
+
         self._env_steps = 0
         self._fine_tune_print_counter = 0
         self._fine_tune_counter = 0
@@ -248,18 +245,18 @@ class ImitationFineTune(rl_agent.AbstractAgent):
             dtype=tf.float32,
             name="policy_constraint_weight_ph"
         )
-        # Trajectories and actions for online fine-tuning without the joint wrapper 
+        # Trajectories and actions for online fine-tuning without the joint wrapper
         self.curr_trajectory = []
         self.action_trajectory = []
 
-        # Create a policy network same size as Q network 
-        self._policy_network = simple_nets.MLP(state_representation_size, 
+        # Create a policy network same size as Q network
+        self._policy_network = simple_nets.MLP(state_representation_size,
                                             self.layer_sizes, num_outputs)
         self._policy_network_variables = self._policy_network.variables[:]
-        self._old_policy_network = simple_nets.MLP(state_representation_size, 
+        self._old_policy_network = simple_nets.MLP(state_representation_size,
                                             self.layer_sizes, num_outputs)
         self._old_policy_network_variables = self._policy_network.variables[:]
-        
+
         # Create a VALUE network same size as Q network
         self._value_network = simple_nets.MLP(state_representation_size, self.layer_sizes, 1)  # self._num_actions)
         self._value_network_variables = self._value_network.variables[:]
@@ -276,22 +273,22 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         """
 
         # self.reward_scaler = RewardScaler(shape=self.num_players, center=True, scale=True)
-    
-        # Create a method that copies parameters from Q network to policy network 
+
+        # Create a method that copies parameters from Q network to policy network
         self._initialize_policy_network = self._create_policy_network(self._policy_network, pre_trained_network)
         self._initialize_old_policy_network = self._create_policy_network(self._old_policy_network, pre_trained_network)
         self._prev_policy_copy_from = prev_policy
 
-        # Pass observations to policy 
+        # Pass observations to policy
         logits = self._policy_network(self._info_state_ph) # [?, num_actions]
 
-        # Get the outputs...softmax over them 
+        # Get the outputs...softmax over them
         # exps = tf.math.exp(logits) # [?, num_actions]
         # normalizer = tf.reshape(tf.reduce_sum(exps, axis=1), [-1, 1]) # [?, 1]
         self.probs = tf.nn.softmax(logits, axis=1)  # exps / normalizer # [?, num_actions]
         # print("Normalizer: ", normalizer.get_shape(), "  probs: ", exps.get_shape(), self.probs.get_shape())
 
-        # Then do tf.log on them to get logprobs 
+        # Then do tf.log on them to get logprobs
         all_log_probs = tf.math.log(tf.clip_by_value(self.probs, 1e-10, 1.0)) # [?, num_actions]
         self.log_probs = tf.gather(all_log_probs, self._action_ph, axis=1, batch_dims=1) # [?, 1]
 
@@ -305,18 +302,18 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         ###################################
 
         ###################################
-        # PPO Implementation 
-        # Pass observations to value network to get value baseline 
+        # PPO Implementation
+        # Pass observations to value network to get value baseline
         self.values = self._value_network(self._info_state_ph) # [?, 1]
 
-        # Subtract from the rewards to go to get advantage values 
+        # Subtract from the rewards to go to get advantage values
         print("rtg values check: ", self._rewards_to_go_ph.get_shape(), self.values.get_shape())
         assert (tf.reshape(self._rewards_to_go_ph, [-1, 1])).get_shape() == self.values.get_shape()
         value_delta = tf.reshape(self._rewards_to_go_ph, [-1, 1]) - self.values  # [?, 1]
 
         advantages = tf.reshape(self._gae_ph, [-1, 1])
 
-        # Calculate entropy 
+        # Calculate entropy
         assert self.probs.get_shape() == all_log_probs.get_shape()
         self.entropy = tf.reduce_mean(-(tf.reduce_sum(self.probs * all_log_probs, axis=1)))
 
@@ -324,18 +321,18 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         assert self.log_probs.get_shape() == advantages.get_shape()
         normalized_advantages = (advantages - tf.reduce_mean(advantages)) / (tf.math.reduce_std(advantages) + 1e-7)
 
-        # Calculate PPO actor loss 
+        # Calculate PPO actor loss
         eps_clip = consensus_kwargs["eps_clip"]
         assert self.log_probs.get_shape() == tf.reshape(tf.stop_gradient(self._old_log_probs_ph), [-1, 1]).get_shape()
         ratios = tf.math.exp(self.log_probs - tf.reshape(tf.stop_gradient(self._old_log_probs_ph), [-1, 1]))
-        assert ratios.get_shape() == normalized_advantages.get_shape() 
-        surr1 = ratios * tf.stop_gradient(normalized_advantages) 
+        assert ratios.get_shape() == normalized_advantages.get_shape()
+        surr1 = ratios * tf.stop_gradient(normalized_advantages)
         surr2 = tf.clip_by_value(ratios, 1-eps_clip, 1+eps_clip) * tf.stop_gradient(normalized_advantages)
         self.actor_loss = -tf.reduce_mean(tf.math.minimum(surr1, surr2)) - (self.entropy_regularization * self.entropy) + (self._policy_constraint_weight_ph * self.constrain_kl_divergence)
 
-        # Calculcate critic loss by taking the square of advantages 
-        self.critic_loss = tf.reduce_mean(tf.math.square(value_delta)) 
-        
+        # Calculcate critic loss by taking the square of advantages
+        self.critic_loss = tf.reduce_mean(tf.math.square(value_delta))
+
         ######################################
 
         ######### SAC Implementation #########
@@ -344,7 +341,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
 
         next_logits = self._policy_network(self._next_info_state_ph)
         next_probs = tf.nn.softmax(next_logits, axis=1)
-        # Account for legal actions here by multiplying next probabilities by the legal actions mask and then renormalizing 
+        # Account for legal actions here by multiplying next probabilities by the legal actions mask and then renormalizing
         print("Masking next probs: ", self._legal_actions_mask_ph.get_shape(), next_probs.get_shape(), tf.reduce_sum(next_probs, axis=1).get_shape())
         next_probs = self._legal_actions_mask_ph * next_probs
         normalizer = tf.reshape(tf.reduce_sum(next_probs, axis=1), [-1, 1])
@@ -362,7 +359,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         next_v = tf.reduce_sum(next_probs * (next_q - tf.exp(self.log_alpha) * all_next_log_probs), axis=1)
         print("target q shapes: ", self._rewards_ph.get_shape(), self._is_final_step_ph.get_shape(), next_v.get_shape())
         target_q = tf.reshape(tf.stop_gradient(self._rewards_ph + self.discount_factor * (1 - self._is_final_step_ph) * next_v), [-1, 1])
-        
+
         q1 = self._value_network(self._info_state_ph)
         q2 = self._value_network_2(self._info_state_ph)
         q1_selected = tf.gather(q1, self._action_ph, axis=1, batch_dims=1)
@@ -370,23 +367,23 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         print("q1 shapes: ", q1.get_shape(), q1_selected.get_shape(), target_q.get_shape())
         q1_loss = tf.reduce_mean(tf.math.square(q1_selected - target_q))
         q2_loss = tf.reduce_mean(tf.math.square(q2_selected - target_q))
-        self.critic_loss = q1_loss + q2_loss 
+        self.critic_loss = q1_loss + q2_loss
 
         q = tf.stop_gradient(tf.minimum(q1, q2))
         print("actor loss shapes: ", self.probs.get_shape(), self.log_alpha.get_shape(), all_log_probs.get_shape(), q.get_shape())
         self.actor_loss = tf.reduce_mean(tf.reduce_sum(self.probs * (tf.exp(tf.stop_gradient(self.log_alpha)) * all_log_probs - q), axis=1)) + (self._policy_constraint_weight_ph * self.constrain_kl_divergence)
 
         # self.entropy_target = self.consensus_kwargs["sac_target_entropy"] * (-np.log(1 / self._num_actions))
-        
+
         self.entropy = -tf.reduce_mean(tf.reduce_sum(self.probs * all_log_probs, axis=1))
         # print("alpha loss shapes: ", self.log_alpha.get_shape(), self.entropy_target, self.entropy.get_shape())
         # self.alpha_loss = -tf.reduce_mean(self.log_alpha * (self.entropy_target - tf.stop_gradient(self.entropy)))
 
-        self.update_target_networks = self._create_target_network_update_op(self._value_network, self._value_target_network, 
+        self.update_target_networks = self._create_target_network_update_op(self._value_network, self._value_target_network,
                                                                             self._value_network_2, self._value_target_network_2)
         """
 
-        # Create separate optimizers for the policy and value network 
+        # Create separate optimizers for the policy and value network
         self._ppo_policy_optimizer = tf.train.AdamOptimizer(learning_rate=3e-5)
         self._ppo_value_optimizer = tf.train.AdamOptimizer(learning_rate=1e-4)
         # self._alpha_optimizer = tf.train.AdamOptimizer(learning_rate=3e-4)
@@ -422,8 +419,8 @@ class ImitationFineTune(rl_agent.AbstractAgent):
 
     def clear_state_tracking(self):
         self.states_seen_in_evaluation = []
-        return 
-    
+        return
+
     # TODO: Make sure this transitions is smooth
     def _create_policy_network(self, policy_network, source_network):
         self._variables = source_network.variables[:]
@@ -447,7 +444,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
 
         if self._prev_policy_copy_from:
             print("Loading previous PPO policy and value networks: ")
-            ref_object = self._prev_policy_copy_from._policy._fine_tune_module 
+            ref_object = self._prev_policy_copy_from._policy._fine_tune_module
             ref_policy_network = getattr(ref_object, "_policy_network")
             ref_value_network = getattr(ref_object, "_value_network")
 
@@ -462,7 +459,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                 for va, vb in zip(ref_value_network.variables, self._value_network.variables)
             ])
             self.session.run(copy_value_weights)
-        
+
         if self.is_train_best_response:
             self.policy_constraint_weight = 0
         else:
@@ -479,7 +476,6 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         Returns:
           A `rl_agent.StepOutput` containing the action probs and chosen action.
         """
-
         # Act step: don't act at terminal info states or if its not our turn.
         if (not time_step.last()) and (
                 time_step.is_simultaneous_move() or
@@ -487,22 +483,22 @@ class ImitationFineTune(rl_agent.AbstractAgent):
 
             # This is a weird issue with the current code framework
             if self.symmetric:
-                # If symmetric, then having a NOT simultaneous move implies that it is updating the empirical game. Time_step.current_player is correctly set corresponding to the player 
+                # If symmetric, then having a NOT simultaneous move implies that it is updating the empirical game. Time_step.current_player is correctly set corresponding to the player
                 # However, if it is a simultaneous move, then we are working with BR. self.player_id is set manually from rl_oracle.py's sample_episode to make sure we get the right observation
                 player = (time_step.current_player() if not time_step.is_simultaneous_move() else self.player_id)
             else:
                 # If it's not symmetric, then each agent is given one policy corresponding to player_id
-                player = self.player_id 
-                
+                player = self.player_id
+
             info_state = time_step.observations["info_state"][player]
-            
+
             # with tf.device(self.device):
             info_state = np.reshape(info_state, [1, -1])
-                
+
 
             if self.joint_action:
-                raise NotImplementedError 
-                
+                raise NotImplementedError
+
             else:
                 # probs = np.zeros(self._num_actions)
                 legal_actions = time_step.observations["legal_actions"][player]
@@ -513,7 +509,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                 action = utils.random_choice(legal_actions, legal_probs)
 
                 probs[action] = 1.0
-            # TODO: Remove this. THis is for experiment 
+            # TODO: Remove this. THis is for experiment
             # if is_evaluation:
             #     self.states_seen_in_evaluation.append(''.join(map(str, time_step.observations["info_state"][self.player_id])))
         else:
@@ -525,7 +521,6 @@ class ImitationFineTune(rl_agent.AbstractAgent):
             if action != None:
                 self.action_trajectory.append([action])
 
-            
             if time_step.last():
                 if add_transition_record:
                     self.add_trajectory(self.curr_trajectory, self.action_trajectory, override_symmetric=True)  # we want to override symmetric because we are now training individually against other targets that are not ourselves
@@ -540,7 +535,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                     self.fine_tune()
 
         return rl_agent.StepOutput(action=action, probs=probs)
-    
+
     def fine_tune(self):
         self._env_steps += len(self._replay_buffer)
         self._fine_tune_counter += 1
@@ -550,7 +545,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         minibatches = self.minibatches
 
         transitions = self._replay_buffer.sample(len(self._replay_buffer))
-        
+
         info_states = [t.info_state for t in transitions]
         actions = [[t.action] for t in transitions]
 
@@ -562,17 +557,17 @@ class ImitationFineTune(rl_agent.AbstractAgent):
             }
         )[0]
 
-        
+
         indices = np.arange(len(transitions))
         size_minibatch = len(transitions) // minibatches
-        # For number of minibatches 
+        # For number of minibatches
         for _ in range(epochs):
-            # Get some random order of all of the transitions 
+            # Get some random order of all of the transitions
             np.random.shuffle(indices)
 
 
             for i in range(minibatches):
-                start = i*size_minibatch 
+                start = i*size_minibatch
                 end = (i+1)*size_minibatch if i < minibatches - 1 else len(indices)
 
                 subset = indices[start:end]
@@ -594,18 +589,17 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                     self._gae_ph: gae,
                     self._policy_constraint_weight_ph: self.policy_constraint_weight
                 })
-            
-            self.actor_loss_list.append(actor_loss)
-            self.entropy_list.append(entropy)
-            self.kl_list.append(kl)
+            config.actor_loss_list.append(actor_loss)
+            config.entropy_list.append(entropy)
+            config.kl_list.append(kl)
 
-        # For number of minibatches 
+        # For number of minibatches
         for _ in range(epochs):
             np.random.shuffle(indices)
 
 
             for i in range(minibatches):
-                start = i*size_minibatch 
+                start = i*size_minibatch
                 end = (i+1)*size_minibatch if i < minibatches - 1 else len(indices)
 
                 subset = indices[start:end]
@@ -619,21 +613,15 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                         self._info_state_ph: info_states,
                         self._rewards_to_go_ph: rewards_to_go,
                     })
-            self.value_loss_list.append(value_loss)
-        
-        if (len(self.actor_loss_list) > 100):
-            self.actor_loss_list = self.actor_loss_list[-100:]
-            self.value_loss_list = self.value_loss_list[-100:]
-            self.entropy_list = self.entropy_list[-100:]
-            self.kl_list = self.kl_list[-100:]
-    
-        if (self._fine_tune_print_counter > 100):
-            print("Mean PPO Actor + Value losses, entropy, and kl last 100 updates...and num env steps...and policy constraint weight: ", sum(self.actor_loss_list) / len(self.actor_loss_list), sum(self.value_loss_list) / len(self.value_loss_list), sum(self.entropy_list) / len(self.entropy_list), sum(self.kl_list) / len(self.kl_list), self._env_steps, self.policy_constraint_weight)
+            config.value_loss_list.append(value_loss)
+            
+        if (len(config.actor_loss_list) > 100 and self._fine_tune_print_counter > 100):
+            print("Mean PPO Actor + Value losses, entropy, and kl last 100 updates...and num env steps: ", sum(config.actor_loss_list[-100:]) / len(config.actor_loss_list[-100:]), sum(config.value_loss_list[-100:]) / len(config.value_loss_list[-100:]), sum(config.entropy_list[-100:]) / len(config.entropy_list[-100:]), sum(config.kl_list[-100:]) / len(config.kl_list[-100:]), self._env_steps)
             # print("Reward scaling mean, std: ", self.reward_scaler.rs.mean, self.reward_scaler.rs.std)
             self._fine_tune_print_counter = 0
-        
+
         self._replay_buffer.reset()
-        
+
         return
 
 
@@ -667,7 +655,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         # initialization_alpha = tf.group(
         #     *[var.initializer for var in self._alpha_optimizer.variables()]
         #   )
-    
+
         # initialization_weights,
         # initialization_opt,
         self.session.run(
@@ -686,7 +674,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
 
     def cumsum(self, x, discount):
         vals = [None for _ in range(len(x))]
-        curr = 0 
+        curr = 0
         for i in range(len(x) - 1, -1, -1):
             vals[i] = curr = x[i] + discount  * curr
         return vals
@@ -701,15 +689,15 @@ class ImitationFineTune(rl_agent.AbstractAgent):
     def insert_transitions(self):
         all_gae = []
         all_rewards_to_go = []
-        
+
         for trajectory in self._all_trajectories:
-            reward_arrays = [np.array(timestep.rewards) for timestep in trajectory[1:]]  # the first timestep has None value 
+            reward_arrays = [np.array(timestep.rewards) for timestep in trajectory[1:]]  # the first timestep has None value
             rewards_to_go = [np.zeros(self.num_players) for _ in range(len(trajectory) - 1)]
 
             # For each of the trajectories and action trajectories, calculate the rewards to go
             rewards_to_go = self.cumsum(reward_arrays, self.discount_factor)
             all_rewards_to_go.append(rewards_to_go)
-            
+
             # Push the rewards to go to our running average/std calculator
             # for rtg in rewards_to_go:
             #     self.reward_scaler.push(rtg)
@@ -719,30 +707,30 @@ class ImitationFineTune(rl_agent.AbstractAgent):
             values = [np.zeros(self.num_players) for _ in range(len(trajectory))]
 
 
-            
+
             for p in range(self.num_players):
                 observations = [timestep.observations["info_state"][p] for timestep in trajectory]
                 vals = self.session.run([self.values], feed_dict={self._info_state_ph:observations})[0]
                 vals = np.array(vals)
 
                 for j, val in enumerate(values):
-                    val[p] = vals[j] 
-            
-            
+                    val[p] = vals[j]
+
+
             # Denormalize the values, normalize the rewards to go
             # NOTE: found performance to be much better without this normalization
             # values = [self.reward_scaler.denormalize(val) for val in values]
 
             # all_rewards_to_go[i] = [self.reward_scaler.normalize(rtg) for rtg in all_rewards_to_go[i]]
 
-            
+
             reward_arrays = [np.array(timestep.rewards) for timestep in trajectory[1:]]
             deltas = [reward_arrays[j] + self.discount_factor * values[j+1] - values[j] for j in range(len(reward_arrays))]
-            gae = self.cumsum(deltas, self.discount_factor * .95) 
-            
-            # Append gae and normalized rewards to go 
+            gae = self.cumsum(deltas, self.discount_factor * .95)
+
+            # Append gae and normalized rewards to go
             all_gae.append(gae)
-            
+
 
         for curr, (trajectory, action_trajectory) in enumerate(zip(self._all_trajectories, self._all_action_trajectories)):
             rewards_to_go = all_rewards_to_go[curr]
@@ -752,27 +740,27 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                 if not self._is_turn_based:
                     # NOTE: If is_symmetric, then add_transition will add observations/actions from BOTH players already
                     # NOTE: Also insert action_trajectory[i+1]. If it is the last i, then we let action be 0 because it won't be used anyway
-                    next_action = action_trajectory[i+1] if (i+1) < len(action_trajectory) else [0 for _ in range(self.num_players)] 
-                    self.add_transition(trajectory[i], action_trajectory[i], trajectory[i+1], next_action, ret=rewards_to_go[i], gae=gae[i], override_symmetric=self._all_override_symmetrics[curr]) 
+                    next_action = action_trajectory[i+1] if (i+1) < len(action_trajectory) else [0 for _ in range(self.num_players)]
+                    self.add_transition(trajectory[i], action_trajectory[i], trajectory[i+1], next_action, ret=rewards_to_go[i], gae=gae[i], override_symmetric=self._all_override_symmetrics[curr])
                 else:
                     player = trajectory[i].observations["current_player"]
 
-                    # Individual player's move 
+                    # Individual player's move
                     action = [0 for _ in range(self.num_players)]
                     next_action = [0 for _ in range(self.num_players)]
-                    
+
                     action[player] = action_trajectory[i][0]
-                    
-                    # Simply indexing i+1 is incorrect. No guarantees it is this player's move or the final 
+
+                    # Simply indexing i+1 is incorrect. No guarantees it is this player's move or the final
                     next_player_timestep_index = None
                     for j in range(i+1, len(trajectory)):
                         if trajectory[j].observations["current_player"] == player or trajectory[j].last():
-                            next_player_timestep_index = j 
-                            break 
+                            next_player_timestep_index = j
+                            break
                     if next_player_timestep_index:
                         next_action[player] = action_trajectory[next_player_timestep_index][0] if next_player_timestep_index < len(action_trajectory) else 0
 
-                        curr_policy.add_transition(trajectory[i], action, trajectory[next_player_timestep_index], next_action, ret=rewards_to_go[i], override_player=[player]) 
+                        curr_policy.add_transition(trajectory[i], action, trajectory[next_player_timestep_index], next_action, ret=rewards_to_go[i], override_player=[player])
 
         self._all_trajectories = []
         self._all_action_trajectories = []
@@ -791,7 +779,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         """
         player_list = [i for i in range(self.num_players)] if self.symmetric and not override_symmetric else [self.player_id]
 
-        if self.joint_action: 
+        if self.joint_action:
             raise NotImplementedError
         else:
             for p in player_list:
@@ -804,9 +792,9 @@ class ImitationFineTune(rl_agent.AbstractAgent):
 
                 # NOTE: We want to keep all the transitions consistent...as if it was from one player's perspective.
                 # So, we need to switch the actions for consistency (this implementation only works for 2-player games)
-                # If we didn't switch, then the same action for the same observation can yield different results depending on which player we took that transition from 
+                # If we didn't switch, then the same action for the same observation can yield different results depending on which player we took that transition from
 
-                # Since the step() function assumes by symmetry that observations come from player0, we need to make sure that all 
+                # Since the step() function assumes by symmetry that observations come from player0, we need to make sure that all
                 # transitions are from player0's perspective, meaning the action applied to the observed player's observation must come first
 
                 store_action = prev_action[p]
@@ -820,12 +808,12 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                     info_state=(
                         prev_time_step.observations["info_state"][p][:]),
                     action=store_action,
-                    reward=r, 
+                    reward=r,
                     next_info_state=time_step.observations["info_state"][p][:],
                     next_action = store_next_action,
                     is_final_step=float(time_step.last()),
                     legal_actions_mask=legal_actions_mask,
-                    rewards_to_go=rewards_to_go, 
+                    rewards_to_go=rewards_to_go,
                     gae=gae[p]
                 )
 

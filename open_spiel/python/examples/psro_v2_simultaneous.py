@@ -51,7 +51,7 @@ from open_spiel.python.algorithms.psro_v2 import rl_oracle_cooperative
 from open_spiel.python.algorithms.psro_v2 import rl_policy
 from open_spiel.python.algorithms.psro_v2 import strategy_selectors
 from open_spiel.python.algorithms.psro_v2 import utils
-
+from open_spiel.python.algorithms import config
 
 FLAGS = flags.FLAGS
 
@@ -73,7 +73,7 @@ flags.DEFINE_integer("gpsro_iterations", 100,
 flags.DEFINE_bool("symmetric_game", False, "Whether to consider the current "
                   "game as a symmetric game.")
 
-# General Cooperative Consensus Policy Stuff 
+# General Cooperative Consensus Policy Stuff
 flags.DEFINE_bool("consensus_imitation", False, "Whether to use consensus oracle as well.")
 flags.DEFINE_string("consensus_oracle", "q_learn", "Choice of oracle for exploration policy. "
                                                       "Choices are trajectory, trajectory_deep, q_learn")
@@ -83,7 +83,7 @@ flags.DEFINE_integer("n_top_trajectories", 1, "Number of trajectories to take fr
 flags.DEFINE_bool("rewards_joint", True, "Whether to select trajectories and optimize consensus policies on joint rewards")
 flags.DEFINE_float("proportion_uniform_trajectories", 0, "Proportion of taken trajectories that will be uniformly sampled across non-high return ones")
 
-# Reward Fitting 
+# Reward Fitting
 flags.DEFINE_float("boltzmann", 1.0, "Boltzmann constant for softmax when reward trajectory fitting in DQN")
 
 # Deep Trajectory Fitting
@@ -115,7 +115,7 @@ flags.DEFINE_float("policy_constraint", .1, "Policy constraint regularization in
 flags.DEFINE_float("sac_target_entropy", .9, "SAC target entropy")
 flags.DEFINE_float('sac_alpha', .2, "SAC alpha value for entropy regularization")
 
-# RRD and MSS 
+# RRD and MSS
 flags.DEFINE_float("regret_lambda_init", .7, "Lambda threshold for RRD initially")
 flags.DEFINE_float("regret_lambda_final", 0, "Lambda threshold decay every iteration")
 flags.DEFINE_integer("regret_steps", 20, "Number of PSRO iterations to take to decrease regret")
@@ -146,7 +146,7 @@ flags.DEFINE_string("training_strategy_selector", "probabilistic",
                     "probability strategy available to each player.")
 
 # General (RL) agent parameters
-flags.DEFINE_integer("number_training_steps", int(1e6), "Number of environment " 
+flags.DEFINE_integer("number_training_steps", int(1e6), "Number of environment "
                      "steps per RL policy. Used for PG, DQN, and Tabular Q")
 flags.DEFINE_float("self_play_proportion", 0.0, "Self play proportion")
 flags.DEFINE_integer("hidden_layer_size", 32, "Hidden layer size")  # CHANGED THIS
@@ -176,15 +176,15 @@ flags.DEFINE_integer("seed", 1, "Seed.")
 flags.DEFINE_bool("local_launch", False, "Launch locally or not.")
 flags.DEFINE_bool("verbose", True, "Enables verbose printing and profiling.")
 
-def save_iteration_data(iteration_number, meta_probabilities, U, save_folder_path, training_returns):
+def save_iteration_data(iteration_number, meta_probabilities, U, save_folder_path, training_returns, ppo_training_data):
       """ How to save the iteration data? """
       date_time_string = str(datetime.now())
       date_time_string = date_time_string.replace(':', '_')
       save_data_path = save_folder_path + date_time_string + "_" + "iteration_{}.npy".format(iteration_number)
 
       all_meta_probabilities = np.vstack(meta_probabilities)
-      array_list = [all_meta_probabilities, np.stack(U, axis=0), training_returns]
-      object_array_list = np.empty(3, object)
+      array_list = [all_meta_probabilities, np.stack(U, axis=0), training_returns, ppo_training_data]
+      object_array_list = np.empty(4, object)
       object_array_list[:] = array_list
 
       with open(save_data_path, "wb") as npy_file:
@@ -225,7 +225,7 @@ def init_dqn_responder(sess, env):
       "optimizer_str": FLAGS.optimizer_str,
       "min_buffer_size_to_learn": FLAGS.min_buffer_size_to_learn,
       "replay_buffer_capacity": FLAGS.max_buffer_size,
-      "epsilon_decay_duration": FLAGS.epsilon_decay_duration, 
+      "epsilon_decay_duration": FLAGS.epsilon_decay_duration,
       "discount_factor": FLAGS.discount_factor
   }
 
@@ -236,12 +236,12 @@ def init_dqn_responder(sess, env):
     "alpha": FLAGS.alpha,
     "consensus_oracle":FLAGS.consensus_oracle,
     "consensus_imitation": FLAGS.consensus_imitation,
-    "imitation_mode":FLAGS.trajectory_mode, 
+    "imitation_mode":FLAGS.trajectory_mode,
     "num_simulations_fit":FLAGS.n_top_trajectories,
     "proportion_uniform_trajectories":FLAGS.proportion_uniform_trajectories,
     "joint_action": FLAGS.joint_action,
     "rewards_joint": FLAGS.rewards_joint,
-    "boltzmann": FLAGS.boltzmann, 
+    "boltzmann": FLAGS.boltzmann,
     "training_epochs": FLAGS.consensus_training_epochs,
     "training_steps": FLAGS.consensus_training_steps,
     "update_target_every": FLAGS.consensus_update_target_every,
@@ -253,13 +253,13 @@ def init_dqn_responder(sess, env):
     "n_hidden_layers": FLAGS.consensus_n_hidden_layers,
     "num_players": FLAGS.n_players,
     "symmetric": FLAGS.symmetric_game,
-    "tau": FLAGS.consensus_tau, 
-    "discount": FLAGS.discount_factor, 
-    "eta": FLAGS.eta, 
+    "tau": FLAGS.consensus_tau,
+    "discount": FLAGS.discount_factor,
+    "eta": FLAGS.eta,
     "beta": FLAGS.beta,
     "max_buffer_size_fine_tune": FLAGS.max_buffer_size_fine_tune,
-    "min_buffer_size_fine_tune": FLAGS.min_buffer_size_fine_tune, 
-    "fine_tune": FLAGS.fine_tune, 
+    "min_buffer_size_fine_tune": FLAGS.min_buffer_size_fine_tune,
+    "fine_tune": FLAGS.fine_tune,
     "clear_trajectories": FLAGS.clear_trajectories,
     "psi": FLAGS.psi,
     "eps_clip": FLAGS.eps_clip,
@@ -268,7 +268,8 @@ def init_dqn_responder(sess, env):
     "epochs_ppo": FLAGS.epochs_ppo,
     "minibatches_ppo": FLAGS.minibatches_ppo,
     "sac_target_entropy": FLAGS.sac_target_entropy,
-    "sac_alpha": FLAGS.sac_alpha
+    "sac_alpha": FLAGS.sac_alpha,
+    "consensus_imitation": FLAGS.consensus_imitation
   }
 
   print("Agent Arguments: ")
@@ -355,7 +356,6 @@ def gpsro_looper(env, oracle, agents):
   sample_from_marginals = True  # TODO(somidshafiei) set False for alpharank
   training_strategy_selector = FLAGS.training_strategy_selector or strategy_selectors.probabilistic
   training_returns = []
-
   g_psro_solver = psro_v2.PSROSolver(
       env.game,
       oracle,
@@ -380,11 +380,9 @@ def gpsro_looper(env, oracle, agents):
       print("Iteration : {}".format(gpsro_iteration))
       print("Time so far: {}".format(time.time() - start_time))
 
-
     g_psro_solver.iteration()
-    # if (FLAGS.consensus_imitation):
-    training_returns = oracle.get_training_returns()
-
+    if FLAGS.consensus_imitation:
+      training_returns = oracle.get_training_returns()
     meta_game = g_psro_solver.get_meta_game()
     meta_probabilities = g_psro_solver.get_meta_strategies()
     policies = g_psro_solver.get_policies()
@@ -404,7 +402,7 @@ def gpsro_looper(env, oracle, agents):
       # env.game.display_policies_in_context(policies)
 
       save_folder_path = FLAGS.save_folder_path if FLAGS.save_folder_path[-1] == "/" else FLAGS.save_folder_path + "/"
-      save_iteration_data(gpsro_iteration, meta_probabilities, meta_game, save_folder_path, training_returns)
+      save_iteration_data(gpsro_iteration, meta_probabilities, meta_game, save_folder_path, training_returns, config.ppo_training_data)
 
     # The following lines only work for sequential games for the moment.
     """
@@ -439,7 +437,7 @@ def main(argv):
 
   env = rl_environment.Environment(game, observation_type=rl_environment.ObservationType.OBSERVATION)
 
-  import os 
+  import os
   num_cpus = os.cpu_count()
   print("Num cpu cores: ", num_cpus)
   os.environ["OMP_NUM_THREADS"] = "16"
@@ -452,7 +450,7 @@ def main(argv):
     oracle, agents = init_dqn_responder(sess, env)
     """
     if FLAGS.oracle_type == "DQN":
-      oracle, agents = init_dqn_responder(sess, env)   
+      oracle, agents = init_dqn_responder(sess, env)
     elif FLAGS.oracle_type == "PG":
       oracle, agents = init_pg_responder(sess, env)
     elif FLAGS.oracle_type == "BR":

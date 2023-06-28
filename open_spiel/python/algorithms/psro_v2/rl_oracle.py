@@ -183,7 +183,6 @@ class RLOracle(optimization_oracle.AbstractOracle):
     # Prioritizing players that haven't had as much training as the others.
     steps_per_player = [sum(steps) for steps in steps_per_oracle]
     chosen_player = random_count_weighted_choice(steps_per_player)
-
     # Uniformly choose among the sampled player.
     agent_chosen_ind = np.random.randint(
         0, len(training_parameters[chosen_player]))
