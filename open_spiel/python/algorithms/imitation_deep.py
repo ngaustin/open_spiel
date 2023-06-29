@@ -51,7 +51,8 @@ class Imitation(rl_agent.AbstractAgent):
                  state_representation_size,
                  num_players,
                  turn_based,
-                 prev_policy):
+                 prev_policy, 
+                 policy_constraint):
 
         # This call to locals() is used to store every argument used to initialize
         # the class instance, so it can be copied with no hyperparameter change.
@@ -170,7 +171,8 @@ class Imitation(rl_agent.AbstractAgent):
                  state_representation_size,
                  num_players,
                  self._is_turn_based, 
-                 prev_policy)
+                 prev_policy,
+                 policy_constraint)
 
 
         self._initialize()
@@ -191,9 +193,9 @@ class Imitation(rl_agent.AbstractAgent):
             indices = indices + diff
         return indices
 
-    def set_to_fine_tuning_mode(self):
+    def set_to_fine_tuning_mode(self, train_best_response):
         self._replay_buffer.reset()
-        self._fine_tune_module.set_to_fine_tuning_mode()
+        self._fine_tune_module.set_to_fine_tuning_mode(train_best_response)
         self._fine_tune_mode = True
 
     def _initialize(self):
@@ -291,8 +293,10 @@ class Imitation(rl_agent.AbstractAgent):
     def add_trajectory(self, trajectory, action_trajectory, override_symmetric=False):
         """Trajectory is a list of timesteps, Action_trajectory is a list of lists representing joint actions. If it is a single player playing an action,
             it will be a list of length 1 lists. """
+        """ Adds the trajectory consisting only of transitions relevant to the current player (only self.player_id if turn-based or all of them if simultaneous)"""
         if self._fine_tune_mode:
-            self._fine_tune_module.add_trajectory(trajectory, action_trajectory, override_symmetric)
+            assert False
+            # self._fine_tune_module.add_trajectory(trajectory, action_trajectory, override_symmetric)
             return
 
         rewards_to_go = [np.zeros(self.num_players) for _ in range(len(trajectory) - 1)]
@@ -309,8 +313,13 @@ class Imitation(rl_agent.AbstractAgent):
                 next_action = action_trajectory[i+1] if (i+1) < len(action_trajectory) else [0 for _ in range(self.num_players)]
                 self.add_transition(trajectory[i], action_trajectory[i], trajectory[i+1], next_action, ret=rewards_to_go[i], override_symmetric=override_symmetric)
             else:
+                # NOTE: Assume that anything called using add_trajectory already filters out for the relevant transitions 
                 player = trajectory[i].observations["current_player"]
-                # TODO: Figure out this later...
+                next_action = action_trajectory[i+1] if (i+1) < len(action_trajectory) else [0 for _ in range(self.num_players)] 
+                self.add_transition(trajectory[i], action_trajectory[i], trajectory[i+1], next_action, ret=rewards_to_go[i], gae=gae[i], override_player=[player])
+                """
+                if player != self.player_id and not self.symmetric:
+                    continue
 
                 # Individual player's move
                 action = [0 for _ in range(self.num_players)]
@@ -327,7 +336,7 @@ class Imitation(rl_agent.AbstractAgent):
                 if next_player_timestep_index:
                     next_action[player] = action_trajectory[next_player_timestep_index][0] if next_player_timestep_index < len(action_trajectory) else 0
 
-                    curr_policy.add_transition(trajectory[i], action, trajectory[next_player_timestep_index], next_action, ret=rewards_to_go[i], override_player=[player])
+                    curr_policy.add_transition(trajectory[i], action, trajectory[next_player_timestep_index], next_action, ret=rewards_to_go[i], override_player=[player])"""
 
 
     def add_transition(self, prev_time_step, prev_action, time_step, action, ret, override_symmetric=False, override_player=[]):
@@ -407,7 +416,7 @@ class Imitation(rl_agent.AbstractAgent):
             i, batches, loss_total, entropy_total = 0, 0, 0, 0  # entropy_total is just an estimate
             dataset = random.sample(dataset, len(dataset))
             rets = [d.ret for d in dataset]
-            weights = self._return_normalization(rets,temp=1)
+            weights = [1 for _ in range(len(rets))] # self._return_normalization(rets,temp=1)
             while i < length:
                 #transitions = dataset[i: min(length, i+self.batch)]
                 transitions = random.choices(population=dataset, weights=weights, k=min(length, i+self.batch) - i)
@@ -454,7 +463,7 @@ class Imitation(rl_agent.AbstractAgent):
                 loss_total += loss
                 i += self.batch
                 batches +=1
-            if ep % 100 == 0:
+            if ep % 10 == 0:
                 print("Average loss for epoch {}: {} ".format(ep, loss_total / float(batches)))
 
             if loss_total / float(batches) < self.minimum_entropy:

@@ -110,19 +110,34 @@ class RLOracleCooperative(rl_oracle.RLOracle):
 
         # TODO: Check the number of policies in total_policies of training parameters. If odd, then do BR. If even, do consensus policies
         num_policies_total = len(training_parameters[0][0]["total_policies"][0])
-        train_best_response = not (num_policies_total % 2 == 0 and self._consensus_kwargs['consensus_imitation'])
+
+        if self._consensus_kwargs["consensus_imitation"]:
+            curr_policy_constraint_weight = self.get_policy_constraint_weight(num_policies_total)
+            if num_policies_total == 1: # The first one will always be BR 
+                train_best_response = True 
+            elif (self._fine_tune_bool and curr_policy_constraint_weight == 0):  # If you are fine tuning and the policy constraint weight is 0, then it will degenerate to always BR 
+                train_best_response = True 
+            elif num_policies_total % 2 == 0:  # The even ones will always be some form of consensus policy (whether or not we fine tune is irrelevant)
+                train_best_response = False
+            elif num_policies_total > 1 and self._consensus_kwargs["perturb_all"]:  # If we want to perturb all of the policies after, we will not make BR 
+                train_best_response = False 
+            else:
+                train_best_response = True
+        else:
+            train_best_response = True
+        # train_best_response = not (num_policies_total % 2 == 0 and self._consensus_kwargs['consensus_imitation']) and not (num_policies_total == 1 )
+
+        print("Training best response: ", train_best_response, self.get_policy_constraint_weight(num_policies_total))
 
         # NOTE: this is a tester to make sure our comparison with other algorithms is fair
         # if False: 
         #     new_policies = self.generate_new_policies(training_parameters)
         # else:
 
-        # TODO: Reset the old and new policy names 
-
         # Generate one new policy for each agent to train imitation
         # If a dummy is passed in for "policy," a new policy is created and not copied. Assumed that we create one
         # for every player
-        new_policies = self.create_consensus_policies(training_parameters)
+        new_policies = self.create_consensus_policies(training_parameters, iteration_num=num_policies_total)
 
         # NOTE: Changed here for fair comparison
         if not train_best_response:
@@ -192,6 +207,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             """
             invalid_candidate = (returns[0] < cutoff_returns[0]) or (returns[1] < cutoff_returns[1]) if is_symmetric else (returns[0] < cutoff_returns[0]) and (returns[1] < cutoff_returns[1])
             self._train_br_returns.append(returns)
+
             if not invalid_candidate and self._consensus_kwargs["consensus_imitation"]:
                 rollout_trajectories.append(trajectory)
                 rollout_returns.append(returns)
@@ -250,8 +266,12 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         fig1.savefig(save_path + "figureTest.jpg")
         fig2.savefig(save_path + "figureTest2.jpg")
         input("Enter to continue...")
+    
+    def get_policy_constraint_weight(self, iteration_num):
+        return self._consensus_kwargs["policy_constraint"] * max((1 - (float(iteration_num) - 1) / self._consensus_kwargs["regret_steps"]), 0)
 
-    def create_consensus_policies(self, training_parameters):
+    def create_consensus_policies(self, training_parameters, iteration_num):
+        fine_tune_constraint = self.get_policy_constraint_weight(iteration_num)
         consensus_training_parameters = [[{"policy": None}] for _ in range(len(training_parameters))]
         consensus_policies = self.generate_new_policies(consensus_training_parameters)
         for i in range(len(consensus_policies)):
@@ -263,10 +283,10 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             elif self._consensus_oracle == "q_learn":
                 curr._policy = imitation_q_learn.Imitation(**{"player_id": i, "consensus_kwargs": self._consensus_kwargs}, **new_arguments)
             elif self._consensus_oracle == "trajectory_deep":
-                new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based, "prev_policy":self._most_recent_br_policies[i] if self._most_recent_br_policies else None}
+                new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based, "prev_policy":self._most_recent_br_policies[i] if self._most_recent_br_policies else None, "policy_constraint":fine_tune_constraint}
                 curr._policy = imitation_deep.Imitation(**{"player_id": i, "consensus_kwargs": self._consensus_kwargs}, **new_arguments)
             elif self._consensus_oracle == "cql_deep":
-                new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based, "prev_policy":self._most_recent_br_policies[i] if self._most_recent_br_policies else None}
+                new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based, "prev_policy":self._most_recent_br_policies[i] if self._most_recent_br_policies else None, "policy_constraint":fine_tune_constraint}
                 curr._policy = imitation_q_learn_deep.Imitation(**{"player_id": i, "consensus_kwargs": self._consensus_kwargs}, **new_arguments)
             else:
                 raise NotImplementedError
@@ -369,7 +389,17 @@ class RLOracleCooperative(rl_oracle.RLOracle):
 
             for trajectory, action_trajectory in zip(high_return_trajectories, high_return_actions):
                 # Calculate the discounted rewards to go for each and pass it in as well
-                curr_policy.add_trajectory(trajectory, action_trajectory)
+
+                if self._is_turn_based:
+                    # Add the parts of the trajectory only relevant to the player (assuming it is turn based)
+                    assert not symmetric # Not implemented 
+                    players_turn = [i for i, t in enumerate(trajectory[:-1]) if t.observations["current_player"] == player] + [len(trajectory) - 1]
+                    player_trajectory = [trajectory[i] for i in players_turn]
+                    player_action_trajectory = [action_trajectory[i] for i in players_turn]
+                    curr_policy.add_trajectory(player_trajectory, player_action_trajectory)
+                    raise NotImplementedError
+                else:
+                    curr_policy.add_trajectory(trajectory, action_trajectory)
 
             print("Training Player {}'s consensus policy".format(player))
             curr_policy.learn()

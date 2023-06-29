@@ -31,6 +31,7 @@ from datetime import datetime
 from absl import app
 from absl import flags
 import numpy as np
+import os
 
 # pylint: disable=g-bad-import-order
 import pyspiel
@@ -82,6 +83,7 @@ flags.DEFINE_string("trajectory_mode", "prob_reward", "How to fit to a trajector
 flags.DEFINE_integer("n_top_trajectories", 1, "Number of trajectories to take from each of the BR simulations")
 flags.DEFINE_bool("rewards_joint", True, "Whether to select trajectories and optimize consensus policies on joint rewards")
 flags.DEFINE_float("proportion_uniform_trajectories", 0, "Proportion of taken trajectories that will be uniformly sampled across non-high return ones")
+flags.DEFINE_bool("perturb_all", False, "Whether to use policy constraints on ALL policies after first iteration")
 
 # Reward Fitting 
 flags.DEFINE_float("boltzmann", 1.0, "Boltzmann constant for softmax when reward trajectory fitting in DQN")
@@ -108,12 +110,15 @@ flags.DEFINE_bool("fine_tune", False, "Determines whether to fine tune the conse
 flags.DEFINE_bool("clear_trajectories", False, "Determines whether to clear the trajectory list after every iteration of PSRO")
 flags.DEFINE_float("psi", 1.0, "How much probability fine tune in joint space")
 flags.DEFINE_float("eps_clip", .2, "PPO epsilon boundary clip")
+flags.DEFINE_float("eps_clip_value", .2, "PPO epsilon boundary clip for value ")
 flags.DEFINE_float("ppo_entropy", .01, "PPO entropy regularization")
 flags.DEFINE_integer("epochs_ppo", 80, "PPO epochs")
 flags.DEFINE_integer("minibatches_ppo", 5, "PPO minibatches")
 flags.DEFINE_float("policy_constraint", .1, "Policy constraint regularization in PPO fine tuning")
-flags.DEFINE_float("sac_target_entropy", .9, "SAC target entropy")
-flags.DEFINE_float('sac_alpha', .2, "SAC alpha value for entropy regularization")
+flags.DEFINE_float("fine_tune_policy_lr", 3e-4, "policy lr")
+flags.DEFINE_float("fine_tune_value_lr", 1e-3, "value lr")
+flags.DEFINE_float("entropy_decay_duration", .9, "proportion of training steps to decay entropy regularization for")
+flags.DEFINE_float("transfer_policy_minimum_entropy", .5, "Minimum policy entropy to transfer policies across PSRO iterations")
 
 # RRD and MSS 
 flags.DEFINE_float("regret_lambda_init", .7, "Lambda threshold for RRD initially")
@@ -181,6 +186,10 @@ def save_iteration_data(iteration_number, meta_probabilities, U, save_folder_pat
       date_time_string = str(datetime.now())
       date_time_string = date_time_string.replace(':', '_')
       save_data_path = save_folder_path + date_time_string + "_" + "iteration_{}.npy".format(iteration_number)
+
+      pathExists = os.path.exists(save_folder_path)
+      if not pathExists:
+        os.makedirs(save_folder_path)
 
       all_meta_probabilities = np.vstack(meta_probabilities)
       array_list = [all_meta_probabilities, np.stack(U, axis=0), training_returns]
@@ -263,12 +272,18 @@ def init_dqn_responder(sess, env):
     "clear_trajectories": FLAGS.clear_trajectories,
     "psi": FLAGS.psi,
     "eps_clip": FLAGS.eps_clip,
+    "eps_clip_value": FLAGS.eps_clip_value,
     "ppo_entropy_regularization": FLAGS.ppo_entropy,
     "policy_constraint": FLAGS.policy_constraint,
     "epochs_ppo": FLAGS.epochs_ppo,
     "minibatches_ppo": FLAGS.minibatches_ppo,
-    "sac_target_entropy": FLAGS.sac_target_entropy,
-    "sac_alpha": FLAGS.sac_alpha
+    "regret_steps": FLAGS.regret_steps,
+    "perturb_all": FLAGS.perturb_all,
+    "steps_fine_tune": FLAGS.number_training_steps,
+    "fine_tune_policy_lr": FLAGS.fine_tune_policy_lr, 
+    "fine_tune_value_lr": FLAGS.fine_tune_value_lr,
+    "entropy_decay_duration": FLAGS.entropy_decay_duration, 
+    "transfer_policy_minimum_entropy": FLAGS.transfer_policy_minimum_entropy
   }
 
   print("Agent Arguments: ")
