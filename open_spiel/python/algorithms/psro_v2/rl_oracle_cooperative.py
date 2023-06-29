@@ -3,7 +3,6 @@ Cooperative oracle for PSRO where we take into account simulation data when addi
 """
 
 import numpy as np
-import matplotlib.pyplot as plt
 import os
 from open_spiel.python.algorithms.psro_v2 import rl_oracle
 from open_spiel.python.algorithms.psro_v2 import utils

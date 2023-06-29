@@ -283,7 +283,7 @@ def init_dqn_responder(sess, env):
     "fine_tune_policy_lr": FLAGS.fine_tune_policy_lr, 
     "fine_tune_value_lr": FLAGS.fine_tune_value_lr,
     "entropy_decay_duration": FLAGS.entropy_decay_duration, 
-    "transfer_policy_minimum_entropy": FLAGS.transfer_policy_minimum_entropy
+    "transfer_policy_minimum_entropy": FLAGS.transfer_policy_minimum_entropy,
     "consensus_imitation": FLAGS.consensus_imitation
   }
 

@@ -477,22 +477,15 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                         self._rewards_to_go_ph: rewards_to_go,
                         self._old_values_ph: old_values_subset
                     })
-            self.value_loss_list.append(value_loss)
             config.value_loss_list.append(value_loss)
         
-        if (len(self.actor_loss_list) > 100):
-            self.actor_loss_list = self.actor_loss_list[-100:]
-            self.value_loss_list = self.value_loss_list[-100:]
-            self.entropy_list = self.entropy_list[-100:]
-            self.kl_list = self.kl_list[-100:]
-        
-        if sum(self.entropy_list[-self.epochs:]) / self.epochs > self.consensus_kwargs["transfer_policy_minimum_entropy"]:  # minimum entropy is 1.0 to transfer to other PSRO iterations
+        if sum(config.entropy_list[-self.epochs:]) / self.epochs > self.consensus_kwargs["transfer_policy_minimum_entropy"]:  # minimum entropy is 1.0 to transfer to other PSRO iterations
             # print("Saved policy network with entropy: ", sum(self.entropy_list[-self.epochs:]) / self.epochs)
             self.session.run(self._save_policy_network)
 
     
         if (self._fine_tune_print_counter <= 0):
-            print("Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight: ", sum(self.actor_loss_list) / len(self.actor_loss_list), sum(self.value_loss_list) / len(self.value_loss_list), sum(self.entropy_list) / len(self.entropy_list), sum(self.kl_list) / len(self.kl_list), self._env_steps, self.policy_constraint_weight)
+            print("Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight: ", sum(config.actor_loss_list) / len(config.actor_loss_list), sum(config.value_loss_list) / len(config.value_loss_list), sum(config.entropy_list) / len(config.entropy_list), sum(config.kl_list) / len(config.kl_list), self._env_steps, self.policy_constraint_weight)
             # print("Reward scaling mean, std: ", self.reward_scaler.rs.mean, self.reward_scaler.rs.std)
             self._fine_tune_print_counter = 20
         
