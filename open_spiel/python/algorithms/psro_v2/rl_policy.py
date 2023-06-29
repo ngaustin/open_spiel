@@ -24,7 +24,7 @@ from open_spiel.python import rl_environment
 from open_spiel.python.algorithms import dqn
 from open_spiel.python.algorithms import policy_gradient
 from open_spiel.python.algorithms import tabular_qlearner
-
+from open_spiel.python.algorithms import imitation_deep
 
 def rl_policy_factory(rl_class):
   """Transforms an RL Agent into an OpenSpiel policy.
