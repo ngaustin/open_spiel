@@ -241,8 +241,11 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         return new_policies
 
     def get_training_returns(self):
-        #return [np.array(rets) for rets in self._train_br_returns if rets]
-        return [np.array(rets) for rets in self._train_br_returns]
+        # Return [np.array(rets) for rets in self._train_br_returns if rets]
+        rets = [np.array(rets) for rets in self._train_br_returns]
+        # Reset for next iteration
+        # self._train_br_returns = [[] for _ in range(self.num_players)]
+        return rets
 
     
     def get_policy_constraint_weight(self, iteration_num):
