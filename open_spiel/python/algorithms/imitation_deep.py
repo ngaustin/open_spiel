@@ -401,8 +401,6 @@ class Imitation(rl_agent.AbstractAgent):
         player_1_sum = np.sum(np.exp(rets[:, 1] / temp))
         weighted_trajectories = [[np.exp(p0_rets / temp) / player_0_sum, np.exp(p1_rets / temp) / player_1_sum] for p0_rets, p1_rets in rets]
         average_weighted = [np.mean(trajectory_weight) for trajectory_weight in weighted_trajectories]
-        # print("AVERAGE", average_weighted)
-        # print("CHECK", np.sum(average_weighted))
         return average_weighted
 
     def _select_transitions(self, dataset, weights, size_output, rng):
@@ -410,16 +408,6 @@ class Imitation(rl_agent.AbstractAgent):
         sample_transitions = []
         for index in index_choices:
             sample_transitions.append(dataset[index])
-        # print(sample_transitions)
-        # sum = 0
-        # for t in sample_transitions:
-        #     sum += np.mean(t.ret)
-        # print("WEIGHTED", sum)
-        # sum = 0
-        # transitions = random.sample(dataset, size_output)
-        # for tr in transitions:
-        #     sum += np.mean(tr.ret)
-        # print("NONWEIGHTED", sum)
         return sample_transitions
 
 
@@ -435,30 +423,19 @@ class Imitation(rl_agent.AbstractAgent):
 
         length = len(self._replay_buffer)
         dataset = self._replay_buffer.sample(length)  # samples without replacement so take the entire thing. Random order
-        indices = list(range(length))
-        rng = np.random.default_rng()
         for ep in range(self.epochs):
             i, batches, loss_total, entropy_total = 0, 0, 0, 0  # entropy_total is just an estimate
             dataset = random.sample(dataset, len(dataset))
             rets = [d.ret for d in dataset]
-            weights = [1 for _ in range(len(rets))] # self._return_normalization(rets,temp=1)
-            # weights = self._return_normalization(rets,temp=1)
-
+            weights = self._return_normalization(rets,temp=1)
             while i < length:
                 transitions = dataset[i: min(length, i+self.batch)]
-                # self._select_transitions(dataset, weights, size_output=min(length, i +self.batch) - i, rng=rng)
                 # transitions = random.choices(population=dataset, weights=weights, k=min(length, i+self.batch) - i)
-                sum = 0
-                # for t in transitions:
-                #     sum += np.mean(t.ret)
-                # input()
                 with tf.device(self.device):
                     info_states = [t.info_state for t in transitions]
                     actions = [t.action for t in transitions]
                     rewards = [t.reward for t in transitions]
                 rets = [t.ret for t in transitions]
-                #print("RETS", rets)
-                # rets = [self._return_normalization(r) for r in rets]
 
                 if self.mode == "prob_action":
                     # Session is for the FF net to learn
