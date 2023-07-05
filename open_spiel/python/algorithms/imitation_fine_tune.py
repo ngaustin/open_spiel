@@ -203,6 +203,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         self._initialize_policy_network = self._create_policy_network(self._policy_network, pre_trained_network)
         self._initialize_old_policy_network = self._create_policy_network(self._old_policy_network, pre_trained_network)
         self._save_policy_network = self._create_policy_network(self._policy_network_copy, self._policy_network)
+        self._recover_policy_network = self._create_policy_network(self._policy_network, self._policy_network_copy)
         self._prev_policy_copy_from = prev_policy
 
         # Pass observations to policy
@@ -230,6 +231,12 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         eps_clip_value = consensus_kwargs["eps_clip_value"]
 
         self.values = self._value_network(self._info_state_ph) # [?, 1]
+
+        self.running_returns = []
+        self.best_return_average_so_far = -np.inf
+        self.first_returns = None 
+        self.running_return = 0
+        self.curr_returns = 0
 
         # Subtract from the rewards to go to get advantage values
         print("rtg values check: ", self._rewards_to_go_ph.get_shape(), self.values.get_shape())
@@ -285,45 +292,43 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         return 
 
     def _create_policy_network(self, policy_network, source_network):
-        self._variables = source_network.variables[:]
-        self._policy_variables = policy_network.variables[:]
-        assert self._variables
-        assert len(self._variables) == len(self._policy_variables)
+        source_variables = source_network.variables[:]
+        policy_variables = policy_network.variables[:]
+        assert source_variables
+        assert len(source_variables) == len(policy_variables)
         return tf.group([
             tf.assign(target_v, v)
-            for (target_v, v) in zip(self._policy_variables, self._variables)
+            for (target_v, v) in zip(policy_variables, source_variables)
         ])
 
     def set_to_fine_tuning_mode(self, is_train_best_response):
         self._replay_buffer.reset()
         self._replay_buffer = ReplayBuffer(self.max_buffer_size_fine_tune)
-        # self.session.run(self._initialize_policy_network)
-        self.session.run(self._initialize_old_policy_network)
+
         self.is_train_best_response = is_train_best_response
 
+        self.recover_policy = is_train_best_response  # We only recover it if it is best response because, otherwise, we would always have a new policy initialized for consensus policies
         self.epochs = self.consensus_kwargs["epochs_ppo"]
         self.minibatches = self.consensus_kwargs["minibatches_ppo"]
+        self.session.run(self._initialize_old_policy_network)  # Initialize the old policy network with the imitation_deep trained network for policy constraint if necessary
 
-        if self._prev_policy_copy_from:
-            print("Loading previous PPO policy and value networks with minimum entropy {}".format(self.consensus_kwargs["transfer_policy_minimum_entropy"]))
+        if self._prev_policy_copy_from: # and is_train_best_response:  # Consider initializing it with the previous BR regardless. Might help the pooping out of the policy training
+            print("Loading previous PPO policy with minimum entropy {}".format(self.consensus_kwargs["transfer_policy_minimum_entropy"]))
             ref_object = self._prev_policy_copy_from._policy._fine_tune_module 
-            ref_policy_network = getattr(ref_object, "_policy_network_copy")
-            # ref_value_network = getattr(ref_object, "_value_network")
+            ref_policy_network = getattr(ref_object, "_policy_network")
 
 
-            copy_weights = tf.group(*[
-                vb.assign(va) # + (.1 * tf.random.normal(va.shape))) # noisy initialization for exploration
-                for va, vb in zip(ref_policy_network.variables, self._policy_network.variables)
+            copy_weights = tf.group([
+                tf.assign(vb, va)
+                for (va, vb) in zip(ref_policy_network.variables, self._policy_network.variables)
             ])
             self.session.run(copy_weights)
+        else:
+            print("Loading policies from offline learning: ")
+            self.session.run(self._initialize_policy_network)  # Initialize the policy with the imitation_deep trained network. If not consensus_imitation, the network initialization is random
 
-            # copy_value_weights = tf.group(*[
-            #     vb.assign(va)
-            #     for va, vb in zip(ref_value_network.variables, self._value_network.variables)
-            # ])
-            # self.session.run(copy_value_weights)
-        
         self.policy_constraint_weight = 0 if self.is_train_best_response else self.policy_constraint_weight
+        self.session.run(self._save_policy_network)
 
 
     def step(self, time_step, is_evaluation=False, add_transition_record=True):
@@ -378,6 +383,9 @@ class ImitationFineTune(rl_agent.AbstractAgent):
             probs = []
 
         if not is_evaluation:
+            if time_step.rewards != None:
+                self.running_return += time_step.rewards[0] if self.symmetric else time_step.rewards[self.player_id]
+
             self.curr_trajectory.append(time_step)
             if action != None:
                 self.action_trajectory.append([action])
@@ -392,12 +400,36 @@ class ImitationFineTune(rl_agent.AbstractAgent):
 
                 self._curr_size_batch = 0
 
+                self.running_returns.append(self.running_return)
+                self.running_return = 0
+
                 if len(self._replay_buffer) > self.min_buffer_size_fine_tune:
                     self.fine_tune()
+                    if self.first_returns == None:
+                        self.first_returns = sum(self.running_returns) / len(self.running_returns)
+                    self.curr_returns = sum(self.running_returns) / len(self.running_returns)
+                    self.running_returns = []
+
+                    
+                
 
         return rl_agent.StepOutput(action=action, probs=probs)
+    
+    def post_training(self):
+        # Post training, if we somehow find a policy worse than the one we initialized with, recover the previous policy
+        if self.curr_returns < self.first_returns:#  and self.recover_policy:
+            print("Recovering previous policy with expected return of {}...".format(self.first_returns))
+            self.session.run(self._recover_policy_network)
+        return
+
 
     def fine_tune(self):
+        # if sum(config.entropy_list[-self.epochs:]) / self.epochs > self.consensus_kwargs["transfer_policy_minimum_entropy"]:  # minimum entropy is 1.0 to transfer to other PSRO iterations
+            # if self.curr_returns > self.best_return_average_so_far:
+            # print("Saved policy network with entropy: ", sum(self.entropy_list[-self.epochs:]) / self.epochs)
+            # self.session.run(self._save_policy_network)
+            # self.best_return_average_so_far = self.curr_returns
+                
         self._env_steps += len(self._replay_buffer)
         self.entropy_regularization =  max((1 - self._env_steps / (self.consensus_kwargs["entropy_decay_duration"] * self.consensus_kwargs["steps_fine_tune"])), 0) * self.entropy_regularization_start
         self._fine_tune_counter += 1
@@ -478,10 +510,6 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                         self._old_values_ph: old_values_subset
                     })
             config.value_loss_list.append(value_loss)
-        
-        if sum(config.entropy_list[-self.epochs:]) / self.epochs > self.consensus_kwargs["transfer_policy_minimum_entropy"]:  # minimum entropy is 1.0 to transfer to other PSRO iterations
-            # print("Saved policy network with entropy: ", sum(self.entropy_list[-self.epochs:]) / self.epochs)
-            self.session.run(self._save_policy_network)
 
     
         if (self._fine_tune_print_counter <= 0):

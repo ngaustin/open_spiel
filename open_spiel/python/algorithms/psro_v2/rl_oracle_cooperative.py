@@ -158,8 +158,8 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         # Prepares the policies for fine tuning
         if self._fine_tune_bool or train_best_response:
             for i in range(len(new_policies)):
-                new_policies[i][0]._policy.set_to_fine_tuning_mode(train_best_response)
                 print("Setting to fine tune mode: ")
+                new_policies[i][0]._policy.set_to_fine_tuning_mode(train_best_response)
 
         if (not self._fine_tune_bool) and not train_best_response:
             rl_oracle.freeze_all(new_policies)
@@ -171,6 +171,8 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         rollout_trajectories, rollout_actions, rollout_returns = [], [], []
 
         cutoff_returns = [self._high_returns[i][-1] if len(self._high_returns[i]) > 0 else -np.inf for i in range(self.num_players)]
+
+        self._train_br_returns = [[] for _ in range(self.num_players)]
 
         print("\nTraining each of the policies for {} steps. ".format(self._number_training_steps))
         while not self._has_terminated(steps_per_oracle):
@@ -230,6 +232,9 @@ class RLOracleCooperative(rl_oracle.RLOracle):
 
             # TODO: This is an invalid way of calculating number of steps for NON-simultaneous games
             steps_per_oracle = rl_oracle.update_steps_per_oracles(steps_per_oracle, indexes, len(actions))
+
+        for pol in new_policies:
+            pol[0]._policy.post_training()
 
         if self._consensus_kwargs["consensus_imitation"]:
             self.update_trajectories(training_parameters, rollout_trajectories, rollout_actions, rollout_returns)

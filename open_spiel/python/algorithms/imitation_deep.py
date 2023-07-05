@@ -290,6 +290,12 @@ class Imitation(rl_agent.AbstractAgent):
 
         return rl_agent.StepOutput(action=action, probs=probs)
 
+    def post_training(self):
+        if self._fine_tune_mode:
+            self._fine_tune_module.post_training()
+        return
+
+
     def add_trajectory(self, trajectory, action_trajectory, override_symmetric=False):
         """Trajectory is a list of timesteps, Action_trajectory is a list of lists representing joint actions. If it is a single player playing an action,
             it will be a list of length 1 lists. """
@@ -439,9 +445,9 @@ class Imitation(rl_agent.AbstractAgent):
             # weights = self._return_normalization(rets,temp=1)
 
             while i < length:
-                #transitions = dataset[i: min(length, i+self.batch)]
-                self._select_transitions(dataset, weights, size_output=min(length, i +self.batch) - i, rng=rng)
-                transitions = random.choices(population=dataset, weights=weights, k=min(length, i+self.batch) - i)
+                transitions = dataset[i: min(length, i+self.batch)]
+                # self._select_transitions(dataset, weights, size_output=min(length, i +self.batch) - i, rng=rng)
+                # transitions = random.choices(population=dataset, weights=weights, k=min(length, i+self.batch) - i)
                 sum = 0
                 # for t in transitions:
                 #     sum += np.mean(t.ret)

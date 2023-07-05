@@ -548,6 +548,11 @@ class Imitation(rl_agent.AbstractAgent):
         for i in range(len(x) - 1, -1, -1):
             vals[i] = curr = x[i] + discount  * curr
         return vals
+        
+    def post_training(self):
+        if self._fine_tune_mode:
+            self._fine_tune_module.post_training()
+        return
 
     def add_trajectory(self, trajectory, action_trajectory, override_symmetric=False):
         """Trajectory is a list of timesteps, Action_trajectory is a list of lists representing joint actions. If it is a single player playing an action, 
