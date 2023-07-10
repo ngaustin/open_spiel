@@ -98,8 +98,8 @@ class Imitation(rl_agent.AbstractAgent):
         max_num_actions = self._num_actions ** num_players
 
         all_actions = list(product(list(range(num_actions)), repeat=num_players))
-        print("THERE ARE A TOTAL OF {} ACTIONS IN JOINT SPACE".format(len(all_actions)))
-        print("Actions here: {}".format(all_actions))
+        # print("THERE ARE A TOTAL OF {} ACTIONS IN JOINT SPACE".format(len(all_actions)))
+        # print("Actions here: {}".format(all_actions))
 
         # Initializes player_marginal indices and joint_index_to_joint_actions
         for joint_action in all_actions:
@@ -322,7 +322,7 @@ class Imitation(rl_agent.AbstractAgent):
                 # NOTE: Assume that anything called using add_trajectory already filters out for the relevant transitions 
                 player = trajectory[i].observations["current_player"]
                 next_action = action_trajectory[i+1] if (i+1) < len(action_trajectory) else [0 for _ in range(self.num_players)] 
-                self.add_transition(trajectory[i], action_trajectory[i], trajectory[i+1], next_action, ret=rewards_to_go[i], gae=gae[i], override_player=[player])
+                self.add_transition(trajectory[i], action_trajectory[i], trajectory[i+1], next_action, ret=rewards_to_go[i], override_player=[player])
                 """
                 if player != self.player_id and not self.symmetric:
                     continue
@@ -382,7 +382,7 @@ class Imitation(rl_agent.AbstractAgent):
                 transition = Transition(
                     info_state=(
                         prev_time_step.observations["info_state"][p][:]),
-                    action=prev_action[p],
+                    action=prev_action[p] if not self._is_turn_based else prev_action[0],  # If it is turn based, then there is only 1 action per step
                     reward=r,
                     ret=ret)
 

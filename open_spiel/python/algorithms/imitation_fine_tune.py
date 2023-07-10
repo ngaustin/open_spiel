@@ -190,7 +190,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         self._policy_network_variables = self._policy_network.variables[:]
         self._old_policy_network = simple_nets.MLP(state_representation_size,
                                             self.layer_sizes, num_outputs)
-        self._old_policy_network_variables = self._policy_network.variables[:]
+        self._old_policy_network_variables = self._old_policy_network.variables[:]
         self._policy_network_copy = simple_nets.MLP(state_representation_size, 
                                             self.layer_sizes, num_outputs)
         self._policy_network_copy_variables = self._policy_network_copy.variables[:]
@@ -233,7 +233,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         self.values = self._value_network(self._info_state_ph) # [?, 1]
 
         self.running_returns = []
-        self.best_return_average_so_far = -np.inf
+        self.average_window = 200
         self.first_returns = None 
         self.running_return = 0
         self.curr_returns = 0
@@ -317,18 +317,26 @@ class ImitationFineTune(rl_agent.AbstractAgent):
             ref_object = self._prev_policy_copy_from._policy._fine_tune_module 
             ref_policy_network = getattr(ref_object, "_policy_network")
 
-
             copy_weights = tf.group([
                 tf.assign(vb, va)
+                for (va, vb) in zip(ref_policy_network.variables, self._policy_network.variables)
+            ])
+            self.session.run(copy_weights)
+            self.session.run(self._save_policy_network)  # Save the network WITHOUT noise. That way, we don't compound noise over PSRO iterations
+
+            # TODO: Consider adding noise here. Lots of the issues with "pooping out" has to do with the starting point it seems. Getting a variety of starting points might help to get it out of there
+            copy_weights = tf.group([
+                tf.assign(vb, va * (1 + .05 * tf.random.normal(va.shape)))
                 for (va, vb) in zip(ref_policy_network.variables, self._policy_network.variables)
             ])
             self.session.run(copy_weights)
         else:
             print("Loading policies from offline learning: ")
             self.session.run(self._initialize_policy_network)  # Initialize the policy with the imitation_deep trained network. If not consensus_imitation, the network initialization is random
+            self.session.run(self._save_policy_network)
 
         self.policy_constraint_weight = 0 if self.is_train_best_response else self.policy_constraint_weight
-        self.session.run(self._save_policy_network)
+        
 
 
     def step(self, time_step, is_evaluation=False, add_transition_record=True):
@@ -405,10 +413,10 @@ class ImitationFineTune(rl_agent.AbstractAgent):
 
                 if len(self._replay_buffer) > self.min_buffer_size_fine_tune:
                     self.fine_tune()
+                        
+                if len(self.running_returns) > self.average_window:
                     if self.first_returns == None:
                         self.first_returns = sum(self.running_returns) / len(self.running_returns)
-                    self.curr_returns = sum(self.running_returns) / len(self.running_returns)
-                    self.running_returns = []
 
                     
                 
@@ -417,18 +425,17 @@ class ImitationFineTune(rl_agent.AbstractAgent):
     
     def post_training(self):
         # Post training, if we somehow find a policy worse than the one we initialized with, recover the previous policy
-        if self.curr_returns < self.first_returns:#  and self.recover_policy:
-            print("Recovering previous policy with expected return of {}...".format(self.first_returns))
+        self.running_returns = self.running_returns[-self.average_window * 5:]
+        long_term_value = sum(self.running_returns) / len(self.running_returns)
+        short_term_value = sum(self.running_returns[-self.average_window:]) / self.average_window
+
+        if long_term_value < self.first_returns or short_term_value < self.first_returns:#  and self.recover_policy:
+            print("Recovering previous policy with expected return of {}. Long term value was {} and short term was {}.".format(self.first_returns, long_term_value, short_term_value))
             self.session.run(self._recover_policy_network)
         return
 
 
     def fine_tune(self):
-        # if sum(config.entropy_list[-self.epochs:]) / self.epochs > self.consensus_kwargs["transfer_policy_minimum_entropy"]:  # minimum entropy is 1.0 to transfer to other PSRO iterations
-            # if self.curr_returns > self.best_return_average_so_far:
-            # print("Saved policy network with entropy: ", sum(self.entropy_list[-self.epochs:]) / self.epochs)
-            # self.session.run(self._save_policy_network)
-            # self.best_return_average_so_far = self.curr_returns
                 
         self._env_steps += len(self._replay_buffer)
         self.entropy_regularization =  max((1 - self._env_steps / (self.consensus_kwargs["entropy_decay_duration"] * self.consensus_kwargs["steps_fine_tune"])), 0) * self.entropy_regularization_start
@@ -609,13 +616,13 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                 if not self._is_turn_based:
                     # NOTE: If is_symmetric, then add_transition will add observations/actions from BOTH players already
                     # NOTE: Also insert action_trajectory[i+1]. If it is the last i, then we let action be 0 because it won't be used anyway
-                    next_action = action_trajectory[i+1] if (i+1) < len(action_trajectory) else [0 for _ in range(self.num_players)]
+                    next_action = action_trajectory[i+1] if (i+1) < len(action_trajectory) else [0]
                     self.add_transition(trajectory[i], action_trajectory[i], trajectory[i+1], next_action, ret=rewards_to_go[i], gae=gae[i], override_symmetric=self._all_override_symmetrics[curr])
                 else:
                     # NOTE: Assume that anything called using add_trajectory already filters out for the relevant transitions 
                     player = trajectory[i].observations["current_player"]
 
-                    next_action = action_trajectory[i+1] if (i+1) < len(action_trajectory) else [0 for _ in range(self.num_players)] 
+                    next_action = action_trajectory[i+1] if (i+1) < len(action_trajectory) else [0] 
                     self.add_transition(trajectory[i], action_trajectory[i], trajectory[i+1], next_action, ret=rewards_to_go[i], gae=gae[i], override_player=[player])
                     """
                     # Individual player's move 
@@ -651,6 +658,8 @@ class ImitationFineTune(rl_agent.AbstractAgent):
           time_step: current ts, an instance of rl_environment.TimeStep.
         """
         player_list = [i for i in range(self.num_players)] if self.symmetric and not override_symmetric else [self.player_id]
+        if len(override_player) > 0:
+            player_list = override_player
 
         if self.joint_action:
             raise NotImplementedError
@@ -670,8 +679,10 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                 # Since the step() function assumes by symmetry that observations come from player0, we need to make sure that all
                 # transitions are from player0's perspective, meaning the action applied to the observed player's observation must come first
 
-                store_action = prev_action[p]
-                store_next_action = action[p]
+                # NOTE: Actions are always one-dimensional because these transitions are created directly from step()
+                assert len(prev_action) == 1 and len(action) == 1
+                store_action = prev_action[0]
+                store_next_action = action[0]
 
                 legal_actions = (time_step.observations["legal_actions"][p])
                 legal_actions_mask = np.zeros(self._num_actions)

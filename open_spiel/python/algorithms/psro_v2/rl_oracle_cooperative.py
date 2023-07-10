@@ -152,8 +152,8 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                 self._high_return_trajectories = []  # list of lists of trajectories
                 self._high_return_actions = []
                 self._high_returns = [[] for _ in range(self._env.num_players)]
-        else:
-            self._most_recent_br_policies = [lst[0] for lst in new_policies]
+                
+        self._most_recent_br_policies = [lst[0] for lst in new_policies]
 
         # Prepares the policies for fine tuning
         if self._fine_tune_bool or train_best_response:
@@ -380,9 +380,9 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                     assert not symmetric # Not implemented 
                     players_turn = [i for i, t in enumerate(trajectory[:-1]) if t.observations["current_player"] == player] + [len(trajectory) - 1]
                     player_trajectory = [trajectory[i] for i in players_turn]
-                    player_action_trajectory = [action_trajectory[i] for i in players_turn]
+                    player_action_trajectory = [action_trajectory[i] for i in players_turn[:-1]]
                     curr_policy.add_trajectory(player_trajectory, player_action_trajectory)
-                    raise NotImplementedError
+                    # raise NotImplementedError
                 else:
                     curr_policy.add_trajectory(trajectory, action_trajectory)
 
