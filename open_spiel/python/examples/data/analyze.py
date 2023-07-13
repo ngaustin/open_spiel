@@ -9,6 +9,12 @@ import matplotlib.pyplot as plt
 
 FLAGS = flags.FLAGS
 
+flags.DEFINE_string("game_data_path",  "", "Directory for retrieving game data. Assuming iteration structure.")
+flags.DEFINE_string("save_graph_path",  "", "Directory for saving graphs. Directory will be created if doesn't exist.")
+flags.DEFINE_integer("n_players", 2, "The number of players.")
+flags.DEFINE_string("game_name", "", "Name of simulation.")
+flags.DEFINE_boolean("graph_mode", True, "Will/won't graph.")
+
 # NOTE: File is designed to analyze one game at a time.
 
 # For the simple one state game:
@@ -57,24 +63,18 @@ def main(argv):
   """
   if len(argv) > 1:
     raise app.UsageError("Too many command-line arguments.")
-
-  data_directory_paths = ["open_spiel/python/examples/data/fire_extinguisher/imitation_game_data/"]
-  iterations = len(os.listdir(data_directory_paths[0]))
-  num_players = 2
-  corresponding_dictionaries = []
-  name_of_method = ["Fire Extinguisher"]
-  save_graph_path = "open_spiel/python/examples/data/fire_extinguisher/output_plots/"
-  graphPathExists = os.path.exists(save_graph_path)
+  
+  # Parent directory for subdirectories containing trial game data
+  data_directory_path = os.getcwd() + FLAGS.game_data_path
+  num_players = FLAGS.n_players
+  name_of_method = FLAGS.game_name
+  save_graph_path = FLAGS.save_graph_path
+  graph_mode = FLAGS.graph_mode
   # For truncating printed training rets and ppo rets for readability
   TRUNCATED_MODE = True
   NUM_TRUNCATED_VALS = 50
 
-  if not graphPathExists:
-    # Create directory
-    os.makedirs(save_graph_path)
-    print("Graph directory created.")
-
-  def graph_training_returns(training_returns, num_iteration, average_grouping = 50):
+  def graph_training_returns(training_returns, num_iteration, folder_path, average_grouping = 50):
     """
       Graph training returns for BR training
         training_returns: 2D array with n arrays containing training returns for players
@@ -82,15 +82,18 @@ def main(argv):
         average_grouping: Size of episode grouping (for cleaner graphing purposes)
         axis_normalization: Normalizes y-axis scale across the iterations for easier trend comparisons
     """
+    if not os.path.exists(folder_path + "training_returns/"):
+      os.makedirs(folder_path + "training_returns/")
     grouped_rets = []
     curr_player = 0
     #Entire training returns dataset
     for i in range(len(training_returns)):
-      grouped_rets.append([])
-      #Each BR Policy
-      for j in range(0, len(training_returns[i]), average_grouping):
-        #Breakdown of BR policy returns for each player
-        grouped_rets[i].append(np.mean(training_returns[i][j: j + average_grouping, curr_player]))
+      if len(training_returns[i]):
+        grouped_rets.append([])
+        #Each BR Policy
+        for j in range(0, len(training_returns[i]), average_grouping):
+          #Breakdown of BR policy returns for each player
+          grouped_rets[i].append(np.mean(training_returns[i][j: j + average_grouping, curr_player]))
       curr_player += 1
     curr_player = 0
     for i in range(len(grouped_rets)):
@@ -99,10 +102,66 @@ def main(argv):
         ax.set_title("Iteration {}: BR Policy {} Training Returns Player {}".format(num_iteration, i + 1, curr_player + 1))
         ax.set_xlabel("Iteration (Grouped by {} episodes)".format(average_grouping))
         ax.set_ylabel("Expected Returns")
-        training_returns_fig.savefig(save_graph_path + "training_returns/" + "policy_{}_iteration_{}_player_{}.jpg".format(i + 1, num_iteration, curr_player + 1))
+        training_returns_fig.savefig(folder_path + "training_returns/" + "policy_{}_iteration_{}_player_{}.jpg".format(i + 1, num_iteration, curr_player + 1))
 
+  def graph_max_welfare(data, folder_path):
+    #Graph the max social welfare over iterations
+    welfare_fig, ax = plt.subplots()
+    #Optional TODO: Fill in label with name of data
+    ax.scatter(x=[ind + 1 for ind in range(len(data))],
+      y=data,
+      label="{}: max welfare".format(name_of_method))
+    ax.set_title("Max Welfare Over Iterations")
+    ax.set_xlabel("Iteration")
+    ax.set_ylabel("Welfare")
+    _, end = ax.get_xlim()
+    ax.xaxis.set_ticks(np.arange(0, end, 1))
+    welfare_fig.savefig(folder_path + "max_welfare.jpg")
 
-  def get_data(folder_path):
+  def graph_expected_welfare(data, folder_path):
+    # Graph the expected welfare over iterations
+    welfare_fig, ax = plt.subplots()
+    ax.scatter(x=[ind + 1 for ind in range(len(data))],
+      y=data, label="{}: expected welfare".format(name_of_method))
+    ax.set_title("Expected Welfare Over Iterations")
+    ax.set_xlabel("Iteration")
+    ax.set_ylabel("Welfare")
+    start, end = ax.get_xlim()
+    ax.xaxis.set_ticks(np.arange(0, end, 1))
+    welfare_fig.savefig(folder_path + "expected_welfare.jpg")
+
+  def graph_expected_payoff(data, folder_path):
+    # Plot the expected payoff for each player on the same plot
+    expected_payoff_fig, ax = plt.subplots()
+    for player_index in range(num_players):
+      ax.scatter(x=[ind + 1 for ind in range(len(data[player_index]))],
+        y=data[player_index],
+        label= "{}: Player {}".format(name_of_method, player_index))
+    ax.set_title("Expected Individual Payoff Over Iterations")
+    ax.set_xlabel("Iteration")
+    ax.set_ylabel("Expected Individual Utility")
+    _, end = ax.get_xlim()
+    ax.xaxis.set_ticks(np.arange(0, end, 1))
+    ax.legend()
+    expected_payoff_fig.savefig(folder_path + "expected_payoff.jpg")
+
+  def graph_regret(data, folder_path):
+    #Plot the individual regret values for each player on the same plot
+    regret_fig, ax = plt.subplots()
+    for player_index in range(len(data)):
+        #TODO: Fix when we figure out regret calculations for odd iterations
+        ax.scatter(x=[ind * 2 + 2 for ind in range(len(data[player_index]))],
+          y=data[player_index],
+          label="{}: Player {}".format(name_of_method, player_index))
+    ax.set_title("Individual Regret Over Iterations")
+    ax.set_xlabel("Iteration")
+    ax.set_ylabel("Regret Values")
+    start, end = ax.get_xlim()
+    ax.xaxis.set_ticks(np.arange(0, end, 1))
+    ax.legend()
+    regret_fig.savefig(folder_path + "regret.jpg")
+
+  def get_data(relative_folder_path):
     """
       Displays game analytics like regret, expected utility, player profiles, and other analytics for 2-player games.
         folder_path: defines the directory where the game data is stored.
@@ -110,40 +169,37 @@ def main(argv):
       Note that the utility matrix corresponding to player 0 is to be read in rows,
         and player 1's should be read column-wise.
     """
+    full_folder_path = data_directory_path + relative_folder_path
+    all_files = os.listdir(full_folder_path)
     max_social_welfare_over_iterations = []
     expected_payoff_individual_players = [[], []]
     expected_welfare = []
-    all_files = os.listdir(folder_path)
+    iterations = len(all_files)
     regret_individuals = [[],[]]
     player_profile_history = [[], []]
     average_regret = []
+    trial_graph_path = os.getcwd() + save_graph_path + relative_folder_path + "/"
     #We add best response and an exploration strategy's utility every iteration. Specifies index of best response utility.
-    print("Folder path: ", folder_path)
     for i in range(iterations):
       # save_folder_path + specific_string.format(i)
       save_data_path = [file for file in all_files if "iteration_{}".format(i) in file][0]
-      save_data_path = folder_path + save_data_path
-      print("Save_data_path", save_data_path)
+      save_data_path = full_folder_path + "/" + save_data_path
       with open(save_data_path, "rb") as npy_file:
           array_list = np.load(npy_file, allow_pickle=True)
       meta_probabilities, utilities, training_returns, ppo_training_data = array_list
-      if training_returns:
-        graph_training_returns(training_returns, i)
-      print("Utilities:", utilities)
-      #Gap for readability
-      print()
+      if graph_mode:
+        if training_returns:
+          graph_training_returns(training_returns, i, trial_graph_path)
+
       # meta_probabilities was vstacked at first dimension for each player
       # utilities were vstacked at the first dimension for each player as well
       list_of_meta_probabilities = [meta_probabilities[i] for i in range(meta_probabilities.shape[0])]
       for num_player in range(len(expected_payoff_individual_players)):
         player_profile_history[num_player].append(list_of_meta_probabilities[num_player])
         expected_payoff_vector = _partial_multi_dot(utilities[num_player], list_of_meta_probabilities, num_player)
-        print("Expected payoff individual {}: ".format(num_player), expected_payoff_vector)
         player_profile = list_of_meta_probabilities[num_player]
-        print("Player {} profile".format(num_player), list_of_meta_probabilities[num_player])
         expected_utility = np.dot(player_profile, expected_payoff_vector)
         expected_payoff_individual_players[num_player].append(expected_utility)
-        print("Expected utility individual {}: ".format(num_player), expected_utility)
 
         if i > 0:
           #TODO: Add regret calculations for consensus policy iterations (i.e. odd iterations)
@@ -159,19 +215,11 @@ def main(argv):
             prev_player_profile = player_profile_history[num_player][i-1]
             best_response_trunc = best_response_payoffs[:len(prev_player_profile)]
             best_response_expected_payoff = np.dot(prev_player_profile, best_response_trunc)
-            #Truncated to the length of the previous player profile
-            print("Best response utilities truncated: ", best_response_trunc)
-            #Dotted utilities with player profile
-            print("Best response payoff: ", best_response_expected_payoff)
-            #Previous iteration expected payoff
-            print("Previous expected payoff: ", expected_payoff_individual_players[num_player][i - 1])
+
             regret_individuals[num_player].append(best_response_expected_payoff - expected_payoff_individual_players[num_player][i - 1])
             print("Individual regret vector: ", regret_individuals)
           else:
             print("PLAYER {}: NO REGRET CALCULATION FOR ODD ITERATIONS.".format(num_player))
-
-        #Gap for readability
-        print()
 
         #Truncation
         if TRUNCATED_MODE:
@@ -179,20 +227,8 @@ def main(argv):
             for k in range(len(ppo_training_data)):
               ppo_training_data[num_player][k] = ppo_training_data[num_player][k][:NUM_TRUNCATED_VALS]
 
-        #Training Returns
-        if len(training_returns[num_player]) > 0:
-          print("Training Returns BR {} for Individual {}: ".format(num_player, num_player), training_returns[num_player][:, num_player])
-        else:
-          print("Training Returns BR {} for Individual {}: N/A - MAY BE A SYMMETRIC GAME: NOT EVERY PLAYER HAS BR".format(num_player, num_player))
-        print()
-
         #PPO Training Returns
         print("KL Divergence Data Individual {}: ".format(num_player), ppo_training_data[num_player][0])
-        print("Entropy Values Individual {}: ".format(num_player), ppo_training_data[num_player][1])
-        print("Actor Loss Individual {}: ".format(num_player), ppo_training_data[num_player][2])
-        print("Value-Loss Individual {}: ".format(num_player), ppo_training_data[num_player][3])
-        #Gap for readability
-        print()
 
 
       social_welfare = np.sum(utilities, axis=0)
@@ -201,6 +237,9 @@ def main(argv):
       expected_welfare_player_0 = _partial_multi_dot(social_welfare, list_of_meta_probabilities, 0)
       expected_welfare_iteration = np.dot(list_of_meta_probabilities[0], expected_welfare_player_0)
       expected_welfare.append(expected_welfare_iteration)
+      print("Expected welfare: ", expected_welfare_iteration)
+      #Readability
+      print()
 
     #Average regret of both players in each iteration
     for i in range(len(regret_individuals[0])):
@@ -209,76 +248,21 @@ def main(argv):
         avg_regret_iter += regret_individuals[num_player][i]
       average_regret.append(avg_regret_iter / num_players)
     print("Average regret: ", average_regret)
-    print("Max welfare:", max_social_welfare_over_iterations)
+
+    #Graphing
+    if graph_mode:
+      if not os.path.exists(trial_graph_path):
+        os.makedirs(trial_graph_path)
+      # TODO: A little bit of a hack but should be ok
+      graph_max_welfare(max_social_welfare_over_iterations, trial_graph_path)
+      graph_expected_welfare(expected_welfare, trial_graph_path)
+      graph_expected_payoff(expected_payoff_individual_players, trial_graph_path)
+      graph_regret(regret_individuals, trial_graph_path)
+
     return max_social_welfare_over_iterations, expected_payoff_individual_players, expected_welfare, regret_individuals
 
-  #Data_directory_paths - in the current case, we only pull data from one directory but can be expanded to hold more.
-  for i, path in enumerate(data_directory_paths):
-    max_social_welfare, expected_payoff_individual, expected_welfare, regret_individuals = get_data(path)
-    corresponding_dictionaries.append({})
-    corresponding_dictionaries[i]["max_social_welfare"] = max_social_welfare
-    corresponding_dictionaries[i]["expected_payoff_individual"] = expected_payoff_individual
-    corresponding_dictionaries[i]["expected_welfare"] = expected_welfare
-    corresponding_dictionaries[i]["regret_individuals"] = regret_individuals
-
-  print("Analysis summary: ", corresponding_dictionaries)
-
-  #Graph the max social welfare over iterations
-  welfare_fig, ax = plt.subplots()
-  for i, curr_dict in enumerate(corresponding_dictionaries):
-    #Optional TODO: Fill in label with name of data
-    ax.scatter(x=[ind + 1 for ind in range(len(curr_dict["max_social_welfare"]))],
-      y=curr_dict["max_social_welfare"],
-      label="{}: max welfare".format(name_of_method[i]))
-  ax.set_title("Max Welfare Over Iterations")
-  ax.set_xlabel("Iteration")
-  ax.set_ylabel("Welfare")
-  start, end = ax.get_xlim()
-  ax.xaxis.set_ticks(np.arange(0, end, 1))
-  welfare_fig.savefig(save_graph_path + "max_welfare.jpg")
-
-  # Graph the expected welfare over iterations
-  welfare_fig, ax = plt.subplots()
-  for i, curr_dict in enumerate(corresponding_dictionaries):
-    ax.scatter(x=[ind + 1 for ind in range(len(curr_dict["expected_welfare"]))],
-      y=curr_dict["expected_welfare"], label="{}: expected welfare".format(name_of_method[i]))
-  ax.set_title("Expected Welfare Over Iterations")
-  ax.set_xlabel("Iteration")
-  ax.set_ylabel("Welfare")
-  start, end = ax.get_xlim()
-  ax.xaxis.set_ticks(np.arange(0, end, 1))
-  welfare_fig.savefig(save_graph_path + "expected_welfare.jpg")
-
-  # Plot the expected payoff for each player on the same plot
-  expected_payoff_fig, ax = plt.subplots()
-  for i, curr_dict in enumerate(corresponding_dictionaries):
-    for player_index in range(num_players):
-      ax.scatter(x=[ind + 1 for ind in range(len(curr_dict["expected_payoff_individual"][0]))],
-        y=curr_dict["expected_payoff_individual"][player_index],
-        label= "{}: Player {}".format(name_of_method[i], player_index))
-  ax.set_title("Expected Individual Payoff Over Iterations")
-  ax.set_xlabel("Iteration")
-  ax.set_ylabel("Expected Individual Utility")
-  start, end = ax.get_xlim()
-  ax.xaxis.set_ticks(np.arange(0, end, 1))
-  ax.legend()
-  expected_payoff_fig.savefig(save_graph_path + "expected_payoff.jpg")
-
-  #Plot the individual regret values for each player on the same plot
-  regret_fig, ax = plt.subplots()
-  for i, curr_dict in enumerate(corresponding_dictionaries):
-    for player_index in range(len(regret_individuals)):
-        #TODO: Fix when we figure out regret calculations for odd iterations
-        ax.scatter(x=[ind * 2 + 2 for ind in range(len(curr_dict["regret_individuals"][0]))],
-          y=regret_individuals[player_index],
-          label="{}: Player {}".format(name_of_method[i], player_index))
-  ax.set_title("Individual Regret Over Iterations")
-  ax.set_xlabel("Iteration")
-  ax.set_ylabel("Regret Values")
-  start, end = ax.get_xlim()
-  ax.xaxis.set_ticks(np.arange(0, end, 1))
-  ax.legend()
-  regret_fig.savefig(save_graph_path + "regret.jpg")
-
+  for trial_data_directory in os.listdir(data_directory_path):
+    get_data(trial_data_directory)
+  
 if __name__ == "__main__":
   app.run(main)
