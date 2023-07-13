@@ -68,8 +68,6 @@ class Imitation(rl_agent.AbstractAgent):
         self.joint_action = consensus_kwargs["joint_action"]
         self.num_players = num_players
 
-        # Controls temperature that can shift action selection towards greedy or towards random
-        self.boltzmann = consensus_kwargs["boltzmann"]
         self.mode = consensus_kwargs["imitation_mode"]
 
         self.epochs = consensus_kwargs["training_epochs"]
@@ -261,7 +259,7 @@ class Imitation(rl_agent.AbstractAgent):
                         legal_actions_joint.append(i)
 
                 legal_logits = logits[legal_actions_joint]
-                action_probs = np.exp(self.boltzmann * legal_logits) / np.sum(np.exp(self.boltzmann * legal_logits))
+                action_probs = np.exp(legal_logits) / np.sum(np.exp(legal_logits))
 
                 joint_action = utils.random_choice(legal_actions_joint, action_probs)
                 action = self.joint_index_to_joint_actions[joint_action][player]
@@ -277,7 +275,7 @@ class Imitation(rl_agent.AbstractAgent):
                 logits = self.session.run(self.log_probs, feed_dict={self._info_state_ph: info_state})[0]
 
                 legal_logits = logits[legal_actions]
-                action_probs = np.exp(self.boltzmann * legal_logits) / np.sum(np.exp(self.boltzmann * legal_logits))
+                action_probs = np.exp(legal_logits) / np.sum(np.exp(legal_logits))
 
                 action = utils.random_choice(legal_actions, action_probs)
 
@@ -423,6 +421,7 @@ class Imitation(rl_agent.AbstractAgent):
 
         length = len(self._replay_buffer)
         dataset = self._replay_buffer.sample(length)  # samples without replacement so take the entire thing. Random order
+        loss = 0
         for ep in range(self.epochs):
             i, batches, loss_total, entropy_total = 0, 0, 0, 0  # entropy_total is just an estimate
             dataset = random.sample(dataset, len(dataset))

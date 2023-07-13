@@ -76,65 +76,83 @@ flags.DEFINE_bool("symmetric_game", False, "Whether to consider the current "
 
 # General Cooperative Consensus Policy Stuff
 flags.DEFINE_bool("consensus_imitation", False, "Whether to use consensus oracle as well.")
-flags.DEFINE_string("consensus_oracle", "q_learn", "Choice of oracle for exploration policy. "
+flags.DEFINE_string("consensus_oracle", "trajectory_deep", "Choice of oracle for exploration policy. "
                                                       "Choices are trajectory, trajectory_deep, q_learn")
 flags.DEFINE_bool("joint_action", False, "Whether to train in joint state space when fitting exploration Q learning")
-flags.DEFINE_string("trajectory_mode", "prob_reward", "How to fit to a trajectory. Options are prob_reward and prob_action")
+flags.DEFINE_string("trajectory_mode", "prob_action", "How to fit to a trajectory. Options are prob_reward and prob_action")
 flags.DEFINE_integer("n_top_trajectories", 1, "Number of trajectories to take from each of the BR simulations")
-flags.DEFINE_bool("rewards_joint", True, "Whether to select trajectories and optimize consensus policies on joint rewards")
-flags.DEFINE_float("proportion_uniform_trajectories", 0, "Proportion of taken trajectories that will be uniformly sampled across non-high return ones")
+flags.DEFINE_bool("rewards_joint", False, "Whether to select trajectories and optimize consensus policies on joint rewards")
 flags.DEFINE_bool("perturb_all", False, "Whether to use policy constraints on ALL policies after first iteration")
 
-# Reward Fitting
-flags.DEFINE_float("boltzmann", 1.0, "Boltzmann constant for softmax when reward trajectory fitting in DQN")
 
-# Deep Trajectory Fitting
-flags.DEFINE_float("consensus_deep_network_lr", 3e-4, "Learning Rate when training network for trajectory/joint q learning")
-flags.DEFINE_float("consensus_deep_policy_network_lr", 3e-4, "Separate learning rate for policy network in CQL ")
-flags.DEFINE_integer("consensus_update_target_every", 1, "Update target network")
-flags.DEFINE_integer("consensus_batch_size", 128, "Batch size when training consensus network offline")
-flags.DEFINE_integer("consensus_hidden_layer_size", 50, "Hidden layer size for consensus network")
-flags.DEFINE_integer("consensus_n_hidden_layers", 2, "Number of hidden layers in consensus network")
-flags.DEFINE_integer("consensus_training_epochs", 1, "Number of training epochs for offline BC training")
-flags.DEFINE_integer("consensus_training_steps", int(1e3), "Number of training steps for offline RL training")
-flags.DEFINE_float("consensus_minimum_entropy", .8, "Entropy of policy required to stop or until epochs run out")
-flags.DEFINE_float("consensus_tau", 1e-3, "Soft update for target q network")
 
-# Deep CQL or R-BVE
-flags.DEFINE_float("alpha", 5.0, "Hyperparameter for q value minimization")
-flags.DEFINE_float("eta", .05, "Gap between difference in values for regularization")
-flags.DEFINE_float("beta", .5, "Amount of weight put on difference between trajectory returns")
+# PPO parameters
 flags.DEFINE_integer("max_buffer_size_fine_tune", 100000, "Fine tuning buffer size")
 flags.DEFINE_integer("min_buffer_size_fine_tune", 50000, "Minimum number of entries in buffer to fine tune")
+flags.DEFINE_integer("number_training_steps", int(1e6), "Number of environment "
+                     "steps per RL policy. Used for PG, DQN, and Tabular Q")
 flags.DEFINE_bool("fine_tune", False, "Determines whether to fine tune the consensus policy")
 flags.DEFINE_bool("clear_trajectories", False, "Determines whether to clear the trajectory list after every iteration of PSRO")
-flags.DEFINE_float("psi", 1.0, "How much probability fine tune in joint space")
 flags.DEFINE_float("eps_clip", .2, "PPO epsilon boundary clip")
 flags.DEFINE_float("eps_clip_value", .2, "PPO epsilon boundary clip for value ")
 flags.DEFINE_float("ppo_entropy", .01, "PPO entropy regularization")
 flags.DEFINE_integer("epochs_ppo", 80, "PPO epochs")
 flags.DEFINE_integer("minibatches_ppo", 5, "PPO minibatches")
 flags.DEFINE_float("policy_constraint", .1, "Policy constraint regularization in PPO fine tuning")
-flags.DEFINE_float("fine_tune_policy_lr", 3e-4, "policy lr")
-flags.DEFINE_float("fine_tune_value_lr", 1e-3, "value lr")
+flags.DEFINE_integer("policy_constraint_steps", 20, "Number of PSRO iterations to take to decrease regret")
+flags.DEFINE_float("fine_tune_policy_lr", 3e-5, "policy lr")
+flags.DEFINE_float("fine_tune_value_lr", 3e-4, "value lr")
 flags.DEFINE_float("entropy_decay_duration", .9, "proportion of training steps to decay entropy regularization for")
-flags.DEFINE_float("transfer_policy_minimum_entropy", .5, "Minimum policy entropy to transfer policies across PSRO iterations")
+flags.DEFINE_float("transfer_policy_minimum_entropy", 0, "Minimum policy entropy to transfer policies across PSRO iterations")
+
+# Both PPO and offline training parameters
+flags.DEFINE_integer("consensus_hidden_layer_size", 50, "Hidden layer size for consensus network")
+flags.DEFINE_integer("consensus_n_hidden_layers", 2, "Number of hidden layers in consensus network")
+
+# BC Offline Training Parameters
+flags.DEFINE_float("consensus_deep_network_lr", 3e-4, "Learning Rate when training network for trajectory/joint q learning")
+flags.DEFINE_integer("consensus_batch_size", 128, "Batch size when training consensus network offline")
+flags.DEFINE_integer("consensus_training_epochs", 1, "Number of training epochs for offline BC training")
+flags.DEFINE_float("consensus_minimum_entropy", .8, "Entropy of policy required to stop or until epochs run out")
+
+# R-BVE Offline training parameters (shouldn't be used)
+flags.DEFINE_integer("consensus_update_target_every", 1, "Update target network")
+flags.DEFINE_float("consensus_tau", 1e-3, "Soft update for target q network")
+flags.DEFINE_integer("consensus_training_steps", int(1e3), "Number of training steps for offline RL training")
+flags.DEFINE_float("alpha", 5.0, "Hyperparameter for q value minimization")
+flags.DEFINE_float("eta", .05, "Gap between difference in values for regularization")
+flags.DEFINE_float("beta", .5, "Amount of weight put on difference between trajectory returns")
 
 # RRD and MSS
-flags.DEFINE_float("regret_lambda_init", .7, "Lambda threshold for RRD initially")
+flags.DEFINE_float("regret_lambda_init", 5, "Lambda threshold for RRD initially")
 flags.DEFINE_float("regret_lambda_final", 0, "Lambda threshold decay every iteration")
-flags.DEFINE_integer("regret_steps", 20, "Number of PSRO iterations to take to decrease regret")
 flags.DEFINE_float("minimum_exploration_init", 0, "Minimum amount of profile weight on exploration policies")
 flags.DEFINE_float("final_exploration", 0, "After annealing, the minimum amount of profile weight on exploration policies")
+flags.DEFINE_integer("regret_steps", 25, "How many iterations regret should be annealed for")
+
+# DQN for regret calculation
+flags.DEFINE_float("dqn_learning_rate", 1e-2, "DQN learning rate.")  # CHAGNED FROM 1e-2
+flags.DEFINE_integer("update_target_network_every", 1000, "Update target "  # CHANGED FROM 1000
+                     "network every [X] steps")
+flags.DEFINE_integer("learn_every", 10, "Learn every [X] steps.")  # CHANGED FROM 10
+flags.DEFINE_integer("min_buffer_size_to_learn", 1000, "Learn after getting certain number of transitions")
+flags.DEFINE_integer("max_buffer_size", int(1e4), "Buffer Size")
+flags.DEFINE_integer("epsilon_decay_duration", 1000, "Number of steps for epsilon from 1 to .1")
+flags.DEFINE_integer("regret_calculation_steps", int(1e6), "Number of steps when estimating regret")
+flags.DEFINE_integer("hidden_layer_size", 50, "Hidden layer size")  # CHANGED THIS
+flags.DEFINE_integer("n_hidden_layers", 2, "# of hidden layers")  # CHANGED THIS
+flags.DEFINE_integer("batch_size", 32, "Batch size")  # CHANGED FROM 32
+
+# General RL used for everything
+flags.DEFINE_float("discount_factor", .99, "Gamma in RL learning")
 
 # Saving Data Path
 flags.DEFINE_string("save_folder_path",  "../examples/data/simple_box_pushing", "Where to save iteration data. Will save one file for each iteration in the given folder")
 
-""" THIS IS TABULAR Q LEARN STUFF"""
+# Tabular Q-Learning (not used)
 flags.DEFINE_float("step_size", 1e-3, "Learning rate in tabular q learning")
-flags.DEFINE_float("discount_factor", .99, "Gamma in RL learning")
 
-# Rectify options
+# Rectify options (not used)
 flags.DEFINE_string("rectifier", "",
                     "Which rectifier to use. Choices are '' "
                     "(No filtering), 'rectified' for rectified.")
@@ -149,32 +167,17 @@ flags.DEFINE_string("training_strategy_selector", "probabilistic",
                     "strategies. "
                     " - 'rectified': Select every non-zero-selection-"
                     "probability strategy available to each player.")
+              
 
-# General (RL) agent parameters
-flags.DEFINE_integer("number_training_steps", int(1e6), "Number of environment "
-                     "steps per RL policy. Used for PG, DQN, and Tabular Q")
+# Not used
 flags.DEFINE_float("self_play_proportion", 0.0, "Self play proportion")
-flags.DEFINE_integer("hidden_layer_size", 32, "Hidden layer size")  # CHANGED THIS
-flags.DEFINE_integer("batch_size", 32, "Batch size")  # CHANGED FROM 32
 flags.DEFINE_float("sigma", 0.0, "Policy copy noise (Gaussian Dropout term).")
 flags.DEFINE_string("optimizer_str", "adam", "'adam' or 'sgd'")
-
-# Policy Gradient Oracle related
 flags.DEFINE_string("loss_str", "qpg", "Name of loss used for BR training.")
 flags.DEFINE_integer("num_q_before_pi", 8, "# critic updates before Pi update")
-flags.DEFINE_integer("n_hidden_layers", 3, "# of hidden layers")  # CHANGED THIS
 flags.DEFINE_float("entropy_cost", 0.001, "Self play proportion")
 flags.DEFINE_float("critic_learning_rate", 1e-2, "Critic learning rate")
 flags.DEFINE_float("pi_learning_rate", 1e-3, "Policy learning rate.")
-
-# DQN
-flags.DEFINE_float("dqn_learning_rate", 1e-2, "DQN learning rate.")  # CHAGNED FROM 1e-2
-flags.DEFINE_integer("update_target_network_every", 1000, "Update target "  # CHANGED FROM 1000
-                     "network every [X] steps")
-flags.DEFINE_integer("learn_every", 10, "Learn every [X] steps.")  # CHANGED FROM 10
-flags.DEFINE_integer("min_buffer_size_to_learn", 1000, "Learn after getting certain number of transitions")
-flags.DEFINE_integer("max_buffer_size", int(1e4), "Buffer Size")
-flags.DEFINE_integer("epsilon_decay_duration", 1000, "Number of steps for epsilon from 1 to .1")
 
 # General
 flags.DEFINE_integer("seed", 1, "Seed.")
@@ -247,16 +250,13 @@ def init_dqn_responder(sess, env):
     "consensus_imitation": FLAGS.consensus_imitation,
     "imitation_mode":FLAGS.trajectory_mode,
     "num_simulations_fit":FLAGS.n_top_trajectories,
-    "proportion_uniform_trajectories":FLAGS.proportion_uniform_trajectories,
     "joint_action": FLAGS.joint_action,
     "rewards_joint": FLAGS.rewards_joint,
-    "boltzmann": FLAGS.boltzmann,
     "training_epochs": FLAGS.consensus_training_epochs,
     "training_steps": FLAGS.consensus_training_steps,
     "update_target_every": FLAGS.consensus_update_target_every,
     "minimum_entropy":FLAGS.consensus_minimum_entropy,
     "deep_network_lr": FLAGS.consensus_deep_network_lr,
-    "deep_policy_network_lr": FLAGS.consensus_deep_policy_network_lr,
     "batch_size": FLAGS.consensus_batch_size,
     "hidden_layer_size": FLAGS.consensus_hidden_layer_size,
     "n_hidden_layers": FLAGS.consensus_n_hidden_layers,
@@ -270,21 +270,22 @@ def init_dqn_responder(sess, env):
     "min_buffer_size_fine_tune": FLAGS.min_buffer_size_fine_tune,
     "fine_tune": FLAGS.fine_tune,
     "clear_trajectories": FLAGS.clear_trajectories,
-    "psi": FLAGS.psi,
     "eps_clip": FLAGS.eps_clip,
     "eps_clip_value": FLAGS.eps_clip_value,
     "ppo_entropy_regularization": FLAGS.ppo_entropy,
     "policy_constraint": FLAGS.policy_constraint,
     "epochs_ppo": FLAGS.epochs_ppo,
     "minibatches_ppo": FLAGS.minibatches_ppo,
-    "regret_steps": FLAGS.regret_steps,
+    "policy_constraint_steps": FLAGS.policy_constraint_steps,
     "perturb_all": FLAGS.perturb_all,
     "steps_fine_tune": FLAGS.number_training_steps,
     "fine_tune_policy_lr": FLAGS.fine_tune_policy_lr, 
     "fine_tune_value_lr": FLAGS.fine_tune_value_lr,
     "entropy_decay_duration": FLAGS.entropy_decay_duration, 
     "transfer_policy_minimum_entropy": FLAGS.transfer_policy_minimum_entropy,
-    "consensus_imitation": FLAGS.consensus_imitation
+    "consensus_imitation": FLAGS.consensus_imitation,
+    "regret_calculation_steps": FLAGS.regret_calculation_steps,
+    "sims_per_entry": FLAGS.sims_per_entry,
   }
 
   print("Agent Arguments: ")
