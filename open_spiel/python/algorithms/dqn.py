@@ -59,7 +59,7 @@ class DQN(rl_agent.AbstractAgent):
                discount_factor=1.0,
                min_buffer_size_to_learn=1000,
                epsilon_start=1.0,
-               epsilon_end=0.02,
+               epsilon_end=0.05,
                epsilon_decay_duration=int(1e6),
                optimizer_str="sgd",
                loss_str="mse"):

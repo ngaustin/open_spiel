@@ -84,9 +84,6 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         self.symmetric = consensus_kwargs["symmetric"]
         self._num_actions = num_actions
 
-        self.lr = consensus_kwargs["deep_network_lr"]
-        self.policy_lr = consensus_kwargs["deep_policy_network_lr"]
-        self.batch = consensus_kwargs["batch_size"]
         self.hidden_layer_size = consensus_kwargs["hidden_layer_size"]
         self.n_hidden_layers = consensus_kwargs["n_hidden_layers"]
         self.rewards_joint = consensus_kwargs["rewards_joint"]
@@ -275,8 +272,8 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         self.critic_loss = tf.reduce_mean(tf.maximum(tf.math.square(value_delta_1), tf.math.square(value_delta_2)))
 
         # Create separate optimizers for the policy and value network
-        self._ppo_policy_optimizer = tf.train.AdamOptimizer(learning_rate=3e-5)
-        self._ppo_value_optimizer = tf.train.AdamOptimizer(learning_rate=3e-4)
+        self._ppo_policy_optimizer = tf.train.AdamOptimizer(learning_rate=self.consensus_kwargs["fine_tune_policy_lr"])
+        self._ppo_value_optimizer = tf.train.AdamOptimizer(learning_rate=self.consensus_kwargs["fine_tune_value_lr"])
 
         # Learn step
         self._ppo_value_learn_step = self._ppo_value_optimizer.minimize(self.critic_loss)
@@ -429,9 +426,11 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         long_term_value = sum(self.running_returns) / len(self.running_returns)
         short_term_value = sum(self.running_returns[-self.average_window:]) / self.average_window
 
+        """
         if long_term_value < self.first_returns or short_term_value < self.first_returns:#  and self.recover_policy:
             print("Recovering previous policy with expected return of {}. Long term value was {} and short term was {}.".format(self.first_returns, long_term_value, short_term_value))
             self.session.run(self._recover_policy_network)
+        """
         return
 
 

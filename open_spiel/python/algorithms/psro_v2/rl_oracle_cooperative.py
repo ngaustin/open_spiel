@@ -53,10 +53,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         self._imitation_mode = consensus_kwargs["imitation_mode"]
         self._rewards_joint = consensus_kwargs["rewards_joint"]
         self._num_simulations_fit = consensus_kwargs["num_simulations_fit"]
-        self.proportion_uniform_trajectories = consensus_kwargs["proportion_uniform_trajectories"]
 
-        self._boltzmann = consensus_kwargs["boltzmann"]
-        self._consensus_training_epochs = consensus_kwargs["training_epochs"]
         self._consensus_kwargs = consensus_kwargs
         self._fine_tune_bool = consensus_kwargs["fine_tune"]
 
@@ -231,7 +228,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             # Update the number of episodes we have trained per oracle
 
             # TODO: This is an invalid way of calculating number of steps for NON-simultaneous games
-            steps_per_oracle = rl_oracle.update_steps_per_oracles(steps_per_oracle, indexes, len(actions))
+            steps_per_oracle = rl_oracle.update_steps_per_oracles(steps_per_oracle, indexes, len(actions) // 2 if self._is_turn_based else len(actions))
 
         for pol in new_policies:
             pol[0]._policy.post_training()
@@ -239,11 +236,83 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         if self._consensus_kwargs["consensus_imitation"]:
             self.update_trajectories(training_parameters, rollout_trajectories, rollout_actions, rollout_returns)
 
+
         # Freeze the new policies to keep their weights static. This allows us to
         # later not have to make the distinction between static and training
         # policies in training iterations.
         rl_oracle.freeze_all(new_policies)
+
+        ################### Regret Calculations #######################
+        total_steps_calculation = self._consensus_kwargs["regret_calculation_steps"]
+        steps_per_policy = np.array([[0 for _ in range(len(player_params))] for player_params in training_parameters])
+
+        print("\nTraining regret calculation best responses for {} steps".format(total_steps_calculation))
+        regret_br_policies = self.generate_new_policies(training_parameters)
+        while not np.all(steps_per_policy > total_steps_calculation):
+            agents, indexes = self.sample_policies_for_episode(
+                    regret_br_policies, training_parameters, steps_per_policy,
+                    strategy_sampler)
+
+            _, actions, returns = self._rollout(game, agents, **oracle_specific_execution_kwargs)
+
+            steps_per_policy = rl_oracle.update_steps_per_oracles(steps_per_policy, indexes, len(actions) // 2 if self._is_turn_based else len(actions))
+
+            # TODO: Document the returns from the pure best response regret calculation 
+        
+        # Now, freeze the regret calculation policies so that we can evaluate them
+        rl_oracle.freeze_all(regret_br_policies)
+
+        # Do simulations for each of them to determine the approximated deviation payoff
+        self.pure_best_response_returns = []
+        for i, new_policy_list_per_player in enumerate(regret_br_policies):
+            print("Evaluating best response for player {}".format(i))
+            new_policy = new_policy_list_per_player[0] # We assume that each player has 1 policy
+            agent_chosen_dict = training_parameters[i][0]  # Assume that we create one br for each player
+            num_players = len(training_parameters)
+            list_of_returns = []
+            for _ in range(self._consensus_kwargs["sims_per_entry"]):
+                agents = self.sample_policies_for_episode_regret_calculation(new_policy, i, agent_chosen_dict, num_players, strategy_sampler)
+                _, _, returns = self._rollout(game, agents, **oracle_specific_execution_kwargs)
+                curr_return = returns[i]  # Get the return corresponding to the player we are evaluating
+                list_of_returns.append(curr_return)
+            self.pure_best_response_returns.append(sum(list_of_returns) / len(list_of_returns))
+        print("Pure best response returns: {}\n\n".format(self.pure_best_response_returns))
+            
+        ################# Finish Regret Calculations #####################
+
         return new_policies
+
+
+    def sample_policies_for_episode_regret_calculation(self, new_policy, chosen_player, agent_chosen_dict, num_players, strategy_sampler):
+
+        # num_players = len(training_parameters)
+
+        # Prioritizing players that haven't had as much training as the others.
+        # steps_per_player = [sum(steps) for steps in steps_per_oracle]
+        # chosen_player = random_count_weighted_choice(steps_per_player)
+        # Uniformly choose among the sampled player.
+        # agent_chosen_ind = np.random.randint(
+        #     0, len(training_parameters[chosen_player]))
+        # agent_chosen_dict = training_parameters[chosen_player][agent_chosen_ind]
+        # new_policy = new_policies[chosen_player][agent_chosen_ind]
+
+        # Sample other players' policies.
+        total_policies = agent_chosen_dict["total_policies"]
+        probabilities_of_playing_policies = agent_chosen_dict[
+            "probabilities_of_playing_policies"]
+        episode_policies = strategy_sampler(total_policies,
+                                            probabilities_of_playing_policies)
+
+        # live_agents_player_index = [(chosen_player, agent_chosen_ind)]
+
+        for player in range(num_players):
+            if player == chosen_player:
+                episode_policies[player] = new_policy
+                # assert not new_policy.is_frozen()
+            # else:
+            #     assert episode_policies[player].is_frozen()
+
+        return episode_policies# , live_agents_player_index
 
     def get_training_returns(self):
         # Return [np.array(rets) for rets in self._train_br_returns if rets]
@@ -254,7 +323,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
 
     
     def get_policy_constraint_weight(self, iteration_num):
-        return self._consensus_kwargs["policy_constraint"] * max((1 - (float(iteration_num) - 1) / self._consensus_kwargs["regret_steps"]), 0)
+        return self._consensus_kwargs["policy_constraint"] * max((1 - (float(iteration_num) - 1) / self._consensus_kwargs["policy_constraint_steps"]), 0)
 
     def create_consensus_policies(self, training_parameters, iteration_num):
         fine_tune_constraint = self.get_policy_constraint_weight(iteration_num)
