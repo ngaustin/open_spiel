@@ -65,6 +65,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         self._high_return_actions = []
         self._high_returns = [[] for _ in range(env.num_players)]
         self._train_br_returns = [[] for _ in range(env.num_players)]
+        self._train_regret_returns = [[] for _ in range(self.num_players)]
 
         self._all_seen_observations = set()
 
@@ -170,6 +171,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         cutoff_returns = [self._high_returns[i][-1] if len(self._high_returns[i]) > 0 else -np.inf for i in range(self.num_players)]
 
         self._train_br_returns = [[] for _ in range(self.num_players)]
+        self._train_regret_returns = [[] for _ in range(self.num_players)]
 
         print("\nTraining each of the policies for {} steps. ".format(self._number_training_steps))
         while not self._has_terminated(steps_per_oracle):
@@ -255,9 +257,9 @@ class RLOracleCooperative(rl_oracle.RLOracle):
 
             _, actions, returns = self._rollout(game, agents, **oracle_specific_execution_kwargs)
 
-            steps_per_policy = rl_oracle.update_steps_per_oracles(steps_per_policy, indexes, len(actions) // 2 if self._is_turn_based else len(actions))
+            self._train_regret_returns[indexes[0][0]].append(returns)
 
-            # TODO: Document the returns from the pure best response regret calculation 
+            steps_per_policy = rl_oracle.update_steps_per_oracles(steps_per_policy, indexes, len(actions) // 2 if self._is_turn_based else len(actions))
         
         # Now, freeze the regret calculation policies so that we can evaluate them
         rl_oracle.freeze_all(regret_br_policies)
@@ -276,6 +278,9 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                 curr_return = returns[i]  # Get the return corresponding to the player we are evaluating
                 list_of_returns.append(curr_return)
             self.pure_best_response_returns.append(sum(list_of_returns) / len(list_of_returns))
+        # TODO: Hack so we ensure there's 2 values for regret (for analyze.py compatibility)
+        if self.num_players > len(regret_br_policies):
+            self.pure_best_response_returns.append(self.pure_best_response_returns[0])
         print("Pure best response returns: {}\n\n".format(self.pure_best_response_returns))
             
         ################# Finish Regret Calculations #####################
@@ -315,12 +320,17 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         return episode_policies# , live_agents_player_index
 
     def get_training_returns(self):
-        # Return [np.array(rets) for rets in self._train_br_returns if rets]
         rets = [np.array(rets) for rets in self._train_br_returns]
         # Reset for next iteration
         # self._train_br_returns = [[] for _ in range(self.num_players)]
         return rets
 
+    def get_training_regret_returns(self):
+        rets = [np.array(rets) for rets in self._train_regret_returns]
+        return rets
+    
+    def get_pure_br_returns(self):
+        return self.pure_best_response_returns
     
     def get_policy_constraint_weight(self, iteration_num):
         return self._consensus_kwargs["policy_constraint"] * max((1 - (float(iteration_num) - 1) / self._consensus_kwargs["policy_constraint_steps"]), 0)
