@@ -140,7 +140,7 @@ def main(argv):
     #Graph the max social welfare over iterations
     welfare_fig, ax = plt.subplots()
     #Optional TODO: Fill in label with name of data
-    ax.scatter(x=[ind + 1 for ind in range(len(data))],
+    ax.scatter(x=[ind for ind in range(len(data))],
       y=data,
       label="{}: max welfare".format(name_of_method))
     ax.set_title("Max Welfare Over Iterations")
@@ -153,7 +153,7 @@ def main(argv):
   def graph_expected_welfare(data, folder_path):
     # Graph the expected welfare over iterations
     welfare_fig, ax = plt.subplots()
-    ax.scatter(x=[ind + 1 for ind in range(len(data))],
+    ax.scatter(x=[ind for ind in range(len(data))],
       y=data, label="{}: expected welfare".format(name_of_method))
     ax.set_title("Expected Welfare Over Iterations")
     ax.set_xlabel("Iteration")
@@ -166,7 +166,7 @@ def main(argv):
     # Plot the expected payoff for each player on the same plot
     expected_payoff_fig, ax = plt.subplots()
     for player_index in range(num_players):
-      ax.scatter(x=[ind + 1 for ind in range(len(data[player_index]))],
+      ax.scatter(x=[ind for ind in range(len(data[player_index]))],
         y=data[player_index],
         label= "{}: Player {}".format(name_of_method, player_index))
     ax.set_title("Expected Individual Payoff Over Iterations")
@@ -181,8 +181,7 @@ def main(argv):
     #Plot the individual regret values for each player on the same plot
     regret_fig, ax = plt.subplots()
     for player_index in range(len(data)):
-        #TODO: Fix when we figure out regret calculations for odd iterations
-        ax.scatter(x=[ind * 2 + 2 for ind in range(len(data[player_index]))],
+        ax.scatter(x=[ind + 1 for ind in range(len(data[player_index]))],
           y=data[player_index],
           label="{}: Player {}".format(name_of_method, player_index))
     ax.set_title("Individual Regret Over Iterations")
@@ -235,24 +234,19 @@ def main(argv):
         expected_payoff_individual_players[num_player].append(expected_utility)
 
         if i > 0:
-          #TODO: Add regret calculations for consensus policy iterations (i.e. odd iterations)
-          #Even iterations add a BR, so only calc regret for those iterations
-          if i % 2 == 0:
-            #Row player
-            if num_player == 0:
-              # Row corresponding to best_response utilities
-              best_response_payoffs = utilities[num_player][-1]
-            else:
-              # Will never get here if game is symmetric
-              # Column corresponding to best_response utilities
-              best_response_payoffs = utilities[num_player][:, -1]
-            prev_player_profile = player_profile_history[num_player][i-1]
-            best_response_trunc = best_response_payoffs[:len(prev_player_profile)]
-            best_response_expected_payoff = np.dot(prev_player_profile, best_response_trunc)
-            regret_individuals[num_player].append(max(best_response_expected_payoff - expected_payoff_individual_players[num_player][i - 1], pure_br_returns[num_player]- expected_payoff_individual_players[num_player][i - 1]))
-            print("Individual regret vector: ", regret_individuals)
+          #Row player
+          if num_player == 0:
+            # Row corresponding to best_response utilities
+            best_response_payoffs = utilities[num_player][-1]
           else:
-            print("PLAYER {}: NO REGRET CALCULATION FOR ODD ITERATIONS.".format(num_player))
+            # Will never get here if game is symmetric
+            # Column corresponding to best_response utilities
+            best_response_payoffs = utilities[num_player][:, -1]
+          prev_player_profile = player_profile_history[num_player][i-1]
+          best_response_trunc = best_response_payoffs[:len(prev_player_profile)]
+          best_response_expected_payoff = np.dot(prev_player_profile, best_response_trunc)
+          regret_individuals[num_player].append(max(best_response_expected_payoff - expected_payoff_individual_players[num_player][i - 1], pure_br_returns[num_player]- expected_payoff_individual_players[num_player][i - 1]))
+          print("Individual regret vector: ", regret_individuals)
 
         #Truncation
         if TRUNCATED_MODE:
