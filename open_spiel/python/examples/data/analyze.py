@@ -140,7 +140,7 @@ def main(argv):
     #Graph the max social welfare over iterations
     welfare_fig, ax = plt.subplots()
     #Optional TODO: Fill in label with name of data
-    ax.scatter(x=[ind + 1 for ind in range(len(data))],
+    ax.scatter(x=[ind for ind in range(len(data))],
       y=data,
       label="{}: max welfare".format(name_of_method))
     ax.set_title("Max Welfare Over Iterations")
@@ -153,7 +153,7 @@ def main(argv):
   def graph_expected_welfare(data, folder_path):
     # Graph the expected welfare over iterations
     welfare_fig, ax = plt.subplots()
-    ax.scatter(x=[ind + 1 for ind in range(len(data))],
+    ax.scatter(x=[ind for ind in range(len(data))],
       y=data, label="{}: expected welfare".format(name_of_method))
     ax.set_title("Expected Welfare Over Iterations")
     ax.set_xlabel("Iteration")
@@ -166,7 +166,7 @@ def main(argv):
     # Plot the expected payoff for each player on the same plot
     expected_payoff_fig, ax = plt.subplots()
     for player_index in range(num_players):
-      ax.scatter(x=[ind + 1 for ind in range(len(data[player_index]))],
+      ax.scatter(x=[ind for ind in range(len(data[player_index]))],
         y=data[player_index],
         label= "{}: Player {}".format(name_of_method, player_index))
     ax.set_title("Expected Individual Payoff Over Iterations")
@@ -181,7 +181,6 @@ def main(argv):
     #Plot the individual regret values for each player on the same plot
     regret_fig, ax = plt.subplots()
     for player_index in range(len(data)):
-        #TODO: Fix when we figure out regret calculations for odd iterations
         ax.scatter(x=[ind + 1 for ind in range(len(data[player_index]))],
           y=data[player_index],
           label="{}: Player {}".format(name_of_method, player_index))
