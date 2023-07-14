@@ -58,7 +58,7 @@ class DQN(rl_agent.AbstractAgent):
                learn_every=10,
                discount_factor=1.0,
                min_buffer_size_to_learn=1000,
-               epsilon_start=1.0,
+               epsilon_start=.8,
                epsilon_end=0.05,
                epsilon_decay_duration=int(1e6),
                optimizer_str="sgd",
@@ -89,6 +89,7 @@ class DQN(rl_agent.AbstractAgent):
     self.trained_at_least_once = False
     self._double = double
 
+    print("Confirming DDQN paremeters: ", self._layer_sizes, self._batch_size, self._update_target_network_every, self._learn_every, self._min_buffer_size_to_learn, self._epsilon_decay_duration, self.trained_at_least_once)
     # TODO(author6) Allow for optional replay buffer config.
     if not isinstance(replay_buffer_capacity, int):
       raise ValueError("Replay buffer capacity not an integer.")

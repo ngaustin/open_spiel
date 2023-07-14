@@ -104,6 +104,7 @@ flags.DEFINE_float("fine_tune_policy_lr", 3e-5, "policy lr")
 flags.DEFINE_float("fine_tune_value_lr", 3e-4, "value lr")
 flags.DEFINE_float("entropy_decay_duration", .9, "proportion of training steps to decay entropy regularization for")
 flags.DEFINE_float("transfer_policy_minimum_entropy", 0, "Minimum policy entropy to transfer policies across PSRO iterations")
+flags.DEFINE_integer("recovery_window", 200, "Window to calculate the recovery for PPO PSRO")
 
 # Both PPO and offline training parameters
 flags.DEFINE_integer("consensus_hidden_layer_size", 50, "Hidden layer size for consensus network")
@@ -138,7 +139,7 @@ flags.DEFINE_integer("learn_every", 10, "Learn every [X] steps.")  # CHANGED FRO
 flags.DEFINE_integer("min_buffer_size_to_learn", 1000, "Learn after getting certain number of transitions")
 flags.DEFINE_integer("max_buffer_size", int(1e4), "Buffer Size")
 flags.DEFINE_integer("epsilon_decay_duration", 1000, "Number of steps for epsilon from 1 to .1")
-flags.DEFINE_integer("regret_calculation_steps", int(1e6), "Number of steps when estimating regret")
+flags.DEFINE_integer("regret_calculation_steps", int(2e5), "Number of steps when estimating regret")
 flags.DEFINE_integer("hidden_layer_size", 50, "Hidden layer size")  # CHANGED THIS
 flags.DEFINE_integer("n_hidden_layers", 2, "# of hidden layers")  # CHANGED THIS
 flags.DEFINE_integer("batch_size", 32, "Batch size")  # CHANGED FROM 32
@@ -286,6 +287,7 @@ def init_dqn_responder(sess, env):
     "consensus_imitation": FLAGS.consensus_imitation,
     "regret_calculation_steps": FLAGS.regret_calculation_steps,
     "sims_per_entry": FLAGS.sims_per_entry,
+    "recovery_window": FLAGS.recovery_window,
   }
 
   print("Agent Arguments: ")

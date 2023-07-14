@@ -76,7 +76,7 @@ def main(argv):
   TRUNCATED_MODE = True
   NUM_TRUNCATED_VALS = 50
 
-  def graph_training_returns(training_returns, num_iteration, folder_path, average_grouping = 50):
+  def graph_training_returns(training_returns, num_iteration, folder_path, average_grouping = 200):
     """
       Graph training returns for BR training
         training_returns: 2D array with n arrays containing training returns for players
@@ -93,7 +93,7 @@ def main(argv):
       if len(training_returns[i]):
         grouped_rets.append([])
         #Each BR Policy
-        for j in range(0, len(training_returns[i]), average_grouping):
+        for j in range(0, len(training_returns[i]) - average_grouping + 1):
           #Breakdown of BR policy returns for each player
           grouped_rets[i].append(np.mean(training_returns[i][j: j + average_grouping, curr_player]))
       curr_player += 1
@@ -106,7 +106,7 @@ def main(argv):
         ax.set_ylabel("Expected Returns")
         training_returns_fig.savefig(folder_path + "training_returns/" + "policy_{}_iteration_{}_player_{}.jpg".format(i + 1, num_iteration, curr_player + 1))
 
-  def graph_regret_training_returns(training_returns, num_iteration, folder_path, average_grouping = 50):
+  def graph_regret_training_returns(training_returns, num_iteration, folder_path, average_grouping = 200):
     """
       Graph regret training returns for BR training
         training_returns: 2D array with n arrays containing training returns for players
@@ -123,7 +123,7 @@ def main(argv):
       if len(training_returns[i]):
         grouped_rets.append([])
         #Each BR Policy
-        for j in range(0, len(training_returns[i]), average_grouping):
+        for j in range(0, len(training_returns[i]) - average_grouping + 1):
           #Breakdown of BR policy returns for each player
           grouped_rets[i].append(np.mean(training_returns[i][j: j + average_grouping, curr_player]))
       curr_player += 1
@@ -135,6 +135,7 @@ def main(argv):
         ax.set_xlabel("Iteration (Grouped by {} episodes)".format(average_grouping))
         ax.set_ylabel("Expected Returns")
         training_returns_fig.savefig(folder_path + "training_regret_returns/" + "policy_{}_iteration_{}_player_{}.jpg".format(i + 1, num_iteration, curr_player + 1))
+    plt.close()
 
   def graph_max_welfare(data, folder_path):
     #Graph the max social welfare over iterations
@@ -149,6 +150,7 @@ def main(argv):
     _, end = ax.get_xlim()
     ax.xaxis.set_ticks(np.arange(0, end, 1))
     welfare_fig.savefig(folder_path + "max_welfare.jpg")
+    plt.close()
 
   def graph_expected_welfare(data, folder_path):
     # Graph the expected welfare over iterations
@@ -161,6 +163,7 @@ def main(argv):
     start, end = ax.get_xlim()
     ax.xaxis.set_ticks(np.arange(0, end, 1))
     welfare_fig.savefig(folder_path + "expected_welfare.jpg")
+    plt.close()
 
   def graph_expected_payoff(data, folder_path):
     # Plot the expected payoff for each player on the same plot
@@ -176,6 +179,7 @@ def main(argv):
     ax.xaxis.set_ticks(np.arange(0, end, 1))
     ax.legend()
     expected_payoff_fig.savefig(folder_path + "expected_payoff.jpg")
+    plt.close()
 
   def graph_regret(data, folder_path):
     #Plot the individual regret values for each player on the same plot
@@ -191,6 +195,7 @@ def main(argv):
     ax.xaxis.set_ticks(np.arange(0, end, 1))
     ax.legend()
     regret_fig.savefig(folder_path + "regret.jpg")
+    plt.close()
 
   def get_data(relative_folder_path):
     """

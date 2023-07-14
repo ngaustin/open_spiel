@@ -230,7 +230,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         self.values = self._value_network(self._info_state_ph) # [?, 1]
 
         self.running_returns = []
-        self.average_window = 200
+        self.average_window = consensus_kwargs["recovery_window"]
         self.first_returns = None 
         self.running_return = 0
         self.curr_returns = 0
@@ -426,11 +426,11 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         long_term_value = sum(self.running_returns) / len(self.running_returns)
         short_term_value = sum(self.running_returns[-self.average_window:]) / self.average_window
 
-        """
+        
         if long_term_value < self.first_returns or short_term_value < self.first_returns:#  and self.recover_policy:
             print("Recovering previous policy with expected return of {}. Long term value was {} and short term was {}.".format(self.first_returns, long_term_value, short_term_value))
             self.session.run(self._recover_policy_network)
-        """
+        
         return
 
 

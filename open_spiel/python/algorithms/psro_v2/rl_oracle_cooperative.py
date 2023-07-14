@@ -305,6 +305,8 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             "probabilities_of_playing_policies"]
         episode_policies = strategy_sampler(total_policies,
                                             probabilities_of_playing_policies)
+        
+        print("SHOWING POLICIES: ")
 
         # live_agents_player_index = [(chosen_player, agent_chosen_ind)]
 
