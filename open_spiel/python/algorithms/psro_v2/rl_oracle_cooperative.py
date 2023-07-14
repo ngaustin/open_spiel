@@ -260,6 +260,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             self._train_regret_returns[indexes[0][0]].append(returns)
 
             steps_per_policy = rl_oracle.update_steps_per_oracles(steps_per_policy, indexes, len(actions) // 2 if self._is_turn_based else len(actions))
+
         
         # Now, freeze the regret calculation policies so that we can evaluate them
         rl_oracle.freeze_all(regret_br_policies)
