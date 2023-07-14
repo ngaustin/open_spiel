@@ -278,9 +278,6 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                 curr_return = returns[i]  # Get the return corresponding to the player we are evaluating
                 list_of_returns.append(curr_return)
             self.pure_best_response_returns.append(sum(list_of_returns) / len(list_of_returns))
-        # TODO: Hack so we ensure there's 2 values for regret (for analyze.py compatibility)
-        if self.num_players > len(regret_br_policies):
-            self.pure_best_response_returns.append(self.pure_best_response_returns[0])
         print("Pure best response returns: {}\n\n".format(self.pure_best_response_returns))
             
         ################# Finish Regret Calculations #####################

@@ -67,11 +67,11 @@ def main(argv):
   
   # Parent directory for subdirectories containing trial game data
   data_directory_path = os.getcwd() + FLAGS.game_data_path
-  num_players = FLAGS.n_players
   name_of_method = FLAGS.game_name
   save_graph_path = FLAGS.save_graph_path
   graph_mode = FLAGS.graph_mode
   is_symmetric = FLAGS.is_symmetric
+  num_players = FLAGS.n_players if not is_symmetric else 1
   # For truncating printed training rets and ppo rets for readability
   TRUNCATED_MODE = True
   NUM_TRUNCATED_VALS = 50
@@ -203,15 +203,16 @@ def main(argv):
     """
     all_files = os.listdir(data_directory_path + relative_folder_path + "/")
     max_social_welfare_over_iterations = []
-    expected_payoff_individual_players = [[], []]
+    expected_payoff_individual_players = [[], []] if not is_symmetric else [[]]
     expected_welfare = []
     iterations = len(all_files)
-    regret_individuals = [[],[]]
-    player_profile_history = [[], []]
+    regret_individuals = [[],[]] if not is_symmetric else [[]]
+    player_profile_history = [[], []] if not is_symmetric else [[]] 
     average_regret = []
     trial_graph_path = os.getcwd() + save_graph_path + relative_folder_path + "/"
     #We add best response and an exploration strategy's utility every iteration. Specifies index of best response utility.
     for i in range(iterations):
+      print("ITERATION {}:".format(i))
       # save_folder_path + specific_string.format(i)
       save_data_path = [file for file in all_files if "iteration_{}".format(i) in file][0]
       save_data_path = data_directory_path + relative_folder_path + "/" + save_data_path
@@ -226,7 +227,7 @@ def main(argv):
       # meta_probabilities was vstacked at first dimension for each player
       # utilities were vstacked at the first dimension for each player as well
       list_of_meta_probabilities = [meta_probabilities[i] for i in range(meta_probabilities.shape[0])]
-      for num_player in range(len(expected_payoff_individual_players)):
+      for num_player in range(num_players):
         player_profile_history[num_player].append(list_of_meta_probabilities[num_player])
         expected_payoff_vector = _partial_multi_dot(utilities[num_player], list_of_meta_probabilities, num_player)
         player_profile = list_of_meta_probabilities[num_player]
@@ -241,8 +242,8 @@ def main(argv):
             if num_player == 0:
               # Row corresponding to best_response utilities
               best_response_payoffs = utilities[num_player][-1]
-              
             else:
+              # Will never get here if game is symmetric
               # Column corresponding to best_response utilities
               best_response_payoffs = utilities[num_player][:, -1]
             prev_player_profile = player_profile_history[num_player][i-1]
@@ -286,7 +287,11 @@ def main(argv):
 
     return max_social_welfare_over_iterations, expected_payoff_individual_players, expected_welfare, regret_individuals
 
-  for trial_data_directory in os.listdir(data_directory_path):
+  if is_symmetric:
+    print("GAME IS SYMMETRIC. ONLY 1 SET OF RETURNS\n")
+
+  for i, trial_data_directory in enumerate(os.listdir(data_directory_path)):
+    print("TRIAL {}:\n".format(i))
     get_data(trial_data_directory)
   
 if __name__ == "__main__":
