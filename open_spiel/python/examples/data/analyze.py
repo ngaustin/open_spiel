@@ -76,6 +76,21 @@ def main(argv):
   TRUNCATED_MODE = True
   NUM_TRUNCATED_VALS = 50
 
+  def graph_kl(kl_values, folder_path):
+    #Graph the kl_divergence values over iterations
+    kl_fig, ax = plt.subplots()
+    for num_player in range(num_players):  
+      ax.scatter(x=[ind for ind in range(len(kl_values[num_player]))],
+        y=[np.mean(np.array(kl_value_iter)) for kl_value_iter in kl_values[num_player]],
+        label="{}: Mean kl_values".format(name_of_method))
+      ax.set_title("Mean KL Values over Iterations")
+      ax.set_xlabel("Iteration")
+      ax.set_ylabel("Mean KL Values")
+      _, end = ax.get_xlim()
+      ax.xaxis.set_ticks(np.arange(0, end, 1))
+      kl_fig.savefig(folder_path + "mean_kl_player_{}.jpg".format(num_player))
+    plt.close()
+
   def graph_training_returns(training_returns, num_iteration, folder_path, average_grouping = 200):
     """
       Graph training returns for BR training
@@ -105,7 +120,8 @@ def main(argv):
         ax.set_xlabel("Iteration (Grouped by {} episodes)".format(average_grouping))
         ax.set_ylabel("Expected Returns")
         training_returns_fig.savefig(folder_path + "training_returns/" + "policy_{}_iteration_{}_player_{}.jpg".format(i + 1, num_iteration, curr_player + 1))
-
+    plt.close()
+  
   def graph_regret_training_returns(training_returns, num_iteration, folder_path, average_grouping = 200):
     """
       Graph regret training returns for BR training
@@ -140,7 +156,6 @@ def main(argv):
   def graph_max_welfare(data, folder_path):
     #Graph the max social welfare over iterations
     welfare_fig, ax = plt.subplots()
-    #Optional TODO: Fill in label with name of data
     ax.scatter(x=[ind for ind in range(len(data))],
       y=data,
       label="{}: max welfare".format(name_of_method))
@@ -207,6 +222,7 @@ def main(argv):
     """
     all_files = os.listdir(data_directory_path + relative_folder_path + "/")
     max_social_welfare_over_iterations = []
+    aggregated_kl_values = [[],[]] if not is_symmetric else [[]]
     expected_payoff_individual_players = [[], []] if not is_symmetric else [[]]
     expected_welfare = []
     iterations = len(all_files)
@@ -214,7 +230,6 @@ def main(argv):
     player_profile_history = [[], []] if not is_symmetric else [[]] 
     average_regret = []
     trial_graph_path = os.getcwd() + save_graph_path + relative_folder_path + "/"
-    #We add best response and an exploration strategy's utility every iteration. Specifies index of best response utility.
     for i in range(iterations):
       print("ITERATION {}:".format(i))
       # save_folder_path + specific_string.format(i)
@@ -237,6 +252,8 @@ def main(argv):
         player_profile = list_of_meta_probabilities[num_player]
         expected_utility = np.dot(player_profile, expected_payoff_vector)
         expected_payoff_individual_players[num_player].append(expected_utility)
+        # ppo_training_data = [kl, entropy, actor-loss, value-loss]
+        aggregated_kl_values[num_player].append(ppo_training_data[num_player][0])
 
         if i > 0:
           #Row player
@@ -259,7 +276,7 @@ def main(argv):
             for k in range(len(ppo_training_data)):
               ppo_training_data[num_player][k] = ppo_training_data[num_player][k][:NUM_TRUNCATED_VALS]
 
-        #PPO Training Returns
+       #PPO Training Returns
         print("KL Divergence Data Individual {}: ".format(num_player), ppo_training_data[num_player][0])
 
 
@@ -277,11 +294,11 @@ def main(argv):
     if graph_mode:
       if not os.path.exists(trial_graph_path):
         os.makedirs(trial_graph_path)
-      # TODO: A little bit of a hack but should be ok
       graph_max_welfare(max_social_welfare_over_iterations, trial_graph_path)
       graph_expected_welfare(expected_welfare, trial_graph_path)
       graph_expected_payoff(expected_payoff_individual_players, trial_graph_path)
       graph_regret(regret_individuals, trial_graph_path)
+      graph_kl(aggregated_kl_values, trial_graph_path)
       
 
     return max_social_welfare_over_iterations, expected_payoff_individual_players, expected_welfare, regret_individuals
