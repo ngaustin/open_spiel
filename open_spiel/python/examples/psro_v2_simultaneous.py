@@ -131,7 +131,7 @@ flags.DEFINE_float("minimum_exploration_init", 0, "Minimum amount of profile wei
 flags.DEFINE_float("final_exploration", 0, "After annealing, the minimum amount of profile weight on exploration policies")
 flags.DEFINE_integer("regret_steps", 25, "How many iterations regret should be annealed for")
 
-# DQN for regret calculation
+# DQN for regret calculation (not used anymore)
 flags.DEFINE_float("dqn_learning_rate", 1e-2, "DQN learning rate.")  # CHAGNED FROM 1e-2
 flags.DEFINE_integer("update_target_network_every", 1000, "Update target "  # CHANGED FROM 1000
                      "network every [X] steps")
@@ -139,6 +139,7 @@ flags.DEFINE_integer("learn_every", 10, "Learn every [X] steps.")  # CHANGED FRO
 flags.DEFINE_integer("min_buffer_size_to_learn", 1000, "Learn after getting certain number of transitions")
 flags.DEFINE_integer("max_buffer_size", int(1e4), "Buffer Size")
 flags.DEFINE_integer("epsilon_decay_duration", 1000, "Number of steps for epsilon from 1 to .1")
+flags.DEFINE_integer("pretrained_policy_steps", 500, "Number of steps to anneal the probability of using the pretrained policy from 1 to 0")
 flags.DEFINE_integer("regret_calculation_steps", int(2e5), "Number of steps when estimating regret")
 flags.DEFINE_integer("hidden_layer_size", 50, "Hidden layer size")  # CHANGED THIS
 flags.DEFINE_integer("n_hidden_layers", 2, "# of hidden layers")  # CHANGED THIS
@@ -288,6 +289,7 @@ def init_dqn_responder(sess, env):
     "regret_calculation_steps": FLAGS.regret_calculation_steps,
     "sims_per_entry": FLAGS.sims_per_entry,
     "recovery_window": FLAGS.recovery_window,
+    "pretrained_policy_steps": FLAGS.pretrained_policy_steps
   }
 
   print("Agent Arguments: ")

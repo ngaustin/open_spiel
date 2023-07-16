@@ -136,7 +136,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         # Generate one new policy for each agent to train imitation
         # If a dummy is passed in for "policy," a new policy is created and not copied. Assumed that we create one
         # for every player
-        new_policies = self.create_consensus_policies(training_parameters, iteration_num=num_policies_total)
+        new_policies = self.create_consensus_policies(training_parameters, self.get_policy_constraint_weight(num_policies_total), self._most_recent_br_policies)
 
         # NOTE: Changed here for fair comparison
         if not train_best_response:
@@ -245,79 +245,65 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         rl_oracle.freeze_all(new_policies)
 
         ################### Regret Calculations #######################
-        total_steps_calculation = self._consensus_kwargs["regret_calculation_steps"]
-        steps_per_policy = np.array([[0 for _ in range(len(player_params))] for player_params in training_parameters])
-
-        print("\nTraining regret calculation best responses for {} steps".format(total_steps_calculation))
-        regret_br_policies = self.generate_new_policies(training_parameters)
-        while not np.all(steps_per_policy > total_steps_calculation):
-            agents, indexes = self.sample_policies_for_episode(
-                    regret_br_policies, training_parameters, steps_per_policy,
-                    strategy_sampler)
-
-            _, actions, returns = self._rollout(game, agents, **oracle_specific_execution_kwargs)
-
-            self._train_regret_returns[indexes[0][0]].append(returns)
-
-            steps_per_policy = rl_oracle.update_steps_per_oracles(steps_per_policy, indexes, len(actions) // 2 if self._is_turn_based else len(actions))
-
-        
-        # Now, freeze the regret calculation policies so that we can evaluate them
-        rl_oracle.freeze_all(regret_br_policies)
-
-        # Do simulations for each of them to determine the approximated deviation payoff
+        # If we didn't calculate a "true" best response before, then do it now 
         self.pure_best_response_returns = []
-        for i, new_policy_list_per_player in enumerate(regret_br_policies):
-            print("Evaluating best response for player {}".format(i))
-            new_policy = new_policy_list_per_player[0] # We assume that each player has 1 policy
-            agent_chosen_dict = training_parameters[i][0]  # Assume that we create one br for each player
-            num_players = len(training_parameters)
-            list_of_returns = []
-            for _ in range(self._consensus_kwargs["sims_per_entry"]):
-                agents = self.sample_policies_for_episode_regret_calculation(new_policy, i, agent_chosen_dict, num_players, strategy_sampler)
-                _, _, returns = self._rollout(game, agents, **oracle_specific_execution_kwargs)
-                curr_return = returns[i]  # Get the return corresponding to the player we are evaluating
-                list_of_returns.append(curr_return)
-            self.pure_best_response_returns.append(sum(list_of_returns) / len(list_of_returns))
-        print("Pure best response returns: {}\n\n".format(self.pure_best_response_returns))
+        print("\n")
+        if not train_best_response:
+            steps_per_policy = np.array([[0 for _ in range(len(player_params))] for player_params in training_parameters])
+            new_policies_regret = self.create_consensus_policies(training_parameters, self.get_policy_constraint_weight(num_policies_total), self._most_recent_br_policies)
+            for i in range(len(new_policies_regret)):
+                new_policies_regret[i][0]._policy.set_to_fine_tuning_mode(train_best_response=True)
+
+            # Keep in mind that we are starting from the policies provided by the perturbed best response...so they're already pretty good. 
+            # So, let's assume we only need around half of the training steps to actually create a best response out of it
+            print("Training pure best response for {} steps.".format(self._number_training_steps // 2))
+            while not np.all(steps_per_policy > (self._number_training_steps // 2)):
+                """ Note: basically, this while loop cycles through each of the agent's new policies at a time. It will
+                use sample_policies_for_episode to determine which agent's new policy to train and what policies each of the
+                player targets will use. Then, it will do the rollout where it trains the new policy for an episode. Then,
+                update the number of episodes each new policy has been trained. """
+                agents, indexes = self.sample_policies_for_episode(
+                        new_policies_regret, training_parameters, steps_per_policy,
+                        strategy_sampler)
+                assert len(indexes) == 1  # we are tailoring this code for one agent training at a time. Make sure true
+                assert len(indexes[0]) == 2  # make sure player index and policy index
+                assert indexes[0][1] == 0 # make sure this is true because we FIXED it so that PSRO only trains 1 strategy for each player each iteration
+
+                _, actions, returns = self._rollout(game, agents, **oracle_specific_execution_kwargs)
+
+                self._train_regret_returns[indexes[0][0]].append(returns)
+
+                steps_per_policy = rl_oracle.update_steps_per_oracles(steps_per_policy, indexes, len(actions) // 2 if self._is_turn_based else len(actions))
             
-        ################# Finish Regret Calculations #####################
+            for player, rets in enumerate(self._train_regret_returns):
+                if len(rets) == 0:
+                    print("No returns found for player {}. Defaulting to 0 for pure best response estimate".format(player))
+                    self.pure_best_response_returns.append(0)
+                else: 
+                    average_window = self._consensus_kwargs["sims_per_entry"]
+                    averages = []
+                    for i in range(len(rets) - average_window + 1):
+                        averages.append(sum(rets[i:i+average_window]) / average_window)
+                    averages = [all_player_rets[player] for all_player_rets in averages]
+                    self.pure_best_response_returns.append(max(averages))  
+                    print("Pure best response payoff estimated to be {} for player {}. ".format(max(averages), player)) 
+        else: 
+            # Otherwise, just take from train_br_returns, windows of length sims_per_entry, take max average window 
+            for player, rets in enumerate(self._train_br_returns):
+                if len(rets) == 0:
+                    print("No returns found for player {}. Defaulting to 0 for pure best response estimate".format(player))
+                    self.pure_best_response_returns.append(0) 
+                else:
+                    average_window = self._consensus_kwargs["sims_per_entry"]
+                    averages = []
+                    for i in range(len(rets) - average_window + 1):
+                        averages.append(sum(rets[i:i+average_window]) / average_window)
+                    averages = [all_player_rets[player] for all_player_rets in averages]
+                    self.pure_best_response_returns.append(max(averages))
+                    print("Pure best response payoff estimated to be {} for player {}. ".format(max(averages), player))
+        print("\n\n")
 
         return new_policies
-
-
-    def sample_policies_for_episode_regret_calculation(self, new_policy, chosen_player, agent_chosen_dict, num_players, strategy_sampler):
-
-        # num_players = len(training_parameters)
-
-        # Prioritizing players that haven't had as much training as the others.
-        # steps_per_player = [sum(steps) for steps in steps_per_oracle]
-        # chosen_player = random_count_weighted_choice(steps_per_player)
-        # Uniformly choose among the sampled player.
-        # agent_chosen_ind = np.random.randint(
-        #     0, len(training_parameters[chosen_player]))
-        # agent_chosen_dict = training_parameters[chosen_player][agent_chosen_ind]
-        # new_policy = new_policies[chosen_player][agent_chosen_ind]
-
-        # Sample other players' policies.
-        total_policies = agent_chosen_dict["total_policies"]
-        probabilities_of_playing_policies = agent_chosen_dict[
-            "probabilities_of_playing_policies"]
-        episode_policies = strategy_sampler(total_policies,
-                                            probabilities_of_playing_policies)
-        
-        print("SHOWING POLICIES: ")
-
-        # live_agents_player_index = [(chosen_player, agent_chosen_ind)]
-
-        for player in range(num_players):
-            if player == chosen_player:
-                episode_policies[player] = new_policy
-                # assert not new_policy.is_frozen()
-            # else:
-            #     assert episode_policies[player].is_frozen()
-
-        return episode_policies# , live_agents_player_index
 
     def get_training_returns(self):
         rets = [np.array(rets) for rets in self._train_br_returns]
@@ -335,24 +321,19 @@ class RLOracleCooperative(rl_oracle.RLOracle):
     def get_policy_constraint_weight(self, iteration_num):
         return self._consensus_kwargs["policy_constraint"] * max((1 - (float(iteration_num) - 1) / self._consensus_kwargs["policy_constraint_steps"]), 0)
 
-    def create_consensus_policies(self, training_parameters, iteration_num):
-        fine_tune_constraint = self.get_policy_constraint_weight(iteration_num)
+    def create_consensus_policies(self, training_parameters, fine_tune_constraint, recent_br_policies):
         consensus_training_parameters = [[{"policy": None}] for _ in range(len(training_parameters))]
         consensus_policies = self.generate_new_policies(consensus_training_parameters)
         for i in range(len(consensus_policies)):
             # Convert each of the policies to consensus policies. rl_oracle: generate_new_policies. This consensus policy won't be copied
             curr = consensus_policies[i][0]
             new_arguments = {"num_actions": self._best_response_kwargs["num_actions"]}
-            if self._consensus_oracle == "trajectory":
-                curr._policy = imitation.Imitation(**{"player_id": i, "consensus_kwargs": self._consensus_kwargs}, **new_arguments)
-            elif self._consensus_oracle == "q_learn":
-                curr._policy = imitation_q_learn.Imitation(**{"player_id": i, "consensus_kwargs": self._consensus_kwargs}, **new_arguments)
-            elif self._consensus_oracle == "trajectory_deep":
-                new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based, "prev_policy":self._most_recent_br_policies[i] if self._most_recent_br_policies else None, "policy_constraint":fine_tune_constraint}
+            if self._consensus_oracle == "trajectory_deep":
+                new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based, "prev_policy":recent_br_policies[i] if recent_br_policies else None, "policy_constraint":fine_tune_constraint}
                 curr._policy = imitation_deep.Imitation(**{"player_id": i, "consensus_kwargs": self._consensus_kwargs}, **new_arguments)
 
             elif self._consensus_oracle == "cql_deep":
-                new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based, "prev_policy":self._most_recent_br_policies[i] if self._most_recent_br_policies else None, "policy_constraint":fine_tune_constraint}
+                new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based, "prev_policy":recent_br_policies[i] if recent_br_policies else None, "policy_constraint":fine_tune_constraint}
                 curr._policy = imitation_q_learn_deep.Imitation(**{"player_id": i, "consensus_kwargs": self._consensus_kwargs}, **new_arguments)
             else:
                 raise NotImplementedError

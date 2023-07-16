@@ -88,8 +88,8 @@ class DQN(rl_agent.AbstractAgent):
     self._epsilon_decay_duration = epsilon_decay_duration
     self.trained_at_least_once = False
     self._double = double
+    self.has_exploration_policy = False
 
-    print("Confirming DDQN paremeters: ", self._layer_sizes, self._batch_size, self._update_target_network_every, self._learn_every, self._min_buffer_size_to_learn, self._epsilon_decay_duration, self.trained_at_least_once)
     # TODO(author6) Allow for optional replay buffer config.
     if not isinstance(replay_buffer_capacity, int):
       raise ValueError("Replay buffer capacity not an integer.")
@@ -199,6 +199,11 @@ class DQN(rl_agent.AbstractAgent):
   def get_step_counter(self):
     return self._step_counter
 
+  def set_exploration_policy(self, exploration_policy, steps):
+    self.has_exploration_policy = True
+    self.exploration_policy = exploration_policy 
+    self.exploration_policy_steps = steps
+
   def step(self, time_step, is_evaluation=False, add_transition_record=True):
     """Returns the action to be taken and updates the Q-network if needed.
 
@@ -231,7 +236,12 @@ class DQN(rl_agent.AbstractAgent):
       legal_actions = time_step.observations["legal_actions"][player]
 
       epsilon = self._get_epsilon(is_evaluation)
-      action, probs = self._epsilon_greedy(info_state, legal_actions, epsilon)
+      if self.has_exploration_policy and np.random.rand() < max(0, (self.exploration_policy_steps - self._step_counter) / self.exploration_policy_steps):
+        output = self.exploration_policy.step(time_step, is_evaluation=True, add_transition_record=False)
+        action = output.action
+        probs = output.probs
+      else:
+        action, probs = self._epsilon_greedy(info_state, legal_actions, epsilon)
 
     else:
       action = None
@@ -333,6 +343,7 @@ class DQN(rl_agent.AbstractAgent):
       A valid epsilon-greedy action and valid action probabilities.
     """
     probs = np.zeros(self._num_actions)
+
     if not self.trained_at_least_once or np.random.rand() < epsilon: # If this is a newly initialized policy, enforce that it is a uniform
       # action = np.random.choice(legal_actions)
       start = time.time()
