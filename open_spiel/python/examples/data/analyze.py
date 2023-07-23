@@ -200,9 +200,9 @@ def main(argv):
     #Plot the individual regret values for each player on the same plot
     regret_fig, ax = plt.subplots()
     for player_index in range(len(data)):
-        ax.scatter(x=[ind + 1 for ind in range(len(data[player_index]))],
-          y=data[player_index],
-          label="{}: Player {}".format(name_of_method, player_index))
+        ax.plot([ind + 1 for ind in range(len(data[player_index]))],
+          data[player_index],
+          label= "{}: Player {}".format(name_of_method, player_index))
     ax.set_title("Individual Regret Over Iterations")
     ax.set_xlabel("Iteration")
     ax.set_ylabel("Regret Values")
@@ -233,7 +233,7 @@ def main(argv):
     for i in range(iterations):
       print("ITERATION {}:".format(i))
       # save_folder_path + specific_string.format(i)
-      save_data_path = [file for file in all_files if "iteration_{}".format(i) in file][0]
+      save_data_path = [file for file in all_files if "iteration_{}.".format(i) in file][0]
       save_data_path = data_directory_path + relative_folder_path + "/" + save_data_path
       with open(save_data_path, "rb") as npy_file:
           array_list = np.load(npy_file, allow_pickle=True)
@@ -250,6 +250,7 @@ def main(argv):
         player_profile_history[num_player].append(list_of_meta_probabilities[num_player])
         expected_payoff_vector = _partial_multi_dot(utilities[num_player], list_of_meta_probabilities, num_player)
         player_profile = list_of_meta_probabilities[num_player]
+        
         expected_utility = np.dot(player_profile, expected_payoff_vector)
         expected_payoff_individual_players[num_player].append(expected_utility)
         # ppo_training_data = [kl, entropy, actor-loss, value-loss]
@@ -266,6 +267,7 @@ def main(argv):
             best_response_payoffs = utilities[num_player][:, -1]
           prev_player_profile = player_profile_history[num_player][i-1]
           best_response_trunc = best_response_payoffs[:len(prev_player_profile)]
+          print(prev_player_profile, best_response_trunc)
           best_response_expected_payoff = np.dot(prev_player_profile, best_response_trunc)
           regret_individuals[num_player].append(max(best_response_expected_payoff - expected_payoff_individual_players[num_player][i - 1], pure_br_returns[num_player]- expected_payoff_individual_players[num_player][i - 1]))
           print("Individual regret vector: ", regret_individuals)
