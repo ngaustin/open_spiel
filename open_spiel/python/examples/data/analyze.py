@@ -91,7 +91,7 @@ def main(argv):
       kl_fig.savefig(folder_path + "mean_kl_player_{}.jpg".format(num_player))
     plt.close()
 
-  def graph_training_returns(training_returns, num_iteration, folder_path, average_grouping = 200):
+  def graph_training_returns(training_returns, num_iteration, folder_path, average_grouping = 1000):
     """
       Graph training returns for BR training
         training_returns: 2D array with n arrays containing training returns for players

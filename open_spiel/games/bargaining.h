@@ -64,6 +64,7 @@ constexpr int kNumPlayers = 2;
 constexpr double kDefaultDiscount = 1.0;
 constexpr int kDefaultMaxTurns = 10;
 constexpr double kDefaultProbEnd = 0.0;
+constexpr bool kDefaultSymmetric = true;
 
 // Default 10-instance database used for tests. See
 // bargaining_instance_generator.cc to create your own.
@@ -146,6 +147,7 @@ class BargainingState : public State {
   Player next_player_;
   double discount_;
   bool game_ended_;
+  Player starting_player_;
 };
 
 class BargainingGame : public Game {
@@ -156,7 +158,14 @@ class BargainingGame : public Game {
   std::unique_ptr<State> NewInitialState() const override {
     return std::unique_ptr<State>(new BargainingState(shared_from_this()));
   }
-  int MaxChanceOutcomes() const override { return all_instances_.size() + 2; }
+  int MaxChanceOutcomes() const override { 
+    if (symmetric_) {
+      return 2* all_instances_.size() + 2; 
+    } else {
+      return all_instances_.size() + 2;
+    }
+  }
+
   std::string ActionToString(Player player, Action move_id) const override;
 
   int MaxGameLength() const override { return max_turns_; }
@@ -171,6 +180,7 @@ class BargainingGame : public Game {
   int max_turns() const { return max_turns_; }
   double discount() const { return discount_; }
   double prob_end() const { return prob_end_; }
+  bool symmetric() const { return symmetric_; }
 
   Action ContinueOutcome() const { return all_instances_.size(); }
   Action EndOutcome() const { return all_instances_.size() + 1; }
@@ -192,6 +202,7 @@ class BargainingGame : public Game {
   const int max_turns_;
   const double discount_;
   const double prob_end_;
+  const bool symmetric_;
 };
 
 }  // namespace bargaining

@@ -52,7 +52,8 @@ const GameType kGameType{/*short_name=*/"bargaining",
                          {{"instances_file", GameParameter("")},
                           {"max_turns", GameParameter(kDefaultMaxTurns)},
                           {"discount", GameParameter(kDefaultDiscount)},
-                          {"prob_end", GameParameter(kDefaultProbEnd)}}};
+                          {"prob_end", GameParameter(kDefaultProbEnd)},
+                          {"symmetric", GameParameter(kDefaultSymmetric)}}};
 
 static std::shared_ptr<const Game> Factory(const GameParameters& params) {
   return std::shared_ptr<const Game>(new BargainingGame(params));
@@ -91,7 +92,7 @@ bool BargainingState::IsTerminal() const {
 
 std::vector<double> BargainingState::Returns() const {
   if (agreement_reached_) {
-    int proposing_player = (offers_.size() + 1) % kNumPlayers;
+    int proposing_player = ((offers_.size() + 1 + starting_player_) % kNumPlayers); // NOTE: This is dependent on who starts. Asymmetric -> starting_player_ always is 0. Symmetric -> uniform 0 or 1
     int other_player = 1 - proposing_player;
     std::vector<double> returns(kNumPlayers, 0);
     for (int i = 0; i < kNumItemTypes; ++i) {
@@ -149,7 +150,7 @@ std::string BargainingState::InformationStateString(Player player) const {
                   "\n");
   absl::StrAppend(&str, "Agreement reached? ", agreement_reached_, "\n");
   for (int i = 0; i < offers_.size(); ++i) {
-    int proposer = i % 2;
+    int proposer = (i + starting_player_) % 2;  // NOTE: // NOTE: This is dependent on who starts. Asymmetric -> starting_player_ is always 0. Symmetric -> uniform 0 and 1
     absl::StrAppend(&str, "P", proposer, " offers: ", offers_[i].ToString(),
                     "\n");
   }
@@ -307,7 +308,7 @@ void BargainingState::SetInstance(Instance instance) {
   // chance player.
   if (IsChanceNode()) {
     SPIEL_CHECK_TRUE(offers_.empty());
-    cur_player_ = 0;
+    cur_player_ = starting_player_; // After doing all the chance node stuff, set it to starting_player_
   }
 }
 
@@ -331,8 +332,14 @@ Action BargainingState::AgreeAction() const {
 void BargainingState::DoApplyAction(Action action) {
   if (IsChanceNode()) {
     if (move_number_ == 0) {
-      instance_ = parent_game_->GetInstance(action);
-      cur_player_ = 0;
+      if (parent_game_->symmetric()) {
+        instance_ = parent_game_->GetInstance(action / 2); // NOTE: If the game is symmetric, chance outcomes include the starting player. So, each game Instance has 2 chance outcomes
+        cur_player_ = action % 2; // NOTE: Half of the chance outcomes are player 0 starting.
+      } else {
+        instance_ = parent_game_->GetInstance(action); 
+        cur_player_ = 0; 
+      }
+      starting_player_ = cur_player_;  // NOTE: We need to keep track of who starts to calculate which offer is made by whom
     } else {
       if (action == parent_game_->ContinueOutcome()) {
         cur_player_ = next_player_;
@@ -350,7 +357,7 @@ void BargainingState::DoApplyAction(Action action) {
 
     const std::vector<Offer>& all_offers = parent_game_->AllOffers();
     if (action != AgreeAction()) {
-      offers_.push_back(all_offers.at(action));
+      offers_.push_back(all_offers.at(action)); // NOTE: The offers_ gets built according to whoever starts 
 
       if (move_number_ >= 2 && parent_game_->prob_end() > 0.0) {
         next_player_ = 1 - cur_player_;
@@ -401,13 +408,26 @@ std::vector<std::pair<Action, double>> BargainingState::ChanceOutcomes() const {
   SPIEL_CHECK_TRUE(IsChanceNode());
   std::vector<std::pair<Action, double>> outcomes;
   const int num_boards = parent_game_->AllInstances().size();
+  bool symmetric = parent_game_->symmetric();
+  int num_outcomes;
 
   if (move_number_ == 0) {
     // First chance move of the game. This is for determining the instance.
-    outcomes.reserve(num_boards);
-    double uniform_prob = 1.0 / num_boards;
+    if (symmetric){
+      num_outcomes = num_boards * 2;
+    } else {
+      num_outcomes = num_boards;
+    }
+    outcomes.reserve(num_outcomes);
+    double uniform_prob = 1.0 / num_outcomes;
     for (int i = 0; i < num_boards; ++i) {
-      outcomes.push_back({i, uniform_prob});
+      if (symmetric) {
+        for (int j = 0; j < 2; j++) {
+          outcomes.push_back({2*i+j, uniform_prob});  // NOTE: In the symmetric version of this game, we allow either player to go first
+        }
+      } else {
+        outcomes.push_back({i, uniform_prob});
+      }
     }
   } else {
     const double prob_end = parent_game_->prob_end();
@@ -426,7 +446,7 @@ std::string BargainingState::ToString() const {
   std::string str = instance_.ToPrettyString();
   absl::StrAppend(&str, "Agreement reached? ", agreement_reached_, "\n");
   for (int i = 0; i < offers_.size(); ++i) {
-    int proposer = i % 2;
+    int proposer = (i + starting_player_) % 2; // NOTE: This is dependent on who starts. Asymmetric -> starting_player_ is always 0. Symmetric -> uniform between 0 and 1
     absl::StrAppend(&str, "P", proposer, " offers: ", offers_[i].ToString(),
                     "\n");
   }
@@ -502,7 +522,8 @@ BargainingGame::BargainingGame(const GameParameters& params)
     : Game(kGameType, params),
       max_turns_(ParameterValue<int>("max_turns", kDefaultMaxTurns)),
       discount_(ParameterValue<double>("discount", kDefaultDiscount)),
-      prob_end_(ParameterValue<double>("prob_end", kDefaultProbEnd)) {
+      prob_end_(ParameterValue<double>("prob_end", kDefaultProbEnd)),
+      symmetric_(ParameterValue<bool>("symmetric", kDefaultSymmetric)) {
   std::string filename = ParameterValue<std::string>("instances_file", "");
   if (!filename.empty()) {
     ParseInstancesFile(filename);

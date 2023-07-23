@@ -240,8 +240,7 @@ class Environment(object):
     }
     rewards = []
     step_type = StepType.LAST if self._state.is_terminal() else StepType.MID
-    # TODO: Insert a different reset condition that separates between DONE and iteration DONE
-    self._should_reset = (step_type == StepType.LAST) # or self._state.reached_max_iterations())
+    self._should_reset = (step_type == StepType.LAST)
 
     cur_rewards = self._state.rewards()
     for player_id in range(self.num_players):

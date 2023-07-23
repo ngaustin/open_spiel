@@ -13,6 +13,7 @@ from open_spiel.python.algorithms import imitation_q_learn_deep
 from open_spiel.python.algorithms import dqn
 from open_spiel.python.algorithms import joint_wrapper
 from open_spiel.python.algorithms import config
+from open_spiel.python.rl_environment import StepType
 import time
 
 class RLOracleCooperative(rl_oracle.RLOracle):
@@ -66,6 +67,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         self._high_returns = [[] for _ in range(env.num_players)]
         self._train_br_returns = [[] for _ in range(env.num_players)]
         self._train_regret_returns = [[] for _ in range(self.num_players)]
+        self.min_returns_in_buffer = [np.inf for _ in range(self.num_players)]
 
         self._all_seen_observations = set()
 
@@ -167,6 +169,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         all_policies = [old_pol + new_pol for old_pol, new_pol in zip(training_parameters[0][0]["total_policies"], new_policies)]
 
         rollout_trajectories, rollout_actions, rollout_returns = [], [], []
+        rollout_min_returns = []
 
         cutoff_returns = [self._high_returns[i][-1] if len(self._high_returns[i]) > 0 else -np.inf for i in range(self.num_players)]
 
@@ -207,25 +210,130 @@ class RLOracleCooperative(rl_oracle.RLOracle):
 
             self._train_br_returns[indexes[0][0]].append(np.array(returns))
             if not invalid_candidate and self._consensus_kwargs["consensus_imitation"]:
-                rollout_trajectories.append(trajectory)
-                rollout_returns.append(returns)
-                rollout_actions.append(actions)
+
+                if not is_symmetric:
+                    rollout_trajectories.append(trajectory)
+                    rollout_returns.append(returns)
+                    rollout_actions.append(actions)
+                else:
+                    # Look at rollout_min_returns. Take the min of the current return and find the index in which it would be added.
+                    metric = min(returns)
+                    chosen_index = 0
+                    if len(rollout_min_returns) > 0:
+                        for k in range(len(rollout_min_returns)):
+                            if rollout_min_returns[k] > metric: 
+                                break 
+                            chosen_index = k+1
+                        rollout_trajectories.insert(chosen_index, trajectory)
+                        rollout_returns.insert(chosen_index, returns)
+                        rollout_actions.insert(chosen_index, actions)
+                        rollout_min_returns.insert(chosen_index, metric)
+                    else:
+                        rollout_trajectories.append(trajectory)
+                        rollout_returns.append(returns)
+                        rollout_actions.append(actions)
+                        rollout_min_returns.append(metric)
 
                 ############## This is just for space saving on the first iteration ####################
                 if len(rollout_returns) > self._num_simulations_fit and is_symmetric:
+
+                    # Pop the first index (because that corresponds to the trajectory with the smallest min return across players)
+                    rollout_trajectories.pop(0)
+                    rollout_returns.pop(0)
+                    rollout_actions.pop(0)
+                    rollout_min_returns.pop(0)
+
+                    """
+                    start = time.time()
+
                     ret_0 = [ret[0] for ret in rollout_returns]
                     ret_1 = [ret[1] for ret in rollout_returns]
+                    first_time = time.time() - start 
+
+                    start = time.time()  
+                    mins = np.min(rollout_returns, axis=0)
+                    new_min = time.time() - start
+
+                    start = time.time()
 
                     min_0 = min(ret_0)
                     min_1 = min(ret_1)
+                    get_min = time.time() - start
+
+                    start = time.time()
                     if min_0 < min_1:
                         take_out_index = ret_0.index(min_0)
                     else:
                         take_out_index = ret_1.index(min_1)
+                    get_index = time.time() - start
 
+                    start = time.time() 
                     rollout_trajectories.pop(take_out_index)
                     rollout_returns.pop(take_out_index)
                     rollout_actions.pop(take_out_index)
+                    pop_time = time.time() - start 
+                    print("Segmented times: ", first_time, get_min, new_min, get_index, pop_time)"""
+                elif len(rollout_returns) > self._num_simulations_fit and not is_symmetric:
+                    # In order to not influence the estimated distributions of returns, both returns need to be the minimum
+                    # Get the min values of each of the rollout returns 
+                    if all([np.isinf(val) for val in self.min_returns_in_buffer]):
+                        ret_0 = [ret[0] for ret in rollout_returns]
+                        ret_1 = [ret[1] for ret in rollout_returns]
+
+                        min_0 = min(ret_0)
+                        min_1 = min(ret_1)
+
+                        self.min_returns_in_buffer = [min_0, min_1] 
+
+                    if (returns[0] <= self.min_returns_in_buffer[0]) and (returns[1] <= self.min_returns_in_buffer[1]): 
+                        rollout_trajectories.pop()
+                        rollout_returns.pop()
+                        rollout_actions.pop()                                       
+                    else:
+                        self.min_returns_in_buffer = [min(self.min_returns_in_buffer[0], returns[0]), min(self.min_returns_in_buffer[1], returns[1])]
+
+                    if len(rollout_returns) > self._num_simulations_fit * 2:
+                        # Only if it is VERY large do we iterate through the entire list. Prune it so that we only take the top certain number of trajectories 
+
+                        num_taken = 0
+
+                        # Sort the arrays
+                        sorted_by_players = [sorted(enumerate(rollout_returns), key=lambda x: (x[1][i], x[0])) for i in range(self.num_players)]
+
+                        in_queue = [0 for _ in range(len(rollout_returns))]
+                        to_keep = [None for _ in range(self._num_simulations_fit)]
+
+                        # Iterate backwards through both arrays 
+                        for k in range(len(rollout_returns) - 1, -1, -1):
+                            indices = [sorted_by_players[i][k][0] for i in range(self.num_players)]
+                            if indices[0] == indices[1]:
+                                to_keep[num_taken] = (indices[0])
+                                num_taken += 1
+                            else:
+                                # Check if either of them are in queue 
+                                for l in range(2):
+                                    if in_queue[indices[l]]:
+                                        to_keep[num_taken] = (indices[l])
+                                        num_taken += 1
+                                        in_queue[indices[l]] = 0
+                                    else:
+                                        in_queue[indices[l]] = 1
+                                    if num_taken == self._num_simulations_fit:
+                                        break 
+                            if num_taken == self._num_simulations_fit:
+                                break 
+                        
+                        for k in range(len(in_queue)):
+                            if in_queue[k]:
+                                to_keep.append(k)
+                        
+                        print("Only kept {} trajectories out of {}".format(len(to_keep), len(rollout_returns)))
+
+                        rollout_trajectories = [trajectory for k, trajectory in enumerate(rollout_trajectories) if k in to_keep]
+                        rollout_actions = [action for k, action in enumerate(rollout_actions) if k in to_keep]
+                        rollout_returns = [returns for k, returns in enumerate(rollout_returns) if k in to_keep]
+                                
+                        
 
             # Update the number of episodes we have trained per oracle
 
@@ -380,6 +488,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         selected_trajectory_indices = sorted(range(len(rankings)), key=lambda i: rankings[i])[-num_simulations_take:]
 
         # TODO: This is a test to analyze state coverage manually. Remove when done
+        """
         incremental_seen_observations_joint = []
         incremental_seen_observations = []
         curr_seen_observations = set()
@@ -397,11 +506,14 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                         curr_seen_observations.add(''.join(map(str, curr_obs)))
             incremental_seen_observations.append(len(curr_seen_observations))
             # incremental_seen_observations_joint.append(len(seen_joint_observations))
+        """
 
+        """
         self._all_seen_observations = self._all_seen_observations.union(curr_seen_observations)
         if not self._consensus_kwargs["joint_action"]:
             # print("Cumulative seen decentralized observations: ", [float(num) / incremental_seen_observations[-1] for num in incremental_seen_observations])
             print("Covered decentralized observations given the number of trajectories taken (assuming BR had complete coverage): ", float(incremental_seen_observations[num_simulations_take - 1]) / len(self._all_seen_observations))
+        """
         # if self._consensus_kwargs["joint_action"] and len(timestep.observations["global_state"]) > 0:
         #     # print("Cumulative seen joint observations: ", [float(num) / incremental_seen_observations_joint[-1] for num in incremental_seen_observations_joint] )
         #     print("Covered joint observations given the number of trajectories taken (assuming BR had complete coverage): ", float(incremental_seen_observations_joint[num_simulations_take - 1]) / incremental_seen_observations_joint[-1])
@@ -437,11 +549,12 @@ class RLOracleCooperative(rl_oracle.RLOracle):
 
                 if self._is_turn_based:
                     # Add the parts of the trajectory only relevant to the player (assuming it is turn based)
-                    assert not symmetric # Not implemented 
-                    players_turn = [i for i, t in enumerate(trajectory[:-1]) if t.observations["current_player"] == player] + [len(trajectory) - 1]
-                    player_trajectory = [trajectory[i] for i in players_turn]
-                    player_action_trajectory = [action_trajectory[i] for i in players_turn[:-1]]
-                    curr_policy.add_trajectory(player_trajectory, player_action_trajectory)
+                    take_from_player_list = [i for i in range(self.num_players)] if symmetric else [player]
+                    for p in take_from_player_list:
+                        players_turn = [i for i, t in enumerate(trajectory[:-1]) if t.observations["current_player"] == p or t.step_type == StepType.LAST]
+                        player_trajectory = [trajectory[i] for i in players_turn]
+                        player_action_trajectory = [action_trajectory[i] for i in players_turn[:-1]]  # There is no action for the last step in the environment
+                        curr_policy.add_trajectory(player_trajectory, player_action_trajectory)
                     # raise NotImplementedError
                 else:
                     curr_policy.add_trajectory(trajectory, action_trajectory)
