@@ -7,12 +7,18 @@ import os
 
 import matplotlib.pyplot as plt
 
+#RRD Runner
+from open_spiel.python.algorithms import projected_replicator_dynamics
+import pyspiel
+import tensorflow.compat.v1 as tf
+import sys
+
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string("game_data_path",  "", "Directory for retrieving game data. Assuming iteration structure.")
 flags.DEFINE_string("save_graph_path",  "", "Directory for saving graphs. Directory will be created if doesn't exist.")
-flags.DEFINE_integer("n_players", 2, "The number of players.")
-flags.DEFINE_string("game_name", "", "Name of simulation.")
+flags.DEFINE_string("game_name",  "Harvest", "Name of game.")
+flags.DEFINE_integer("n_players", 2, "Number of players")
 flags.DEFINE_boolean("graph_mode", True, "Will/won't graph.")
 flags.DEFINE_boolean("is_symmetric", True, "Symmetric game?")
 
@@ -301,16 +307,42 @@ def main(argv):
       graph_expected_payoff(expected_payoff_individual_players, trial_graph_path)
       graph_regret(regret_individuals, trial_graph_path)
       graph_kl(aggregated_kl_values, trial_graph_path)
-      
 
-    return max_social_welfare_over_iterations, expected_payoff_individual_players, expected_welfare, regret_individuals
+    return utilities
+
+  def welfare_runner(meta_games):
+    NUM_ITER = 1
+
+    import random
+    for _ in range(NUM_ITER):
+      random_nums = [np.array([random.randint(1,100) for _ in range(len(meta_games[0]))]) for _ in range(FLAGS.n_players)]
+      random_profile = [player_profile / np.sum(player_profile) for player_profile in random_nums]
+      prd_profile = projected_replicator_dynamics.regularized_replicator_dynamics(
+        meta_games,regret_lambda=0.001,
+        prd_initial_strategies=random_profile)
+      max_welfare_profile = []
+      max_welfare = 0
+      combined_profile = []
+      for prob in prd_profile[0]:
+        for p2_prob in prd_profile[1]:
+          combined_profile.append(prob * p2_prob)
+      welfare = np.mean([np.dot(combined_profile, np.array(meta_games[0]).flatten()), np.dot(combined_profile, np.array(meta_games[1]).flatten())])
+      if welfare > max_welfare:
+        max_welfare_profile = prd_profile
+        max_welfare = welfare
+    return max_welfare_profile, max_welfare
 
   if is_symmetric:
     print("GAME IS SYMMETRIC. ONLY 1 SET OF RETURNS\n")
 
+  utilities = []
   for i, trial_data_directory in enumerate(os.listdir(data_directory_path)):
     print("TRIAL {}:\n".format(i))
-    get_data(trial_data_directory)
+    #Do welfare prd once after all trials
+    utilities = get_data(trial_data_directory)
+  print("Calculating alternate RRD Welfares")
+  print(welfare_runner([utilities[0], utilities[1]]))
+
   
 if __name__ == "__main__":
   app.run(main)
