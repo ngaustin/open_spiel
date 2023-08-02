@@ -18,6 +18,7 @@ ENV/
 *.npy
 *.jpg
 *.sh
+*.out
 
  # OSX specific
 .DS_Store

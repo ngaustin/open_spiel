@@ -355,3 +355,4 @@ Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env ste
 Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  2.4607451086922084e-05 28.23863277435303 0.3567775636911392 10.638542366027831 5503993 0
 Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0005306705450493609 15.291641139984131 0.4534758448600769 9.854251956939697 5716647 0
 Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0013235868929768913 17.330385398864745 0.31272167563438413 10.438453483581544 5930242 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0017221372210769915 18.905138969421387 0.434744256734848 10.163855457305909 6141285 0
