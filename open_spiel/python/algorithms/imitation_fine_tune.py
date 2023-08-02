@@ -310,23 +310,25 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         self.session.run(self._initialize_old_policy_network)  # Initialize the old policy network with the imitation_deep trained network for policy constraint if necessary
 
         if self._prev_policy_copy_from: # and is_train_best_response:  # Consider initializing it with the previous BR regardless. Might help the pooping out of the policy training
-            print("Loading previous PPO policy with minimum entropy {}".format(self.consensus_kwargs["transfer_policy_minimum_entropy"]))
             ref_object = self._prev_policy_copy_from._policy._fine_tune_module 
             ref_policy_network = getattr(ref_object, "_policy_network")
 
-            copy_weights = tf.group([
-                tf.assign(vb, va)
-                for (va, vb) in zip(ref_policy_network.variables, self._policy_network.variables)
-            ])
-            self.session.run(copy_weights)
-            self.session.run(self._save_policy_network)  # Save the network WITHOUT noise. That way, we don't compound noise over PSRO iterations
+            if self.consensus_kwargs["transfer_policy"]:
+                print("Loading previous PPO policy with minimum entropy {}".format(self.consensus_kwargs["transfer_policy_minimum_entropy"]))
+                copy_weights = tf.group([
+                    tf.assign(vb, va)
+                    for (va, vb) in zip(ref_policy_network.variables, self._policy_network.variables)
+                ])
+                self.session.run(copy_weights)
+                self.session.run(self._save_policy_network)  # Save the network WITHOUT noise. That way, we don't compound noise over PSRO iterations
 
-            # TODO: Consider adding noise here. Lots of the issues with "pooping out" has to do with the starting point it seems. Getting a variety of starting points might help to get it out of there
-            copy_weights = tf.group([
-                tf.assign(vb, va * (1 + .05 * tf.random.normal(va.shape)))
-                for (va, vb) in zip(ref_policy_network.variables, self._policy_network.variables)
-            ])
-            self.session.run(copy_weights)
+                # TODO: Consider adding noise here. Lots of the issues with "pooping out" has to do with the starting point it seems. Getting a variety of starting points might help to get it out of there
+                copy_weights = tf.group([
+                    tf.assign(vb, va * (1 + .05 * tf.random.normal(va.shape)))
+                    for (va, vb) in zip(ref_policy_network.variables, self._policy_network.variables)
+                ])
+                self.session.run(copy_weights)
+                
         else:
             print("Loading policies from offline learning: ")
             self.session.run(self._initialize_policy_network)  # Initialize the policy with the imitation_deep trained network. If not consensus_imitation, the network initialization is random
@@ -490,7 +492,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                     self._policy_constraint_weight_ph: self.policy_constraint_weight,
                     self._entropy_regularization_ph: self.entropy_regularization
                 })
-            config.actor_loss_list.append(actor_loss)
+            # config.actor_loss_list.append(actor_loss)
             config.entropy_list.append(entropy)
             config.kl_list.append(kl)
 
@@ -515,11 +517,11 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                         self._rewards_to_go_ph: rewards_to_go,
                         self._old_values_ph: old_values_subset
                     })
-            config.value_loss_list.append(value_loss)
+            # config.value_loss_list.append(value_loss)
 
     
         if (self._fine_tune_print_counter <= 0):
-            print("Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight: ", sum(config.actor_loss_list) / len(config.actor_loss_list), sum(config.value_loss_list) / len(config.value_loss_list), sum(config.entropy_list) / len(config.entropy_list), sum(config.kl_list) / len(config.kl_list), self._env_steps, self.policy_constraint_weight)
+            print("Mean PPO entropy, and kl last 20 updates...and num env steps...and policy constraint weight: ",  sum(config.entropy_list) / len(config.entropy_list), sum(config.kl_list) / len(config.kl_list), self._env_steps, self.policy_constraint_weight)
             # print("Reward scaling mean, std: ", self.reward_scaler.rs.mean, self.reward_scaler.rs.std)
             self._fine_tune_print_counter = 20
         

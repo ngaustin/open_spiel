@@ -242,6 +242,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                     rollout_returns.pop(0)
                     rollout_actions.pop(0)
                     rollout_min_returns.pop(0)
+                    cutoff_returns = [max(cutoff_returns[0], rollout_returns[0][0]), max(cutoff_returns[1], rollout_returns[0][1])]
 
                     """
                     start = time.time()
@@ -417,10 +418,12 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         rets = [np.array(rets) for rets in self._train_br_returns]
         # Reset for next iteration
         # self._train_br_returns = [[] for _ in range(self.num_players)]
+        # rets = [np.array([]) for rets in self._train_br_returns]
         return rets
 
     def get_training_regret_returns(self):
-        rets = [np.array(rets) for rets in self._train_regret_returns]
+        # rets = [np.array(rets) for rets in self._train_regret_returns]
+        rets = [np.array([]) for rets in self._train_regret_returns]
         return rets
     
     def get_pure_br_returns(self):
@@ -531,6 +534,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             print("Overall selected trajectories have mean payoff {} for both player0 and player1 and mean welfare of {}. Mean absolute difference in return is {}\n\n".format(np.mean(self._high_returns[0] + self._high_returns[1]),
                                                                                                                                            np.mean(np.array(self._high_returns[0]) + np.array(self._high_returns[1])),
                                                                                                                                            np.mean(difference)))
+            print("Additionally, stats on the length of each of the trajectories: ", np.mean([len(t) for t in self._high_return_trajectories]), np.std([len(t) for t in self._high_return_trajectories]))
         else:
             print("Overall selected trajectories have mean payoff {} for player0, {} for player1 and mean welfare of {}. Mean absolute difference in return is {}\n\n".format(np.mean(self._high_returns[0]),
                                                                                                                                            np.mean(self._high_returns[1]),
@@ -551,9 +555,9 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                     # Add the parts of the trajectory only relevant to the player (assuming it is turn based)
                     take_from_player_list = [i for i in range(self.num_players)] if symmetric else [player]
                     for p in take_from_player_list:
-                        players_turn = [i for i, t in enumerate(trajectory[:-1]) if t.observations["current_player"] == p or t.step_type == StepType.LAST]
+                        players_turn = [i for i, t in enumerate(trajectory) if t.observations["current_player"] == p or t.step_type == StepType.LAST]
                         player_trajectory = [trajectory[i] for i in players_turn]
-                        player_action_trajectory = [action_trajectory[i] for i in players_turn[:-1]]  # There is no action for the last step in the environment
+                        player_action_trajectory = [action_trajectory[i] for i in players_turn[:-1]] # There is no action on the last step
                         curr_policy.add_trajectory(player_trajectory, player_action_trajectory)
                     # raise NotImplementedError
                 else:

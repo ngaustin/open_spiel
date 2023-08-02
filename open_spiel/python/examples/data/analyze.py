@@ -220,7 +220,8 @@ def main(argv):
       Note that the utility matrix corresponding to player 0 is to be read in rows,
         and player 1's should be read column-wise.
     """
-    all_files = os.listdir(data_directory_path + relative_folder_path + "/")
+    total_path = data_directory_path + relative_folder_path + "/"
+    all_files = [f for f in os.listdir(total_path) if os.path.isfile(os.path.join(total_path, f))]
     max_social_welfare_over_iterations = []
     aggregated_kl_values = [[],[]] if not is_symmetric else [[]]
     expected_payoff_individual_players = [[], []] if not is_symmetric else [[]]
@@ -269,7 +270,7 @@ def main(argv):
           best_response_trunc = best_response_payoffs[:len(prev_player_profile)]
           print(prev_player_profile, best_response_trunc)
           best_response_expected_payoff = np.dot(prev_player_profile, best_response_trunc)
-          regret_individuals[num_player].append(max(best_response_expected_payoff - expected_payoff_individual_players[num_player][i - 1], pure_br_returns[num_player]- expected_payoff_individual_players[num_player][i - 1]))
+          regret_individuals[num_player].append(max(max(best_response_expected_payoff - expected_payoff_individual_players[num_player][i - 1], pure_br_returns[num_player]- expected_payoff_individual_players[num_player][i - 1]), 0))
           print("Individual regret vector: ", regret_individuals)
 
         #Truncation
@@ -309,7 +310,7 @@ def main(argv):
     print("GAME IS SYMMETRIC. ONLY 1 SET OF RETURNS\n")
 
   for i, trial_data_directory in enumerate(os.listdir(data_directory_path)):
-    print("TRIAL {}:\n".format(i))
+    print("TRIAL {}: {} \n".format(i, trial_data_directory))
     get_data(trial_data_directory)
   
 if __name__ == "__main__":

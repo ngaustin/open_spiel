@@ -104,6 +104,7 @@ flags.DEFINE_float("fine_tune_policy_lr", 3e-5, "policy lr")
 flags.DEFINE_float("fine_tune_value_lr", 3e-4, "value lr")
 flags.DEFINE_float("entropy_decay_duration", .9, "proportion of training steps to decay entropy regularization for")
 flags.DEFINE_float("transfer_policy_minimum_entropy", 0, "Minimum policy entropy to transfer policies across PSRO iterations")
+flags.DEFINE_bool("transfer_policy", True, "Determines whether to transfer policy across PSRO iterations")
 flags.DEFINE_integer("recovery_window", 200, "Window to calculate the recovery for PPO PSRO")
 
 # Both PPO and offline training parameters
@@ -285,6 +286,7 @@ def init_dqn_responder(sess, env):
     "fine_tune_value_lr": FLAGS.fine_tune_value_lr,
     "entropy_decay_duration": FLAGS.entropy_decay_duration, 
     "transfer_policy_minimum_entropy": FLAGS.transfer_policy_minimum_entropy,
+    "transfer_policy": FLAGS.transfer_policy,
     "consensus_imitation": FLAGS.consensus_imitation,
     "regret_calculation_steps": FLAGS.regret_calculation_steps,
     "sims_per_entry": FLAGS.sims_per_entry,

@@ -310,6 +310,7 @@ class Imitation(rl_agent.AbstractAgent):
             curr_rtg = curr_reward + self.discount_factor * curr_rtg
             rewards_to_go[i-1] = curr_rtg
 
+        # print("Available action trajectory: ", action_trajectory, len(action_trajectory), len(trajectory))
         for i in range(len(trajectory) - 1):
             if not self._is_turn_based:
                 # NOTE: If is_symmetric, then add_transition will add observations/actions from BOTH players already
@@ -376,7 +377,6 @@ class Imitation(rl_agent.AbstractAgent):
             for p in player_list:
                 o = prev_time_step.observations["info_state"][p][:]
                 r = sum(time_step.rewards) # WELFARE
-
                 transition = Transition(
                     info_state=(
                         prev_time_step.observations["info_state"][p][:]),
