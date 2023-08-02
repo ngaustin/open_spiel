@@ -78,9 +78,6 @@ def main(argv):
   graph_mode = FLAGS.graph_mode
   is_symmetric = FLAGS.is_symmetric
   num_players = FLAGS.n_players if not is_symmetric else 1
-  # For truncating printed training rets and ppo rets for readability
-  TRUNCATED_MODE = True
-  NUM_TRUNCATED_VALS = 50
 
   def graph_kl(kl_values, folder_path):
     #Graph the kl_divergence values over iterations
@@ -278,12 +275,6 @@ def main(argv):
           best_response_expected_payoff = np.dot(prev_player_profile, best_response_trunc)
           regret_individuals[num_player].append(max(max(best_response_expected_payoff - expected_payoff_individual_players[num_player][i - 1], pure_br_returns[num_player]- expected_payoff_individual_players[num_player][i - 1]), 0))
           print("Individual regret vector: ", regret_individuals)
-
-        #Truncation
-        if TRUNCATED_MODE:
-            training_returns[num_player] = training_returns[num_player][:NUM_TRUNCATED_VALS]
-            for k in range(len(ppo_training_data)):
-              ppo_training_data[num_player][k] = ppo_training_data[num_player][k][:NUM_TRUNCATED_VALS]
 
        #PPO Training Returns
         print("KL Divergence Data Individual {}: ".format(num_player), ppo_training_data[num_player][0])

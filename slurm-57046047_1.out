@@ -1,0 +1,994 @@
+Job Id listed below:
+57046049
+
+Lmod is automatically replacing "clang/2022.1.2" with "intel/2022.1.2".
+
+
+Lmod is automatically replacing "gcc/10.3.0" with "clang/2022.1.2".
+
+-------------------------------------------------------------------------------
+The following dependent module(s) are not currently loaded: gcc/10.3.0 (required by: python/3.10.4)
+-------------------------------------------------------------------------------
+
+Lmod is automatically replacing "clang/2022.1.2" with "gcc/10.3.0".
+
+/var/spool/slurmd.spool/job57046049/slurm_script: line 36: regret_lambda: command not found
+2023-08-01 23:54:29.999808: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2023-08-01 23:54:30.885396: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+WARNING:tensorflow:From /home/anrigu/.local/lib/python3.10/site-packages/tensorflow/python/compat/v2_compat.py:107: disable_resource_variables (from tensorflow.python.ops.variable_scope) is deprecated and will be removed in a future version.
+Instructions for updating:
+non-resource variables are not supported in the long term
+I0801 23:54:32.317616 23137417546624 rl_environment.py:187] Using game instance: bargaining
+Num cpu cores:  36
+ 
+ Did not find gpu device. Using cpu. 
+ 
+Agent Arguments: 
+batch_size: 32
+discount_factor: 0.99
+double: True
+epsilon_decay_duration: 1000
+hidden_layers_sizes: [50, 50]
+learn_every: 10
+learning_rate: 0.01
+min_buffer_size_to_learn: 1000
+num_actions: 121
+optimizer_str: adam
+replay_buffer_capacity: 10000
+session: <tensorflow.python.client.session.Session object at 0x150ad04ded70>
+state_representation_size: 93
+symmetric: True
+update_target_network_every: 1000
+
+
+Consensus Arguments: 
+alpha: 5.0
+batch_size: 128
+beta: 0.5
+clear_trajectories: False
+consensus_imitation: False
+consensus_oracle: trajectory_deep
+deep_network_lr: 0.0003
+device: /cpu:0
+discount: 0.99
+entropy_decay_duration: 0.8
+epochs_ppo: 5
+eps_clip: 0.1
+eps_clip_value: 0.5
+eta: 0.05
+fine_tune: True
+fine_tune_policy_lr: 3e-05
+fine_tune_value_lr: 0.0003
+hidden_layer_size: 50
+imitation_mode: prob_action
+joint_action: False
+max_buffer_size_fine_tune: 100000
+min_buffer_size_fine_tune: 20000
+minibatches_ppo: 50
+minimum_entropy: 0.8
+n_hidden_layers: 2
+num_players: 2
+num_simulations_fit: 1
+perturb_all: False
+policy_constraint: 0.1
+policy_constraint_steps: 20
+ppo_entropy_regularization: 0.05
+pretrained_policy_steps: 500
+recovery_window: 1000
+regret_calculation_steps: 200000
+rewards_joint: False
+session: <tensorflow.python.client.session.Session object at 0x150ad04ded70>
+sims_per_entry: 5000
+state_representation_size: 93
+steps_fine_tune: 2000000
+symmetric: True
+tau: 0.001
+training_epochs: 1
+training_steps: 1000
+transfer_policy_minimum_entropy: 0.0
+update_target_every: 1
+
+
+2023-08-01 23:54:32.631168: I tensorflow/compiler/mlir/mlir_graph_optimization_pass.cc:353] MLIR V1 optimization pass is not enabled
+2023-08-01 23:54:32.907184: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_2/bias_2/Adam_1/Assign' id:1079 op device:{requested: '', assigned: ''} def:{{{node mlp_2/bias_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_2/bias_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_2/bias_2/Adam_1, mlp_2/bias_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Using 5000 sims per entry.
+Rectifier : 
+Perturbating oracle outputs : False
+Sampling from marginals : True
+Using prd_collab as strategy method.
+Using probabilistic as training strategy selector.
+Estimating current strategies:  (0, 0)
+Current player 0 and current strategies (0, 0) took 2.68 seconds to finish estimate with resulting utilities: [1.8636 1.9492]
+Exited RRD with total regret 0.0 that was less than regret lambda 0.2 after 0 iterations 
+
+ Metagame display:
+Player 0 Payoff matrix: 
+
+           0      
+    0     1.91      
+
+ 
+
+Player 1 Payoff matrix: 
+
+           0      
+    0     1.91      
+
+ 
+
+Social Welfare Sum Matrix: 
+
+           0      
+    0     3.81      
+
+ 
+
+Iteration : 0
+Time so far: 0.00019598007202148438
+Approximating Best Response
+Training best response:  True 0.1
+rtg values check:  (?,) (?, 1)
+2023-08-01 23:54:36.685106: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_6/weights_2/Adam_1/Assign' id:1941 op device:{requested: '', assigned: ''} def:{{{node mlp_6/weights_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_6/weights_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_6/weights_2/Adam_1, mlp_6/weights_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Setting to fine tune mode: 
+Loading policies from offline learning: 
+
+Training each of the policies for 2000000 steps. 
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.24732008278369905 9.744935894012452 4.765791416168213 0.00090534831979312 20003 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.22061258000986916 9.82934802827381 4.647881067366827 0.1584925744663148 420049 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.1846193690488978 8.303806516600819 4.445638690343717 0.38127813598087124 820078 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.15185792822329724 7.462203125875504 4.237022332676122 0.6712863306340295 1220114 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.1228305159918504 7.00540492799547 4.084858960869871 1.0379810396392892 1620154 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.10126264547505001 6.774033212189627 3.9514351032748083 1.474358939050782 2020187 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.08666598169856574 6.661317050555521 3.827695782716609 1.9486007003649042 2420230 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.07625657148025138 6.5990254611833725 3.7155014582559573 2.433565569169372 2820265 0
+
+
+Pure best response payoff estimated to be 7.5182 for player 0. 
+No returns found for player 1. Defaulting to 0 for pure best response estimate
+
+
+
+Updating Empirical Game
+Estimating current strategies:  (1, 0)
+Current player 0 and current strategies (1, 0) took 6.21 seconds to finish estimate with resulting utilities: [7.3762 2.8488]
+Estimating current strategies:  (1, 1)
+Current player 0 and current strategies (1, 1) took 9.96 seconds to finish estimate with resulting utilities: [4.4978 4.8092]
+Computing meta_strategies
+Exited RRD with total regret 0.19994536639745775 that was less than regret lambda 0.2 after 1164 iterations 
+NEW LAMBDA 0.19310344827586207
+New explore mss minimum:  0.0
+
+ Metagame display:
+Player 0 Payoff matrix: 
+
+           0              1      
+    0     1.91           2.85      
+    1     7.38           4.65      
+
+ 
+
+Player 1 Payoff matrix: 
+
+           0              1      
+    0     1.91           7.38      
+    1     2.85           4.65      
+
+ 
+
+Social Welfare Sum Matrix: 
+
+           0              1      
+    0     3.81          10.22      
+    1    10.22           9.31      
+
+ 
+
+Metagame probabilities: 
+Player #0: 0.0503  0.9497  
+Player #1: 0.0503  0.9497  
+Iteration : 1
+Time so far: 5233.860857486725
+Approximating Best Response
+Training best response:  True 0.095
+rtg values check:  (?,) (?, 1)
+2023-08-02 01:21:50.939643: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_13/weights_2/Adam_1/Assign' id:3851 op device:{requested: '', assigned: ''} def:{{{node mlp_13/weights_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_13/weights_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_13/weights_2/Adam_1, mlp_13/weights_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Setting to fine tune mode: 
+Loading previous PPO policy with minimum entropy 0.0
+
+Training each of the policies for 2000000 steps. 
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.07718237914722151 6.72953760657512 3.712870888307061 2.4512850753776485 20005 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.09199328870731004 6.992493690679103 3.697880364936075 2.742268286141557 420049 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.09853309265409525 6.66428594982231 3.681778660449353 3.017198675209535 820093 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.09917597628502857 6.381268267112203 3.6581544354410456 3.2799052228374546 1220135 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.09552416633311156 6.120479967143084 3.631352248707333 3.5185533063316576 1620172 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0903374368509601 5.899752006254905 3.592161936996397 3.753066172427522 2020226 0
+
+
+Pure best response payoff estimated to be 6.125 for player 0. 
+No returns found for player 1. Defaulting to 0 for pure best response estimate
+
+
+
+Updating Empirical Game
+Estimating current strategies:  (2, 0)
+Current player 0 and current strategies (2, 0) took 5.53 seconds to finish estimate with resulting utilities: [7.2752 3.4918]
+Estimating current strategies:  (2, 1)
+Current player 0 and current strategies (2, 1) took 9.12 seconds to finish estimate with resulting utilities: [5.944 4.85 ]
+Estimating current strategies:  (2, 2)
+Current player 0 and current strategies (2, 2) took 8.75 seconds to finish estimate with resulting utilities: [6.096  5.3784]
+Computing meta_strategies
+Exited RRD with total regret 0.1930990725751247 that was less than regret lambda 0.19310344827586207 after 2372 iterations 
+NEW LAMBDA 0.18620689655172412
+New explore mss minimum:  0.0
+
+ Metagame display:
+Player 0 Payoff matrix: 
+
+           0              1              2      
+    0     1.91           2.85           3.49      
+    1     7.38           4.65           4.85      
+    2     7.28           5.94           5.74      
+
+ 
+
+Player 1 Payoff matrix: 
+
+           0              1              2      
+    0     1.91           7.38           7.28      
+    1     2.85           4.65           5.94      
+    2     3.49           4.85           5.74      
+
+ 
+
+Social Welfare Sum Matrix: 
+
+           0              1              2      
+    0     3.81          10.22          10.77      
+    1    10.22           9.31          10.79      
+    2    10.77          10.79          11.47      
+
+ 
+
+Metagame probabilities: 
+Player #0: 0.0017  0.1001  0.8982  
+Player #1: 0.0017  0.1001  0.8982  
+Iteration : 2
+Time so far: 10282.44222354889
+Approximating Best Response
+Training best response:  True 0.09000000000000001
+rtg values check:  (?,) (?, 1)
+2023-08-02 02:45:59.417233: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_20/weights_2/Adam_1/Assign' id:5841 op device:{requested: '', assigned: ''} def:{{{node mlp_20/weights_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_20/weights_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_20/weights_2/Adam_1, mlp_20/weights_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Setting to fine tune mode: 
+Loading previous PPO policy with minimum entropy 0.0
+
+Training each of the policies for 2000000 steps. 
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.08650126595726114 5.829068358616479 3.550503724514287 3.937253931724097 20002 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.09307477492772337 6.000508484105483 3.537475243264202 4.042391931835589 420052 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.09393738682528203 5.818144193859802 3.507860485606369 4.15910095733555 820083 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.09138201371209001 5.644172323310637 3.460488760359235 4.303130713933046 1220126 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.08684204209185202 5.475411572498558 3.3939042489437226 4.484623536209189 1620160 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.08210119047757453 5.297222226575888 3.31870942056013 4.699327356998065 2020200 0
+
+
+Pure best response payoff estimated to be 7.182 for player 0. 
+No returns found for player 1. Defaulting to 0 for pure best response estimate
+
+
+
+Updating Empirical Game
+Estimating current strategies:  (3, 0)
+Current player 0 and current strategies (3, 0) took 6.24 seconds to finish estimate with resulting utilities: [7.208 3.018]
+Estimating current strategies:  (3, 1)
+Current player 0 and current strategies (3, 1) took 9.39 seconds to finish estimate with resulting utilities: [6.1376 5.252 ]
+Estimating current strategies:  (3, 2)
+Current player 0 and current strategies (3, 2) took 6.11 seconds to finish estimate with resulting utilities: [7.2126 6.4816]
+Estimating current strategies:  (3, 3)
+Current player 0 and current strategies (3, 3) took 7.82 seconds to finish estimate with resulting utilities: [6.0754 5.428 ]
+Computing meta_strategies
+Exited RRD with total regret 0.18619695543333137 that was less than regret lambda 0.18620689655172412 after 2208 iterations 
+NEW LAMBDA 0.1793103448275862
+New explore mss minimum:  0.0
+
+ Metagame display:
+Player 0 Payoff matrix: 
+
+           0              1              2              3      
+    0     1.91           2.85           3.49           3.02      
+    1     7.38           4.65           4.85           5.25      
+    2     7.28           5.94           5.74           6.48      
+    3     7.21           6.14           7.21           5.75      
+
+ 
+
+Player 1 Payoff matrix: 
+
+           0              1              2              3      
+    0     1.91           7.38           7.28           7.21      
+    1     2.85           4.65           5.94           6.14      
+    2     3.49           4.85           5.74           7.21      
+    3     3.02           5.25           6.48           5.75      
+
+ 
+
+Social Welfare Sum Matrix: 
+
+           0              1              2              3      
+    0     3.81          10.22          10.77          10.23      
+    1    10.22           9.31          10.79          11.39      
+    2    10.77          10.79          11.47          13.69      
+    3    10.23          11.39          13.69          11.50      
+
+ 
+
+Metagame probabilities: 
+Player #0: 0.0004  0.0359  0.3736  0.5901  
+Player #1: 0.0004  0.0359  0.3736  0.5901  
+Iteration : 3
+Time so far: 16389.65695476532
+Approximating Best Response
+Training best response:  True 0.085
+rtg values check:  (?,) (?, 1)
+2023-08-02 04:27:46.728664: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_27/weights_2/Adam_1/Assign' id:7831 op device:{requested: '', assigned: ''} def:{{{node mlp_27/weights_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_27/weights_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_27/weights_2/Adam_1, mlp_27/weights_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Setting to fine tune mode: 
+Loading previous PPO policy with minimum entropy 0.0
+
+Training each of the policies for 2000000 steps. 
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.07831028939255232 5.219790832517008 3.2416635115941363 4.920708950704457 20005 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.08042127928931414 5.43294726729992 3.196728794838316 5.113029503669656 420044 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.08053532283321717 5.421698941967704 3.154731042362286 5.293734590827644 820085 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.07915592790837207 5.37367411459962 3.121420961155739 5.45144757198152 1220129 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.07657958144363437 5.3250472855359705 3.0887570498291583 5.604455143054573 1620168 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0736669084519631 5.271799570795881 3.0563942877817354 5.758168013996231 2020203 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.07099794837882495 5.207217172302874 3.023971805179933 5.916967595506931 2420246 0
+Recovering previous policy with expected return of 6.6223776223776225. Long term value was 6.6768 and short term was 6.596.
+
+
+Pure best response payoff estimated to be 6.862 for player 0. 
+No returns found for player 1. Defaulting to 0 for pure best response estimate
+
+
+
+Updating Empirical Game
+Estimating current strategies:  (4, 0)
+Current player 0 and current strategies (4, 0) took 6.27 seconds to finish estimate with resulting utilities: [7.325  3.0288]
+Estimating current strategies:  (4, 1)
+Current player 0 and current strategies (4, 1) took 9.31 seconds to finish estimate with resulting utilities: [6.182  5.2872]
+Estimating current strategies:  (4, 2)
+Current player 0 and current strategies (4, 2) took 6.12 seconds to finish estimate with resulting utilities: [7.2196 6.4568]
+Estimating current strategies:  (4, 3)
+Current player 0 and current strategies (4, 3) took 7.91 seconds to finish estimate with resulting utilities: [6.0948 5.416 ]
+Estimating current strategies:  (4, 4)
+Current player 0 and current strategies (4, 4) took 7.76 seconds to finish estimate with resulting utilities: [6.141  5.4532]
+Computing meta_strategies
+Exited RRD with total regret 0.17926654273101228 that was less than regret lambda 0.1793103448275862 after 3361 iterations 
+NEW LAMBDA 0.1724137931034483
+New explore mss minimum:  0.0
+
+ Metagame display:
+Player 0 Payoff matrix: 
+
+           0              1              2              3              4      
+    0     1.91           2.85           3.49           3.02           3.03      
+    1     7.38           4.65           4.85           5.25           5.29      
+    2     7.28           5.94           5.74           6.48           6.46      
+    3     7.21           6.14           7.21           5.75           5.42      
+    4     7.33           6.18           7.22           6.09           5.80      
+
+ 
+
+Player 1 Payoff matrix: 
+
+           0              1              2              3              4      
+    0     1.91           7.38           7.28           7.21           7.33      
+    1     2.85           4.65           5.94           6.14           6.18      
+    2     3.49           4.85           5.74           7.21           7.22      
+    3     3.02           5.25           6.48           5.75           6.09      
+    4     3.03           5.29           6.46           5.42           5.80      
+
+ 
+
+Social Welfare Sum Matrix: 
+
+           0              1              2              3              4      
+    0     3.81          10.22          10.77          10.23          10.35      
+    1    10.22           9.31          10.79          11.39          11.47      
+    2    10.77          10.79          11.47          13.69          13.68      
+    3    10.23          11.39          13.69          11.50          11.51      
+    4    10.35          11.47          13.68          11.51          11.59      
+
+ 
+
+Metagame probabilities: 
+Player #0: 0.0001  0.0082  0.3161  0.2122  0.4634  
+Player #1: 0.0001  0.0082  0.3161  0.2122  0.4634  
+Iteration : 4
+Time so far: 22332.989352226257
+Approximating Best Response
+Training best response:  True 0.08000000000000002
+rtg values check:  (?,) (?, 1)
+2023-08-02 06:06:50.179107: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_34/weights_2/Adam_1/Assign' id:9821 op device:{requested: '', assigned: ''} def:{{{node mlp_34/weights_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_34/weights_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_34/weights_2/Adam_1, mlp_34/weights_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Setting to fine tune mode: 
+Loading previous PPO policy with minimum entropy 0.0
+
+Training each of the policies for 2000000 steps. 
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.07053150296713674 5.247113767485495 3.014659647344358 5.957031364301157 20002 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.07248445864929523 5.43933270807248 2.9872787197962776 6.07314479945729 420041 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.07302978144137678 5.449511888101834 2.9622272421641904 6.187566979702068 820083 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0721874632851692 5.407807873112694 2.9414621193497896 6.295538068683762 1220115 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.07037982681849794 5.3430945020597145 2.9249682132416686 6.393006289248664 1620150 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.06830090355792733 5.278083170270841 2.9080693306219123 6.493776419603663 2020186 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0663659292021835 5.21994575952833 2.8916312407911495 6.595684562006939 2420219 0
+
+
+Pure best response payoff estimated to be 6.7698 for player 0. 
+No returns found for player 1. Defaulting to 0 for pure best response estimate
+
+
+
+Updating Empirical Game
+Estimating current strategies:  (5, 0)
+Current player 0 and current strategies (5, 0) took 6.71 seconds to finish estimate with resulting utilities: [6.7264 2.72  ]
+Estimating current strategies:  (5, 1)
+Current player 0 and current strategies (5, 1) took 9.08 seconds to finish estimate with resulting utilities: [5.9912 5.8716]
+Estimating current strategies:  (5, 2)
+Current player 0 and current strategies (5, 2) took 6.78 seconds to finish estimate with resulting utilities: [6.7638 6.359 ]
+Estimating current strategies:  (5, 3)
+Current player 0 and current strategies (5, 3) took 7.33 seconds to finish estimate with resulting utilities: [6.1528 5.8876]
+Estimating current strategies:  (5, 4)
+Current player 0 and current strategies (5, 4) took 7.23 seconds to finish estimate with resulting utilities: [6.1436 5.9422]
+Estimating current strategies:  (5, 5)
+Current player 0 and current strategies (5, 5) took 7.18 seconds to finish estimate with resulting utilities: [6.755 5.856]
+Computing meta_strategies
+Exited RRD with total regret 0.17240771498542173 that was less than regret lambda 0.1724137931034483 after 6401 iterations 
+NEW LAMBDA 0.16551724137931034
+New explore mss minimum:  0.0
+
+ Metagame display:
+Player 0 Payoff matrix: 
+
+           0              1              2              3              4              5      
+    0     1.91           2.85           3.49           3.02           3.03           2.72      
+    1     7.38           4.65           4.85           5.25           5.29           5.87      
+    2     7.28           5.94           5.74           6.48           6.46           6.36      
+    3     7.21           6.14           7.21           5.75           5.42           5.89      
+    4     7.33           6.18           7.22           6.09           5.80           5.94      
+    5     6.73           5.99           6.76           6.15           6.14           6.31      
+
+ 
+
+Player 1 Payoff matrix: 
+
+           0              1              2              3              4              5      
+    0     1.91           7.38           7.28           7.21           7.33           6.73      
+    1     2.85           4.65           5.94           6.14           6.18           5.99      
+    2     3.49           4.85           5.74           7.21           7.22           6.76      
+    3     3.02           5.25           6.48           5.75           6.09           6.15      
+    4     3.03           5.29           6.46           5.42           5.80           6.14      
+    5     2.72           5.87           6.36           5.89           5.94           6.31      
+
+ 
+
+Social Welfare Sum Matrix: 
+
+           0              1              2              3              4              5      
+    0     3.81          10.22          10.77          10.23          10.35           9.45      
+    1    10.22           9.31          10.79          11.39          11.47          11.86      
+    2    10.77          10.79          11.47          13.69          13.68          13.12      
+    3    10.23          11.39          13.69          11.50          11.51          12.04      
+    4    10.35          11.47          13.68          11.51          11.59          12.09      
+    5     9.45          11.86          13.12          12.04          12.09          12.61      
+
+ 
+
+Metagame probabilities: 
+Player #0: 0.0001  0.0007  0.2357  0.0831  0.2441  0.4362  
+Player #1: 0.0001  0.0007  0.2357  0.0831  0.2441  0.4362  
+Iteration : 5
+Time so far: 28316.724624156952
+Approximating Best Response
+Training best response:  True 0.07500000000000001
+rtg values check:  (?,) (?, 1)
+2023-08-02 07:46:34.165316: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_41/weights_2/Adam_1/Assign' id:11811 op device:{requested: '', assigned: ''} def:{{{node mlp_41/weights_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_41/weights_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_41/weights_2/Adam_1, mlp_41/weights_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Setting to fine tune mode: 
+Loading previous PPO policy with minimum entropy 0.0
+
+Training each of the policies for 2000000 steps. 
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.06585923064549408 5.252848526447538 2.8843716259608194 6.6344611583986515 20001 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.06706521536514964 5.388219808615171 2.866803450364333 6.731903336871639 420045 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.06751502270119959 5.36564430994774 2.8567470098609355 6.806207038660598 820083 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.06702446759871922 5.3633321349171625 2.849958504732104 6.8672178935815085 1220123 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.06562258903035041 5.357678519537751 2.8419179994959225 6.930663175027183 1620172 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.06388966487255744 5.352562109966801 2.829934616415468 7.001093565909876 2020205 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.062197250456501284 5.348067873732249 2.811138554763794 7.085151501574561 2420246 0
+Recovering previous policy with expected return of 6.676323676323676. Long term value was 6.6162 and short term was 6.74.
+
+
+Pure best response payoff estimated to be 7.0032 for player 0. 
+No returns found for player 1. Defaulting to 0 for pure best response estimate
+
+
+
+Updating Empirical Game
+Estimating current strategies:  (6, 0)
+Current player 0 and current strategies (6, 0) took 7.0 seconds to finish estimate with resulting utilities: [6.649  2.8732]
+Estimating current strategies:  (6, 1)
+Current player 0 and current strategies (6, 1) took 9.39 seconds to finish estimate with resulting utilities: [6.0658 5.939 ]
+Estimating current strategies:  (6, 2)
+Current player 0 and current strategies (6, 2) took 6.93 seconds to finish estimate with resulting utilities: [6.7712 6.367 ]
+Estimating current strategies:  (6, 3)
+Current player 0 and current strategies (6, 3) took 7.65 seconds to finish estimate with resulting utilities: [6.1684 5.8682]
+Estimating current strategies:  (6, 4)
+Current player 0 and current strategies (6, 4) took 7.6 seconds to finish estimate with resulting utilities: [6.127  5.9282]
+Estimating current strategies:  (6, 5)
+Current player 0 and current strategies (6, 5) took 7.53 seconds to finish estimate with resulting utilities: [6.7882 5.8546]
+Estimating current strategies:  (6, 6)
+Current player 0 and current strategies (6, 6) took 7.31 seconds to finish estimate with resulting utilities: [6.7802 5.9154]
+Computing meta_strategies
+Exited RRD with total regret 0.16551026163417504 that was less than regret lambda 0.16551724137931034 after 8372 iterations 
+NEW LAMBDA 0.1586206896551724
+New explore mss minimum:  0.0
+
+ Metagame display:
+Player 0 Payoff matrix: 
+
+           0              1              2              3              4              5              6      
+    0     1.91           2.85           3.49           3.02           3.03           2.72           2.87      
+    1     7.38           4.65           4.85           5.25           5.29           5.87           5.94      
+    2     7.28           5.94           5.74           6.48           6.46           6.36           6.37      
+    3     7.21           6.14           7.21           5.75           5.42           5.89           5.87      
+    4     7.33           6.18           7.22           6.09           5.80           5.94           5.93      
+    5     6.73           5.99           6.76           6.15           6.14           6.31           5.85      
+    6     6.65           6.07           6.77           6.17           6.13           6.79           6.35      
+
+ 
+
+Player 1 Payoff matrix: 
+
+           0              1              2              3              4              5              6      
+    0     1.91           7.38           7.28           7.21           7.33           6.73           6.65      
+    1     2.85           4.65           5.94           6.14           6.18           5.99           6.07      
+    2     3.49           4.85           5.74           7.21           7.22           6.76           6.77      
+    3     3.02           5.25           6.48           5.75           6.09           6.15           6.17      
+    4     3.03           5.29           6.46           5.42           5.80           6.14           6.13      
+    5     2.72           5.87           6.36           5.89           5.94           6.31           6.79      
+    6     2.87           5.94           6.37           5.87           5.93           5.85           6.35      
+
+ 
+
+Social Welfare Sum Matrix: 
+
+           0              1              2              3              4              5              6      
+    0     3.81          10.22          10.77          10.23          10.35           9.45           9.52      
+    1    10.22           9.31          10.79          11.39          11.47          11.86          12.00      
+    2    10.77          10.79          11.47          13.69          13.68          13.12          13.14      
+    3    10.23          11.39          13.69          11.50          11.51          12.04          12.04      
+    4    10.35          11.47          13.68          11.51          11.59          12.09          12.06      
+    5     9.45          11.86          13.12          12.04          12.09          12.61          12.64      
+    6     9.52          12.00          13.14          12.04          12.06          12.64          12.70      
+
+ 
+
+Metagame probabilities: 
+Player #0: 0.0001  0.0003  0.1603  0.0284  0.0785  0.0688  0.6636  
+Player #1: 0.0001  0.0003  0.1603  0.0284  0.0785  0.0688  0.6636  
+Iteration : 6
+Time so far: 34485.1382060051
+Approximating Best Response
+Training best response:  True 0.06999999999999999
+rtg values check:  (?,) (?, 1)
+2023-08-02 09:29:22.828775: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_48/weights_2/Adam_1/Assign' id:13801 op device:{requested: '', assigned: ''} def:{{{node mlp_48/weights_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_48/weights_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_48/weights_2/Adam_1, mlp_48/weights_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Setting to fine tune mode: 
+Loading previous PPO policy with minimum entropy 0.0
+
+Training each of the policies for 2000000 steps. 
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.06201216946290725 5.39445570441709 2.8062648975880773 7.1046105368210535 20001 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.06330286910734746 5.52918039954602 2.7950665499196803 7.172026195188869 420046 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.06383930844666678 5.503293122662705 2.7908783302499307 7.217663086915539 820093 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.06349920242202373 5.4918032286793945 2.786823275223997 7.265548948674923 1220130 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.062365393054779956 5.477625437234517 2.781166722562959 7.313485541087872 1620162 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.06094189302615302 5.463725796432629 2.7738889096771526 7.364585288499262 2020193 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.05956737503468091 5.453439195450711 2.764982253790447 7.418823184886606 2420228 0
+
+
+Pure best response payoff estimated to be 7.6556 for player 0. 
+No returns found for player 1. Defaulting to 0 for pure best response estimate
+
+
+
+Updating Empirical Game
+Estimating current strategies:  (7, 0)
+Current player 0 and current strategies (7, 0) took 7.93 seconds to finish estimate with resulting utilities: [6.3044 2.4264]
+Estimating current strategies:  (7, 1)
+Current player 0 and current strategies (7, 1) took 11.4 seconds to finish estimate with resulting utilities: [6.0084 4.5552]
+Estimating current strategies:  (7, 2)
+Current player 0 and current strategies (7, 2) took 8.82 seconds to finish estimate with resulting utilities: [6.628  5.4838]
+Estimating current strategies:  (7, 3)
+Current player 0 and current strategies (7, 3) took 10.27 seconds to finish estimate with resulting utilities: [5.5568 4.644 ]
+Estimating current strategies:  (7, 4)
+Current player 0 and current strategies (7, 4) took 10.2 seconds to finish estimate with resulting utilities: [5.562 4.677]
+Estimating current strategies:  (7, 5)
+Current player 0 and current strategies (7, 5) took 5.81 seconds to finish estimate with resulting utilities: [8.0142 5.7658]
+Estimating current strategies:  (7, 6)
+Current player 0 and current strategies (7, 6) took 5.75 seconds to finish estimate with resulting utilities: [8.0002 5.8034]
+Estimating current strategies:  (7, 7)
+Current player 0 and current strategies (7, 7) took 10.55 seconds to finish estimate with resulting utilities: [4.8838 4.677 ]
+Computing meta_strategies
+Exited RRD with total regret 0.1586110601323263 that was less than regret lambda 0.1586206896551724 after 5548 iterations 
+NEW LAMBDA 0.15172413793103448
+New explore mss minimum:  0.0
+
+ Metagame display:
+Player 0 Payoff matrix: 
+
+           0              1              2              3              4              5              6              7      
+    0     1.91           2.85           3.49           3.02           3.03           2.72           2.87           2.43      
+    1     7.38           4.65           4.85           5.25           5.29           5.87           5.94           4.56      
+    2     7.28           5.94           5.74           6.48           6.46           6.36           6.37           5.48      
+    3     7.21           6.14           7.21           5.75           5.42           5.89           5.87           4.64      
+    4     7.33           6.18           7.22           6.09           5.80           5.94           5.93           4.68      
+    5     6.73           5.99           6.76           6.15           6.14           6.31           5.85           5.77      
+    6     6.65           6.07           6.77           6.17           6.13           6.79           6.35           5.80      
+    7     6.30           6.01           6.63           5.56           5.56           8.01           8.00           4.78      
+
+ 
+
+Player 1 Payoff matrix: 
+
+           0              1              2              3              4              5              6              7      
+    0     1.91           7.38           7.28           7.21           7.33           6.73           6.65           6.30      
+    1     2.85           4.65           5.94           6.14           6.18           5.99           6.07           6.01      
+    2     3.49           4.85           5.74           7.21           7.22           6.76           6.77           6.63      
+    3     3.02           5.25           6.48           5.75           6.09           6.15           6.17           5.56      
+    4     3.03           5.29           6.46           5.42           5.80           6.14           6.13           5.56      
+    5     2.72           5.87           6.36           5.89           5.94           6.31           6.79           8.01      
+    6     2.87           5.94           6.37           5.87           5.93           5.85           6.35           8.00      
+    7     2.43           4.56           5.48           4.64           4.68           5.77           5.80           4.78      
+
+ 
+
+Social Welfare Sum Matrix: 
+
+           0              1              2              3              4              5              6              7      
+    0     3.81          10.22          10.77          10.23          10.35           9.45           9.52           8.73      
+    1    10.22           9.31          10.79          11.39          11.47          11.86          12.00          10.56      
+    2    10.77          10.79          11.47          13.69          13.68          13.12          13.14          12.11      
+    3    10.23          11.39          13.69          11.50          11.51          12.04          12.04          10.20      
+    4    10.35          11.47          13.68          11.51          11.59          12.09          12.06          10.24      
+    5     9.45          11.86          13.12          12.04          12.09          12.61          12.64          13.78      
+    6     9.52          12.00          13.14          12.04          12.06          12.64          12.70          13.80      
+    7     8.73          10.56          12.11          10.20          10.24          13.78          13.80           9.56      
+
+ 
+
+Metagame probabilities: 
+Player #0: 0.0001  0.0009  0.0745  0.0084  0.0135  0.0977  0.2875  0.5173  
+Player #1: 0.0001  0.0009  0.0745  0.0084  0.0135  0.0977  0.2875  0.5173  
+Iteration : 7
+Time so far: 41083.9281835556
+Approximating Best Response
+Training best response:  True 0.065
+rtg values check:  (?,) (?, 1)
+2023-08-02 11:19:21.743454: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_55/weights_2/Adam_1/Assign' id:15791 op device:{requested: '', assigned: ''} def:{{{node mlp_55/weights_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_55/weights_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_55/weights_2/Adam_1, mlp_55/weights_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Setting to fine tune mode: 
+Loading previous PPO policy with minimum entropy 0.0
+
+Training each of the policies for 2000000 steps. 
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.059293463466645976 5.477387563613328 2.7613505841385235 7.435512504454402 20001 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.061098478111417096 5.578142043087218 2.7611852813826667 7.46116786987123 420044 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.061998106916110476 5.5605129883859465 2.7614978379270303 7.488707809745006 820088 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.062001632240659695 5.532139496676465 2.7590340162845366 7.525451082966465 1220128 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.061291559324967826 5.488529829407732 2.7551823888222375 7.566807046618348 1620167 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.060293056286794794 5.4330668129969615 2.743556876961066 7.615607788014203 2020200 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.059325780556890514 5.376833550453186 2.723682010221481 7.6677120501387455 2420245 0
+
+
+Pure best response payoff estimated to be 6.7806 for player 0. 
+No returns found for player 1. Defaulting to 0 for pure best response estimate
+
+
+
+Updating Empirical Game
+Estimating current strategies:  (8, 0)
+Current player 0 and current strategies (8, 0) took 6.74 seconds to finish estimate with resulting utilities: [7.0902 3.0912]
+Estimating current strategies:  (8, 1)
+Current player 0 and current strategies (8, 1) took 10.02 seconds to finish estimate with resulting utilities: [5.9354 5.289 ]
+Estimating current strategies:  (8, 2)
+Current player 0 and current strategies (8, 2) took 8.37 seconds to finish estimate with resulting utilities: [6.584  6.2196]
+Estimating current strategies:  (8, 3)
+Current player 0 and current strategies (8, 3) took 8.57 seconds to finish estimate with resulting utilities: [6.4622 6.4512]
+Estimating current strategies:  (8, 4)
+Current player 0 and current strategies (8, 4) took 8.45 seconds to finish estimate with resulting utilities: [6.4702 6.5288]
+Estimating current strategies:  (8, 5)
+Current player 0 and current strategies (8, 5) took 5.17 seconds to finish estimate with resulting utilities: [7.9484 6.6876]
+Estimating current strategies:  (8, 6)
+Current player 0 and current strategies (8, 6) took 5.14 seconds to finish estimate with resulting utilities: [7.9374 6.6904]
+Estimating current strategies:  (8, 7)
+Current player 0 and current strategies (8, 7) took 7.99 seconds to finish estimate with resulting utilities: [5.8546 6.6772]
+Estimating current strategies:  (8, 8)
+Current player 0 and current strategies (8, 8) took 6.17 seconds to finish estimate with resulting utilities: [6.872  6.6114]
+Computing meta_strategies
+Exited RRD with total regret 0.15168979370548996 that was less than regret lambda 0.15172413793103448 after 6051 iterations 
+NEW LAMBDA 0.14482758620689656
+New explore mss minimum:  0.0
+
+ Metagame display:
+Player 0 Payoff matrix: 
+
+           0              1              2              3              4              5              6              7              8      
+    0     1.91           2.85           3.49           3.02           3.03           2.72           2.87           2.43           3.09      
+    1     7.38           4.65           4.85           5.25           5.29           5.87           5.94           4.56           5.29      
+    2     7.28           5.94           5.74           6.48           6.46           6.36           6.37           5.48           6.22      
+    3     7.21           6.14           7.21           5.75           5.42           5.89           5.87           4.64           6.45      
+    4     7.33           6.18           7.22           6.09           5.80           5.94           5.93           4.68           6.53      
+    5     6.73           5.99           6.76           6.15           6.14           6.31           5.85           5.77           6.69      
+    6     6.65           6.07           6.77           6.17           6.13           6.79           6.35           5.80           6.69      
+    7     6.30           6.01           6.63           5.56           5.56           8.01           8.00           4.78           6.68      
+    8     7.09           5.94           6.58           6.46           6.47           7.95           7.94           5.85           6.74      
+
+ 
+
+Player 1 Payoff matrix: 
+
+           0              1              2              3              4              5              6              7              8      
+    0     1.91           7.38           7.28           7.21           7.33           6.73           6.65           6.30           7.09      
+    1     2.85           4.65           5.94           6.14           6.18           5.99           6.07           6.01           5.94      
+    2     3.49           4.85           5.74           7.21           7.22           6.76           6.77           6.63           6.58      
+    3     3.02           5.25           6.48           5.75           6.09           6.15           6.17           5.56           6.46      
+    4     3.03           5.29           6.46           5.42           5.80           6.14           6.13           5.56           6.47      
+    5     2.72           5.87           6.36           5.89           5.94           6.31           6.79           8.01           7.95      
+    6     2.87           5.94           6.37           5.87           5.93           5.85           6.35           8.00           7.94      
+    7     2.43           4.56           5.48           4.64           4.68           5.77           5.80           4.78           5.85      
+    8     3.09           5.29           6.22           6.45           6.53           6.69           6.69           6.68           6.74      
+
+ 
+
+Social Welfare Sum Matrix: 
+
+           0              1              2              3              4              5              6              7              8      
+    0     3.81          10.22          10.77          10.23          10.35           9.45           9.52           8.73          10.18      
+    1    10.22           9.31          10.79          11.39          11.47          11.86          12.00          10.56          11.22      
+    2    10.77          10.79          11.47          13.69          13.68          13.12          13.14          12.11          12.80      
+    3    10.23          11.39          13.69          11.50          11.51          12.04          12.04          10.20          12.91      
+    4    10.35          11.47          13.68          11.51          11.59          12.09          12.06          10.24          13.00      
+    5     9.45          11.86          13.12          12.04          12.09          12.61          12.64          13.78          14.64      
+    6     9.52          12.00          13.14          12.04          12.06          12.64          12.70          13.80          14.63      
+    7     8.73          10.56          12.11          10.20          10.24          13.78          13.80           9.56          12.53      
+    8    10.18          11.22          12.80          12.91          13.00          14.64          14.63          12.53          13.48      
+
+ 
+
+Metagame probabilities: 
+Player #0: 0.0001  0.0001  0.0118  0.0055  0.0095  0.0432  0.0852  0.1342  0.7104  
+Player #1: 0.0001  0.0001  0.0118  0.0055  0.0095  0.0432  0.0852  0.1342  0.7104  
+Iteration : 8
+Time so far: 47235.3113553524
+Approximating Best Response
+Training best response:  True 0.06
+rtg values check:  (?,) (?, 1)
+2023-08-02 13:01:53.417077: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_62/weights_2/Adam_1/Assign' id:17781 op device:{requested: '', assigned: ''} def:{{{node mlp_62/weights_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_62/weights_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_62/weights_2/Adam_1, mlp_62/weights_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Setting to fine tune mode: 
+Loading previous PPO policy with minimum entropy 0.0
+
+Training each of the policies for 2000000 steps. 
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.05913658514144821 5.392174976246494 2.716935295186507 7.684553321631989 20005 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.060402387442760185 5.398355313374518 2.7161552643915368 7.7216096122234985 420039 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.06090841180621723 5.320911874005261 2.7156450699209937 7.7576523650319675 820071 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.06075469420506348 5.2439675049475385 2.714718659733742 7.7921724438320945 1220114 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.060002656687294056 5.170726002113375 2.7114854373984576 7.826945256999215 1620155 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.059020265773115865 5.098753261625443 2.6931026865302115 7.871088206174176 2020184 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.05806783498633272 5.031391141422053 2.6635974465847863 7.924152836779537 2420217 0
+Recovering previous policy with expected return of 6.877122877122877. Long term value was 6.891 and short term was 6.735.
+
+
+Pure best response payoff estimated to be 7.0552 for player 0. 
+No returns found for player 1. Defaulting to 0 for pure best response estimate
+
+
+
+Updating Empirical Game
+Estimating current strategies:  (9, 0)
+Current player 0 and current strategies (9, 0) took 6.73 seconds to finish estimate with resulting utilities: [7.049  3.1958]
+Estimating current strategies:  (9, 1)
+Current player 0 and current strategies (9, 1) took 10.11 seconds to finish estimate with resulting utilities: [5.9666 5.4194]
+Estimating current strategies:  (9, 2)
+Current player 0 and current strategies (9, 2) took 8.43 seconds to finish estimate with resulting utilities: [6.5502 6.276 ]
+Estimating current strategies:  (9, 3)
+Current player 0 and current strategies (9, 3) took 8.7 seconds to finish estimate with resulting utilities: [6.4036 6.4726]
+Estimating current strategies:  (9, 4)
+Current player 0 and current strategies (9, 4) took 8.56 seconds to finish estimate with resulting utilities: [6.4384 6.453 ]
+Estimating current strategies:  (9, 5)
+Current player 0 and current strategies (9, 5) took 5.22 seconds to finish estimate with resulting utilities: [7.966  6.6834]
+Estimating current strategies:  (9, 6)
+Current player 0 and current strategies (9, 6) took 5.1 seconds to finish estimate with resulting utilities: [7.9904 6.6806]
+Estimating current strategies:  (9, 7)
+Current player 0 and current strategies (9, 7) took 8.21 seconds to finish estimate with resulting utilities: [5.804  6.6638]
+Estimating current strategies:  (9, 8)
+Current player 0 and current strategies (9, 8) took 6.32 seconds to finish estimate with resulting utilities: [6.8848 6.5314]
+Estimating current strategies:  (9, 9)
+Current player 0 and current strategies (9, 9) took 6.2 seconds to finish estimate with resulting utilities: [6.8938 6.5542]
+Computing meta_strategies
+Exited RRD with total regret 0.14480916672656008 that was less than regret lambda 0.14482758620689656 after 8132 iterations 
+NEW LAMBDA 0.13793103448275862
+New explore mss minimum:  0.0
+
+ Metagame display:
+Player 0 Payoff matrix: 
+
+           0              1              2              3              4              5              6              7              8              9      
+    0     1.91           2.85           3.49           3.02           3.03           2.72           2.87           2.43           3.09           3.20      
+    1     7.38           4.65           4.85           5.25           5.29           5.87           5.94           4.56           5.29           5.42      
+    2     7.28           5.94           5.74           6.48           6.46           6.36           6.37           5.48           6.22           6.28      
+    3     7.21           6.14           7.21           5.75           5.42           5.89           5.87           4.64           6.45           6.47      
+    4     7.33           6.18           7.22           6.09           5.80           5.94           5.93           4.68           6.53           6.45      
+    5     6.73           5.99           6.76           6.15           6.14           6.31           5.85           5.77           6.69           6.68      
+    6     6.65           6.07           6.77           6.17           6.13           6.79           6.35           5.80           6.69           6.68      
+    7     6.30           6.01           6.63           5.56           5.56           8.01           8.00           4.78           6.68           6.66      
+    8     7.09           5.94           6.58           6.46           6.47           7.95           7.94           5.85           6.74           6.53      
+    9     7.05           5.97           6.55           6.40           6.44           7.97           7.99           5.80           6.88           6.72      
+
+ 
+
+Player 1 Payoff matrix: 
+
+           0              1              2              3              4              5              6              7              8              9      
+    0     1.91           7.38           7.28           7.21           7.33           6.73           6.65           6.30           7.09           7.05      
+    1     2.85           4.65           5.94           6.14           6.18           5.99           6.07           6.01           5.94           5.97      
+    2     3.49           4.85           5.74           7.21           7.22           6.76           6.77           6.63           6.58           6.55      
+    3     3.02           5.25           6.48           5.75           6.09           6.15           6.17           5.56           6.46           6.40      
+    4     3.03           5.29           6.46           5.42           5.80           6.14           6.13           5.56           6.47           6.44      
+    5     2.72           5.87           6.36           5.89           5.94           6.31           6.79           8.01           7.95           7.97      
+    6     2.87           5.94           6.37           5.87           5.93           5.85           6.35           8.00           7.94           7.99      
+    7     2.43           4.56           5.48           4.64           4.68           5.77           5.80           4.78           5.85           5.80      
+    8     3.09           5.29           6.22           6.45           6.53           6.69           6.69           6.68           6.74           6.88      
+    9     3.20           5.42           6.28           6.47           6.45           6.68           6.68           6.66           6.53           6.72      
+
+ 
+
+Social Welfare Sum Matrix: 
+
+           0              1              2              3              4              5              6              7              8              9      
+    0     3.81          10.22          10.77          10.23          10.35           9.45           9.52           8.73          10.18          10.24      
+    1    10.22           9.31          10.79          11.39          11.47          11.86          12.00          10.56          11.22          11.39      
+    2    10.77          10.79          11.47          13.69          13.68          13.12          13.14          12.11          12.80          12.83      
+    3    10.23          11.39          13.69          11.50          11.51          12.04          12.04          10.20          12.91          12.88      
+    4    10.35          11.47          13.68          11.51          11.59          12.09          12.06          10.24          13.00          12.89      
+    5     9.45          11.86          13.12          12.04          12.09          12.61          12.64          13.78          14.64          14.65      
+    6     9.52          12.00          13.14          12.04          12.06          12.64          12.70          13.80          14.63          14.67      
+    7     8.73          10.56          12.11          10.20          10.24          13.78          13.80           9.56          12.53          12.47      
+    8    10.18          11.22          12.80          12.91          13.00          14.64          14.63          12.53          13.48          13.42      
+    9    10.24          11.39          12.83          12.88          12.89          14.65          14.67          12.47          13.42          13.45      
+
+ 
+
+Metagame probabilities: 
+Player #0: 0.0001  0.0001  0.0031  0.0022  0.0033  0.0271  0.0519  0.0809  0.253  0.5784  
+Player #1: 0.0001  0.0001  0.0031  0.0022  0.0033  0.0271  0.0519  0.0809  0.253  0.5784  
+Iteration : 9
+Time so far: 54074.60759663582
+Approximating Best Response
+Training best response:  True 0.05500000000000001
+rtg values check:  (?,) (?, 1)
+2023-08-02 14:55:52.920865: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_69/weights_2/Adam_1/Assign' id:19771 op device:{requested: '', assigned: ''} def:{{{node mlp_69/weights_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_69/weights_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_69/weights_2/Adam_1, mlp_69/weights_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Setting to fine tune mode: 
+Loading previous PPO policy with minimum entropy 0.0
+
+Training each of the policies for 2000000 steps. 
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.058058692836693404 5.056205743926426 2.6611856201650403 7.928747765127045 20001 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.05926686537623571 5.066287133866071 2.662229276804143 7.952542915648522 420031 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.059791793307565656 4.99470789202119 2.663546741355772 7.978133581342996 820075 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0596621991942282 4.924555428481664 2.6624416995730864 8.006468903967255 1220111 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.05897049957648447 4.857197116379509 2.659340155183874 8.038395999667095 1620150 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.05805950926867262 4.792231542381673 2.6440534093675083 8.078823804145749 2020186 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.057182474077297984 4.729403252441149 2.6155204658802504 8.131225492317162 2420227 0
+Recovering previous policy with expected return of 6.8441558441558445. Long term value was 6.828 and short term was 6.922.
+
+
+Pure best response payoff estimated to be 7.0476 for player 0. 
+No returns found for player 1. Defaulting to 0 for pure best response estimate
+
+
+
+Updating Empirical Game
+Estimating current strategies:  (10, 0)
+Current player 0 and current strategies (10, 0) took 6.69 seconds to finish estimate with resulting utilities: [7.1872 3.177 ]
+Estimating current strategies:  (10, 1)
+Current player 0 and current strategies (10, 1) took 10.14 seconds to finish estimate with resulting utilities: [5.9616 5.3488]
+Estimating current strategies:  (10, 2)
+Current player 0 and current strategies (10, 2) took 8.45 seconds to finish estimate with resulting utilities: [6.556  6.2302]
+Estimating current strategies:  (10, 3)
+Current player 0 and current strategies (10, 3) took 8.53 seconds to finish estimate with resulting utilities: [6.458 6.492]
+Estimating current strategies:  (10, 4)
+Current player 0 and current strategies (10, 4) took 8.56 seconds to finish estimate with resulting utilities: [6.4066 6.4976]
+Estimating current strategies:  (10, 5)
+Current player 0 and current strategies (10, 5) took 5.17 seconds to finish estimate with resulting utilities: [7.929 6.704]
+Estimating current strategies:  (10, 6)
+Current player 0 and current strategies (10, 6) took 5.15 seconds to finish estimate with resulting utilities: [7.9562 6.6866]
+Estimating current strategies:  (10, 7)
+Current player 0 and current strategies (10, 7) took 8.16 seconds to finish estimate with resulting utilities: [5.8152 6.5884]
+Estimating current strategies:  (10, 8)
+Current player 0 and current strategies (10, 8) took 6.35 seconds to finish estimate with resulting utilities: [6.8766 6.6172]
+Estimating current strategies:  (10, 9)
+Current player 0 and current strategies (10, 9) took 6.28 seconds to finish estimate with resulting utilities: [6.8772 6.5708]
+Estimating current strategies:  (10, 10)
+Current player 0 and current strategies (10, 10) took 6.28 seconds to finish estimate with resulting utilities: [6.821  6.6106]
+Computing meta_strategies
+Exited RRD with total regret 0.13792068736529295 that was less than regret lambda 0.13793103448275862 after 9938 iterations 
+NEW LAMBDA 0.13103448275862067
+New explore mss minimum:  0.0
+
+ Metagame display:
+Player 0 Payoff matrix: 
+
+           0              1              2              3              4              5              6              7              8              9             10      
+    0     1.91           2.85           3.49           3.02           3.03           2.72           2.87           2.43           3.09           3.20           3.18      
+    1     7.38           4.65           4.85           5.25           5.29           5.87           5.94           4.56           5.29           5.42           5.35      
+    2     7.28           5.94           5.74           6.48           6.46           6.36           6.37           5.48           6.22           6.28           6.23      
+    3     7.21           6.14           7.21           5.75           5.42           5.89           5.87           4.64           6.45           6.47           6.49      
+    4     7.33           6.18           7.22           6.09           5.80           5.94           5.93           4.68           6.53           6.45           6.50      
+    5     6.73           5.99           6.76           6.15           6.14           6.31           5.85           5.77           6.69           6.68           6.70      
+    6     6.65           6.07           6.77           6.17           6.13           6.79           6.35           5.80           6.69           6.68           6.69      
+    7     6.30           6.01           6.63           5.56           5.56           8.01           8.00           4.78           6.68           6.66           6.59      
+    8     7.09           5.94           6.58           6.46           6.47           7.95           7.94           5.85           6.74           6.53           6.62      
+    9     7.05           5.97           6.55           6.40           6.44           7.97           7.99           5.80           6.88           6.72           6.57      
+   10     7.19           5.96           6.56           6.46           6.41           7.93           7.96           5.82           6.88           6.88           6.72      
+
+ 
+
+Player 1 Payoff matrix: 
+
+           0              1              2              3              4              5              6              7              8              9             10      
+    0     1.91           7.38           7.28           7.21           7.33           6.73           6.65           6.30           7.09           7.05           7.19      
+    1     2.85           4.65           5.94           6.14           6.18           5.99           6.07           6.01           5.94           5.97           5.96      
+    2     3.49           4.85           5.74           7.21           7.22           6.76           6.77           6.63           6.58           6.55           6.56      
+    3     3.02           5.25           6.48           5.75           6.09           6.15           6.17           5.56           6.46           6.40           6.46      
+    4     3.03           5.29           6.46           5.42           5.80           6.14           6.13           5.56           6.47           6.44           6.41      
+    5     2.72           5.87           6.36           5.89           5.94           6.31           6.79           8.01           7.95           7.97           7.93      
+    6     2.87           5.94           6.37           5.87           5.93           5.85           6.35           8.00           7.94           7.99           7.96      
+    7     2.43           4.56           5.48           4.64           4.68           5.77           5.80           4.78           5.85           5.80           5.82      
+    8     3.09           5.29           6.22           6.45           6.53           6.69           6.69           6.68           6.74           6.88           6.88      
+    9     3.20           5.42           6.28           6.47           6.45           6.68           6.68           6.66           6.53           6.72           6.88      
+   10     3.18           5.35           6.23           6.49           6.50           6.70           6.69           6.59           6.62           6.57           6.72      
+
+ 
+
+Social Welfare Sum Matrix: 
+
+           0              1              2              3              4              5              6              7              8              9             10      
+    0     3.81          10.22          10.77          10.23          10.35           9.45           9.52           8.73          10.18          10.24          10.36      
+    1    10.22           9.31          10.79          11.39          11.47          11.86          12.00          10.56          11.22          11.39          11.31      
+    2    10.77          10.79          11.47          13.69          13.68          13.12          13.14          12.11          12.80          12.83          12.79      
+    3    10.23          11.39          13.69          11.50          11.51          12.04          12.04          10.20          12.91          12.88          12.95      
+    4    10.35          11.47          13.68          11.51          11.59          12.09          12.06          10.24          13.00          12.89          12.90      
+    5     9.45          11.86          13.12          12.04          12.09          12.61          12.64          13.78          14.64          14.65          14.63      
+    6     9.52          12.00          13.14          12.04          12.06          12.64          12.70          13.80          14.63          14.67          14.64      
+    7     8.73          10.56          12.11          10.20          10.24          13.78          13.80           9.56          12.53          12.47          12.40      
+    8    10.18          11.22          12.80          12.91          13.00          14.64          14.63          12.53          13.48          13.42          13.49      
+    9    10.24          11.39          12.83          12.88          12.89          14.65          14.67          12.47          13.42          13.45          13.45      
+   10    10.36          11.31          12.79          12.95          12.90          14.63          14.64          12.40          13.49          13.45          13.43      
+
+ 
+
+Metagame probabilities: 
+Player #0: 0.0001  0.0001  0.0008  0.0012  0.0018  0.0205  0.0363  0.0455  0.146  0.2391  0.5086  
+Player #1: 0.0001  0.0001  0.0008  0.0012  0.0018  0.0205  0.0363  0.0455  0.146  0.2391  0.5086  
+Iteration : 10
+Time so far: 60955.405373334885
+Approximating Best Response
+Training best response:  True 0.05
+rtg values check:  (?,) (?, 1)
+2023-08-02 16:50:33.625140: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_76/weights_2/Adam_1/Assign' id:21761 op device:{requested: '', assigned: ''} def:{{{node mlp_76/weights_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_76/weights_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_76/weights_2/Adam_1, mlp_76/weights_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Setting to fine tune mode: 
+Loading previous PPO policy with minimum entropy 0.0
+
+Training each of the policies for 2000000 steps. 
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.05723280448062778 4.754123475744402 2.6151099520267915 8.132382317663126 20001 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.05837288848678918 4.768868520557645 2.6173578144622844 8.147564944278761 420032 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.05889618121849454 4.703791093022857 2.6197703966620915 8.163185359997957 820069 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.05886416958369299 4.640132728923678 2.6214479529010695 8.17966056608537 1220104 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.05826542325352557 4.577687291599154 2.618060403349168 8.199657571279014 1620145 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.05746855794842896 4.51703058718431 2.6095802528845815 8.224327246244108 2020176 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.05668006062274468 4.458571436539173 2.5972471582271304 8.254813442610779 2420215 0
+
+
+slurmstepd: error: *** JOB 57046049 ON gl3049 CANCELLED AT 2023-08-02T18:18:41 ***

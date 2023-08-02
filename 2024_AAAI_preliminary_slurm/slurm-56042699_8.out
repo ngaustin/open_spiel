@@ -1,0 +1,1087 @@
+Job Id listed below:
+56042708
+
+Lmod is automatically replacing "clang/2022.1.2" with "intel/2022.1.2".
+
+
+Lmod is automatically replacing "gcc/10.3.0" with "clang/2022.1.2".
+
+-------------------------------------------------------------------------------
+The following dependent module(s) are not currently loaded: gcc/10.3.0 (required by: python/3.10.4)
+-------------------------------------------------------------------------------
+
+Lmod is automatically replacing "clang/2022.1.2" with "gcc/10.3.0".
+
+2023-07-18 13:25:32.449102: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2023-07-18 13:25:33.611541: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+WARNING:tensorflow:From /home/anrigu/.local/lib/python3.10/site-packages/tensorflow/python/compat/v2_compat.py:107: disable_resource_variables (from tensorflow.python.ops.variable_scope) is deprecated and will be removed in a future version.
+Instructions for updating:
+non-resource variables are not supported in the long term
+I0718 13:25:35.652446 23164637539200 rl_environment.py:187] Using game instance: harvest
+Num cpu cores:  36
+ 
+ Did not find gpu device. Using cpu. 
+ 
+Agent Arguments: 
+batch_size: 64
+discount_factor: 0.99
+double: True
+epsilon_decay_duration: 100000
+hidden_layers_sizes: [50, 50]
+learn_every: 1
+learning_rate: 0.0003
+min_buffer_size_to_learn: 20000
+num_actions: 8
+optimizer_str: adam
+replay_buffer_capacity: 100000
+session: <tensorflow.python.client.session.Session object at 0x151119fe2d10>
+state_representation_size: 84
+symmetric: True
+update_target_network_every: 500
+
+
+Consensus Arguments: 
+alpha: 5.0
+batch_size: 128
+beta: 0.5
+clear_trajectories: False
+consensus_imitation: False
+consensus_oracle: trajectory_deep
+deep_network_lr: 0.0003
+device: /cpu:0
+discount: 0.99
+entropy_decay_duration: 0.5
+epochs_ppo: 10
+eps_clip: 0.1
+eps_clip_value: 0.5
+eta: 0.05
+fine_tune: True
+fine_tune_policy_lr: 3e-05
+fine_tune_value_lr: 0.0003
+hidden_layer_size: 50
+imitation_mode: prob_action
+joint_action: False
+max_buffer_size_fine_tune: 100000
+min_buffer_size_fine_tune: 10000
+minibatches_ppo: 50
+minimum_entropy: 0.8
+n_hidden_layers: 2
+num_players: 2
+num_simulations_fit: 1
+perturb_all: False
+policy_constraint: 0.1
+policy_constraint_steps: 20
+ppo_entropy_regularization: 0.05
+pretrained_policy_steps: 500
+recovery_window: 200
+regret_calculation_steps: 1500000
+rewards_joint: False
+session: <tensorflow.python.client.session.Session object at 0x151119fe2d10>
+sims_per_entry: 200
+state_representation_size: 84
+steps_fine_tune: 8000000
+symmetric: True
+tau: 0.001
+training_epochs: 1
+training_steps: 1000
+transfer_policy_minimum_entropy: 0.0
+update_target_every: 1
+
+
+2023-07-18 13:25:36.000860: I tensorflow/compiler/mlir/mlir_graph_optimization_pass.cc:353] MLIR V1 optimization pass is not enabled
+2023-07-18 13:25:36.400450: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_2/bias_2/Adam_1/Assign' id:1071 op device:{requested: '', assigned: ''} def:{{{node mlp_2/bias_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_2/bias_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_2/bias_2/Adam_1, mlp_2/bias_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Using 200 sims per entry.
+Rectifier : 
+Perturbating oracle outputs : False
+Sampling from marginals : True
+Using prd_collab as strategy method.
+Using probabilistic as training strategy selector.
+Estimating current strategies:  (0, 0)
+Current player 0 and current strategies (0, 0) took 19.9 seconds to finish estimate with resulting utilities: [47.2  48.42]
+Exited RRD with total regret 0.0 that was less than regret lambda 10.0 after 0 iterations 
+
+ Metagame display:
+Player 0 Payoff matrix: 
+
+           0      
+    0    47.81      
+
+ 
+
+Player 1 Payoff matrix: 
+
+           0      
+    0    47.81      
+
+ 
+
+Social Welfare Sum Matrix: 
+
+           0      
+    0    95.62      
+
+ 
+
+Iteration : 0
+Time so far: 0.0001964569091796875
+Approximating Best Response
+Training best response:  True 0.1
+rtg values check:  (?,) (?, 1)
+2023-07-18 13:25:57.466510: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_6/weights_2/Adam_1/Assign' id:1925 op device:{requested: '', assigned: ''} def:{{{node mlp_6/weights_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_6/weights_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_6/weights_2/Adam_1, mlp_6/weights_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Setting to fine tune mode: 
+Loading policies from offline learning: 
+
+Training each of the policies for 8000000 steps. 
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.12051765397191047 28.448916053771974 2.056212544441223 0.0009188456984702498 10711 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.09722068458795548 15.723194885253907 1.8869329333305358 0.21578032821416854 217235 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.09656834080815316 16.453553199768066 1.8706951856613159 0.3511887937784195 419600 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.08490169048309326 13.236034107208251 1.8326775074005126 0.46764488220214845 621078 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.08048474863171577 15.120393180847168 1.790243911743164 0.6252914607524872 823015 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.07704814523458481 17.055399417877197 1.7719257354736329 0.6678982138633728 1025602 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.07063675075769424 21.023517227172853 1.747056007385254 0.7701067626476288 1228472 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.060909072309732436 17.77167863845825 1.700620746612549 0.8028848350048066 1432288 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.058266539499163626 20.264978981018068 1.6520448327064514 1.0137648344039918 1637699 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.05211478173732757 23.4360689163208 1.5778942704200745 1.1472729921340943 1845318 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.03919304497539997 17.888024139404298 1.517676842212677 1.2676192283630372 2056381 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.03360820226371288 19.77652988433838 1.4405597686767577 1.33612220287323 2265537 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.031210380233824254 19.16953887939453 1.4202804446220398 1.457232904434204 2477468 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.024234474077820777 22.224165534973146 1.385426926612854 1.5891294836997987 2687622 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.02133107967674732 22.198749160766603 1.3058716535568238 1.7835472583770753 2895057 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.015611310116946697 19.47201747894287 1.2925152420997619 1.9119173765182496 3104717 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.012655059527605771 24.082359886169435 1.2127019166946411 2.0932305812835694 3312071 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.007629951764829457 21.261080932617187 1.0729552865028382 2.2524524211883543 3523238 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.004705678299069404 22.042576217651366 0.9764404177665711 2.6209752321243287 3736039 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.002752924710512161 25.82827682495117 0.9365922391414643 2.788282012939453 3948523 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0014995122830441688 24.25893497467041 0.8677050650119782 3.0648738861083986 4160307 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0005570550099946558 25.46323642730713 0.7771271347999573 3.510114240646362 4373859 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.002169513619446661 23.399581527709962 0.7655060470104218 3.4051544427871705 4588243 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.001763683054014109 23.625706481933594 0.6887484788894653 3.760781979560852 4805638 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00026802270440384746 22.117043113708498 0.641758406162262 3.9675522565841677 5022024 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0008192692315788008 26.296573066711424 0.6114143013954163 4.054367566108704 5238228 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0008772588829742744 29.407110977172852 0.5680879354476929 4.4846720695495605 5455427 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.001682596818136517 24.064806747436524 0.5432960331439972 4.608431673049926 5673146 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0014304681870271451 17.524321460723876 0.5078774511814117 4.900160694122315 5889694 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0015056652293424122 29.05393466949463 0.47338489890098573 4.937412977218628 6103905 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0007929137113023898 22.256757926940917 0.45983791947364805 5.135303163528443 6321352 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.001462342851300491 23.62295036315918 0.40638767182826996 5.530002117156982 6537359 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0006748122557837632 22.87986946105957 0.3798596143722534 5.794495105743408 6754953 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00015208489639917389 27.465271377563475 0.37500557005405427 5.8899538040161135 6972647 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0008774137590080499 25.67068405151367 0.3671568065881729 5.965133905410767 7190811 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0010755224982858635 25.48986530303955 0.35134314000606537 6.108223485946655 7408232 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00020034665940329432 25.209570121765136 0.31929830014705657 6.605578517913818 7623847 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0009642009688832331 23.839489936828613 0.30664817690849305 6.707672071456909 7839873 0
+
+
+Pure best response payoff estimated to be 193.465 for player 0. 
+No returns found for player 1. Defaulting to 0 for pure best response estimate
+
+
+
+Updating Empirical Game
+Estimating current strategies:  (1, 0)
+Current player 0 and current strategies (1, 0) took 94.48 seconds to finish estimate with resulting utilities: [186.015   4.1  ]
+Estimating current strategies:  (1, 1)
+Current player 0 and current strategies (1, 1) took 154.3 seconds to finish estimate with resulting utilities: [95.49  95.185]
+Computing meta_strategies
+Exited RRD with total regret 9.525935890358198 that was less than regret lambda 10.0 after 27 iterations 
+REGRET STEPS:  25
+NEW LAMBDA 9.583333333333334
+New explore mss minimum:  0.0
+
+ Metagame display:
+Player 0 Payoff matrix: 
+
+           0              1      
+    0    47.81           4.10      
+    1    186.01          95.34      
+
+ 
+
+Player 1 Payoff matrix: 
+
+           0              1      
+    0    47.81          186.01      
+    1     4.10          95.34      
+
+ 
+
+Social Welfare Sum Matrix: 
+
+           0              1      
+    0    95.62          190.11      
+    1    190.11          190.68      
+
+ 
+
+Metagame probabilities: 
+Player #0: 0.0509  0.9491  
+Player #1: 0.0509  0.9491  
+Iteration : 1
+Time so far: 7952.34356880188
+Approximating Best Response
+Training best response:  True 0.095
+rtg values check:  (?,) (?, 1)
+2023-07-18 15:38:29.965902: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_13/weights_2/Adam_1/Assign' id:3823 op device:{requested: '', assigned: ''} def:{{{node mlp_13/weights_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_13/weights_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_13/weights_2/Adam_1, mlp_13/weights_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Setting to fine tune mode: 
+Loading previous PPO policy with minimum entropy 0.0
+
+Training each of the policies for 8000000 steps. 
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.011759094428271055 124.21709365844727 0.21613803505897522 8.83230800628662 11000 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.023668914288282394 20.037967681884766 0.47420174181461333 7.406074094772339 226561 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.038283439725637435 14.847604274749756 0.8310030281543732 5.838929939270019 441278 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.03376692198216915 19.42329502105713 0.7819384157657623 5.489928388595581 653976 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.03388398177921772 17.298082065582275 0.8428659439086914 5.27130012512207 865374 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.03391527198255062 17.76541337966919 0.9083627581596374 5.353642177581787 1076465 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.03361391499638557 15.604934215545654 0.9704920887947083 4.987177324295044 1287156 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.030027645640075207 21.69645538330078 0.9215566694736481 4.909366798400879 1496663 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.02864616848528385 16.975725364685058 0.9299677670001983 5.000569200515747 1706179 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0268182972446084 17.523664474487305 0.9721027374267578 5.141155529022217 1916098 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.022265228815376757 24.485107231140137 0.9369312942028045 4.801967525482178 2125792 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.02017280589789152 18.907105731964112 0.9089722394943237 4.819426822662353 2333419 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.01764366403222084 17.736343955993654 0.9581125855445862 4.872962474822998 2544129 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.016096948087215422 14.041302394866943 0.9149596571922303 5.024016904830932 2755941 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.012694178242236375 13.73856725692749 0.9273042798042297 5.1005675315856935 2965958 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.011528127733618021 15.460652446746826 0.9145640015602112 5.1622802734375 3175345 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.007428991002961993 16.947908020019533 0.8399047434329987 5.358620452880859 3385511 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.004382801172323525 23.193679904937746 0.7641447484493256 5.3871382713317875 3595695 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0032685923972167073 20.22083854675293 0.7708544611930848 5.585694789886475 3806546 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0008410047776123974 17.24056558609009 0.773079389333725 5.853444385528564 4017933 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -9.367795137222856e-05 14.516094970703126 0.7371359288692474 5.944478702545166 4230980 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0011723953663022257 23.104775619506835 0.6685934066772461 5.971834993362426 4443607 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0013812377022986767 15.260648250579834 0.6607823133468628 6.082916355133056 4657043 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0007248194284329657 16.935225772857667 0.5719160258769989 6.494883489608765 4872057 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0002578061264102871 22.720841789245604 0.47737727463245394 6.878270149230957 5085213 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  2.901483967434615e-05 16.094916343688965 0.4857034146785736 6.819510126113892 5297950 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.001200419504311867 15.910783958435058 0.3276052862405777 7.015653848648071 5512203 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0010236217349302024 24.567540550231932 0.3446069240570068 7.1720216274261475 5729110 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0013078362724627368 16.478908157348634 0.4593805015087128 7.255242204666137 5944289 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0004070845472597284 16.67581949234009 0.45063198208808897 7.468437719345093 6159596 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.001178765919758007 16.471405220031738 0.4236665368080139 7.962369728088379 6376544 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  8.340525855601299e-05 22.465168952941895 0.43611074090003965 7.945394515991211 6594213 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0017372393882396863 15.756021881103516 0.3932117849588394 8.070942401885986 6814013 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00015022194565972313 17.300396156311034 0.3769798785448074 8.487048625946045 7025793 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0009854245756287128 16.386459732055663 0.35625133514404295 8.501299381256104 7240887 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0009421645139809698 17.774853229522705 0.34996356070041656 8.869710540771484 7457538 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.001029769023443805 20.432091331481935 0.3803966581821442 8.746395874023438 7671247 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0009247073183360043 22.709725379943848 0.40588377714157103 8.559351348876953 7890082 0
+
+
+Pure best response payoff estimated to be 127.195 for player 0. 
+No returns found for player 1. Defaulting to 0 for pure best response estimate
+
+
+
+Updating Empirical Game
+Estimating current strategies:  (2, 0)
+Current player 0 and current strategies (2, 0) took 96.16 seconds to finish estimate with resulting utilities: [178.77    2.715]
+Estimating current strategies:  (2, 1)
+Current player 0 and current strategies (2, 1) took 159.83 seconds to finish estimate with resulting utilities: [126.14   56.625]
+Estimating current strategies:  (2, 2)
+Current player 0 and current strategies (2, 2) took 158.73 seconds to finish estimate with resulting utilities: [41.12  41.315]
+Computing meta_strategies
+Exited RRD with total regret 9.358326758504305 that was less than regret lambda 9.583333333333334 after 32 iterations 
+REGRET STEPS:  25
+NEW LAMBDA 9.166666666666668
+New explore mss minimum:  0.0
+
+ Metagame display:
+Player 0 Payoff matrix: 
+
+           0              1              2      
+    0    47.81           4.10           2.71      
+    1    186.01          95.34          56.62      
+    2    178.77          126.14          41.22      
+
+ 
+
+Player 1 Payoff matrix: 
+
+           0              1              2      
+    0    47.81          186.01          178.77      
+    1     4.10          95.34          126.14      
+    2     2.71          56.62          41.22      
+
+ 
+
+Social Welfare Sum Matrix: 
+
+           0              1              2      
+    0    95.62          190.11          181.49      
+    1    190.11          190.68          182.76      
+    2    181.49          182.76          82.44      
+
+ 
+
+Metagame probabilities: 
+Player #0: 0.0286  0.4464  0.525  
+Player #1: 0.0286  0.4464  0.525  
+Iteration : 2
+Time so far: 18615.12286901474
+Approximating Best Response
+Training best response:  True 0.09000000000000001
+rtg values check:  (?,) (?, 1)
+2023-07-18 18:36:13.068854: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_20/weights_2/Adam_1/Assign' id:5801 op device:{requested: '', assigned: ''} def:{{{node mlp_20/weights_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_20/weights_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_20/weights_2/Adam_1, mlp_20/weights_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Setting to fine tune mode: 
+Loading previous PPO policy with minimum entropy 0.0
+
+Training each of the policies for 8000000 steps. 
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.013461366295814514 81.77808227539063 0.2645997002720833 11.410010528564452 11000 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.027447979897260666 21.214625358581543 0.5559323132038116 8.6626766204834 227256 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.026253943517804145 17.296065711975096 0.5660965859889984 8.080861139297486 437834 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.031112545169889927 18.82991943359375 0.7211309969425201 7.225207757949829 650830 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.034173119254410265 21.13729610443115 0.8428459525108337 6.436327695846558 861310 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.027073479630053042 24.38524646759033 0.7146533250808715 6.984138679504395 1073633 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.028010543435811996 18.43031177520752 0.7907789349555969 6.836252927780151 1285155 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0279826782643795 15.245828628540039 0.8767682790756226 6.2274699211120605 1497237 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.024129999801516533 30.031924629211424 0.8241055727005004 5.897251272201538 1709767 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.02198056261986494 14.78939609527588 0.7967191874980927 6.3209137439727785 1921019 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.021158883720636366 18.471953201293946 0.8516712725162506 6.123757314682007 2133203 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.02003404274582863 22.424885749816895 0.8969828426837921 6.049100923538208 2346727 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.015186183527112007 19.75267105102539 0.8134679019451141 6.569912242889404 2556917 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.01375734768807888 16.847125244140624 0.858791297674179 6.235187292098999 2770455 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00918454946950078 21.60898666381836 0.759991067647934 6.688120031356812 2985315 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.009623316768556833 20.63039665222168 0.9022885262966156 6.0930602073669435 3201071 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.006049472605809569 18.25126008987427 0.744309538602829 6.855400514602661 3417713 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.004535256186500192 16.882640647888184 0.7784188747406006 6.68894772529602 3629642 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0018412868201266974 17.078113555908203 0.7281058549880981 7.045756816864014 3846880 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0005297741154208779 14.08072509765625 0.6270325005054473 7.896191167831421 4064079 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0002691412802960258 22.055143356323242 0.6167172849178314 7.374007749557495 4279011 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0015463666146388277 19.05164680480957 0.6009446740150451 7.439656448364258 4494772 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  7.52414962335024e-05 25.918642044067383 0.6372615218162536 7.142900657653809 4710074 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0004038063721964136 27.918578720092775 0.5889258086681366 7.749278736114502 4924574 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0015725120319984853 20.042277336120605 0.4615801364183426 7.803487014770508 5141732 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0010152980525163003 17.36724443435669 0.4973070412874222 7.806144332885742 5356287 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.000981585305999033 21.255298042297362 0.35425046980381014 8.481634044647217 5572838 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  8.512288623023778e-05 21.59540710449219 0.4157956302165985 8.006273555755616 5792228 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0008782599194091745 14.348150634765625 0.5213680446147919 8.173842859268188 6011294 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0009322462326963432 15.021874046325683 0.49836793541908264 8.806337547302245 6226033 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0011456756154075264 19.74524345397949 0.5253835558891297 7.954284286499023 6443756 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0007891793473390862 17.882595252990722 0.29507107734680177 8.599931144714356 6661728 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0004308175562982797 19.45540409088135 0.21316331177949904 9.216807079315185 6878917 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.000710363796679303 21.15329055786133 0.17484342008829118 9.722344493865966 7095026 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  0.0004974516610673163 19.56147289276123 0.16433874964714051 9.290978527069091 7311817 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0020408340242283884 15.228067302703858 0.18909895271062852 9.09425163269043 7527219 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0010515174726606347 20.578113746643066 0.3018831074237823 9.31658878326416 7743739 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00020654446198022924 17.169331741333007 0.4239884942770004 9.252624988555908 7958259 0
+
+
+Pure best response payoff estimated to be 100.465 for player 0. 
+No returns found for player 1. Defaulting to 0 for pure best response estimate
+
+
+
+Updating Empirical Game
+Estimating current strategies:  (3, 0)
+Current player 0 and current strategies (3, 0) took 95.39 seconds to finish estimate with resulting utilities: [161.28    3.415]
+Estimating current strategies:  (3, 1)
+Current player 0 and current strategies (3, 1) took 156.94 seconds to finish estimate with resulting utilities: [118.435  51.985]
+Estimating current strategies:  (3, 2)
+Current player 0 and current strategies (3, 2) took 159.49 seconds to finish estimate with resulting utilities: [76.68 63.46]
+Estimating current strategies:  (3, 3)
+Current player 0 and current strategies (3, 3) took 154.91 seconds to finish estimate with resulting utilities: [68.115 67.805]
+Computing meta_strategies
+Exited RRD with total regret 9.109271539575815 that was less than regret lambda 9.166666666666668 after 99 iterations 
+REGRET STEPS:  25
+NEW LAMBDA 8.750000000000002
+New explore mss minimum:  0.0
+
+ Metagame display:
+Player 0 Payoff matrix: 
+
+           0              1              2              3      
+    0    47.81           4.10           2.71           3.42      
+    1    186.01          95.34          56.62          51.98      
+    2    178.77          126.14          41.22          63.46      
+    3    161.28          118.44          76.68          67.96      
+
+ 
+
+Player 1 Payoff matrix: 
+
+           0              1              2              3      
+    0    47.81          186.01          178.77          161.28      
+    1     4.10          95.34          126.14          118.44      
+    2     2.71          56.62          41.22          76.68      
+    3     3.42          51.98          63.46          67.96      
+
+ 
+
+Social Welfare Sum Matrix: 
+
+           0              1              2              3      
+    0    95.62          190.11          181.49          164.69      
+    1    190.11          190.68          182.76          170.42      
+    2    181.49          182.76          82.44          140.14      
+    3    164.69          170.42          140.14          135.92      
+
+ 
+
+Metagame probabilities: 
+Player #0: 0.0002  0.1161  0.2376  0.6461  
+Player #1: 0.0002  0.1161  0.2376  0.6461  
+Iteration : 3
+Time so far: 29346.944808721542
+Approximating Best Response
+Training best response:  True 0.085
+rtg values check:  (?,) (?, 1)
+2023-07-18 21:35:04.807943: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_27/weights_2/Adam_1/Assign' id:7779 op device:{requested: '', assigned: ''} def:{{{node mlp_27/weights_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_27/weights_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_27/weights_2/Adam_1, mlp_27/weights_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Setting to fine tune mode: 
+Loading previous PPO policy with minimum entropy 0.0
+
+Training each of the policies for 8000000 steps. 
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.02813899125903845 72.50882415771484 0.5541823863983154 9.440788078308106 10836 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.03304483629763126 16.45756950378418 0.6625647842884064 8.773122882843017 227087 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.03050607331097126 18.920940589904784 0.6528064846992493 8.489575481414795 442577 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.030889663845300674 11.942307662963866 0.7175414323806762 8.171955680847168 655510 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.029111442901194096 11.113274574279785 0.706116509437561 8.36484375 869361 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.024923053942620753 19.667793655395506 0.6387763500213623 8.361906433105469 1083293 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.02466000206768513 20.219517135620116 0.7015998125076294 8.12869234085083 1296398 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.021325519122183324 14.41233139038086 0.6368553221225739 8.276680850982666 1510244 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.019370151683688164 22.87501678466797 0.6453292191028595 8.476633167266845 1726113 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.018297168891876936 18.122667217254637 0.6895049035549163 8.084810924530029 1945007 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.014067414961755276 18.916760063171388 0.517751207947731 8.738018894195557 2161970 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.01508812801912427 18.398523902893068 0.6665724158287049 8.290120935440063 2380495 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.01218689177185297 18.507606506347656 0.7069749772548676 8.017601013183594 2598304 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.011487994622439147 14.206452369689941 0.7014890909194946 7.822058057785034 2812830 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.010072830598801374 18.292427825927735 0.7470362544059753 7.5956333637237545 3030817 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.006264274101704359 17.396438598632812 0.6330863058567047 8.485043716430663 3248472 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00462871000636369 18.728290367126466 0.6461124777793884 8.781569385528565 3467119 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.003208164719399065 22.972089958190917 0.7071148574352264 8.294104766845702 3685563 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0018323336844332516 22.077465057373047 0.6920064091682434 8.281084442138672 3901989 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.000549143373791594 17.48726167678833 0.7071979820728302 8.092329406738282 4119228 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00033093621541411264 17.882358264923095 0.5871442556381226 8.591780853271484 4335421 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0001073566876584664 15.400540637969971 0.5573266208171844 8.66341428756714 4550432 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00040271392645081506 17.769325542449952 0.5560934185981751 8.710381889343262 4765782 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00042733189247883273 23.52578125 0.379269203543663 9.683407306671143 4979308 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0020200740109430626 25.457063293457033 0.5439783066511155 8.77444143295288 5190807 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0006383583502611145 29.486316108703612 0.3726084053516388 10.000737953186036 5400242 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0016268538718577474 32.897216606140134 0.4085257321596146 9.458825874328614 5607389 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0003559244389180094 28.46543159484863 0.31748470664024353 9.993555068969727 5815927 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0010634570848196746 19.44502696990967 0.3524774074554443 9.686527156829834 6025366 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00016212711052503436 23.166022109985352 0.22356837391853332 10.371860980987549 6231716 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.000878555034432793 17.731651973724365 0.26654628068208697 10.4896390914917 6439616 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  0.00014370022290677298 21.033535957336426 0.21505270451307296 10.6702091217041 6648528 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0007064423814881593 19.401652908325197 0.21468425095081328 10.768810939788818 6857628 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00010683178843464702 16.191251373291017 0.18047578632831573 10.616994667053223 7066977 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0002698461338695779 17.90980167388916 0.25379778444767 10.558541584014893 7276473 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0009726423839310882 12.94716854095459 0.22990078181028367 10.553550243377686 7484214 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0010072910277813206 18.570321464538573 0.15875334292650223 11.07709379196167 7692629 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0008774347108555958 11.661390399932861 0.23615354746580125 10.53784122467041 7899344 0
+Recovering previous policy with expected return of 77.53731343283582. Long term value was 58.766 and short term was 60.095.
+
+
+Pure best response payoff estimated to be 95.22 for player 0. 
+No returns found for player 1. Defaulting to 0 for pure best response estimate
+
+
+
+Updating Empirical Game
+Estimating current strategies:  (4, 0)
+Current player 0 and current strategies (4, 0) took 81.33 seconds to finish estimate with resulting utilities: [159.585   3.055]
+Estimating current strategies:  (4, 1)
+Current player 0 and current strategies (4, 1) took 134.06 seconds to finish estimate with resulting utilities: [118.365  53.865]
+Estimating current strategies:  (4, 2)
+Current player 0 and current strategies (4, 2) took 135.33 seconds to finish estimate with resulting utilities: [78.505 64.19 ]
+Estimating current strategies:  (4, 3)
+Current player 0 and current strategies (4, 3) took 134.06 seconds to finish estimate with resulting utilities: [68.63  70.175]
+Estimating current strategies:  (4, 4)
+Current player 0 and current strategies (4, 4) took 134.67 seconds to finish estimate with resulting utilities: [68.415 70.48 ]
+Computing meta_strategies
+Exited RRD with total regret 8.657236644534336 that was less than regret lambda 8.750000000000002 after 63 iterations 
+REGRET STEPS:  25
+NEW LAMBDA 8.333333333333336
+New explore mss minimum:  0.0
+
+ Metagame display:
+Player 0 Payoff matrix: 
+
+           0              1              2              3              4      
+    0    47.81           4.10           2.71           3.42           3.06      
+    1    186.01          95.34          56.62          51.98          53.87      
+    2    178.77          126.14          41.22          63.46          64.19      
+    3    161.28          118.44          76.68          67.96          70.17      
+    4    159.59          118.36          78.50          68.63          69.45      
+
+ 
+
+Player 1 Payoff matrix: 
+
+           0              1              2              3              4      
+    0    47.81          186.01          178.77          161.28          159.59      
+    1     4.10          95.34          126.14          118.44          118.36      
+    2     2.71          56.62          41.22          76.68          78.50      
+    3     3.42          51.98          63.46          67.96          68.63      
+    4     3.06          53.87          64.19          70.17          69.45      
+
+ 
+
+Social Welfare Sum Matrix: 
+
+           0              1              2              3              4      
+    0    95.62          190.11          181.49          164.69          162.64      
+    1    190.11          190.68          182.76          170.42          172.23      
+    2    181.49          182.76          82.44          140.14          142.69      
+    3    164.69          170.42          140.14          135.92          138.81      
+    4    162.64          172.23          142.69          138.81          138.90      
+
+ 
+
+Metagame probabilities: 
+Player #0: 0.0019  0.1186  0.1961  0.3385  0.3448  
+Player #1: 0.0019  0.1186  0.1961  0.3385  0.3448  
+Iteration : 4
+Time so far: 38732.82373070717
+Approximating Best Response
+Training best response:  True 0.08000000000000002
+rtg values check:  (?,) (?, 1)
+2023-07-19 00:11:30.788387: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_34/weights_2/Adam_1/Assign' id:9757 op device:{requested: '', assigned: ''} def:{{{node mlp_34/weights_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_34/weights_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_34/weights_2/Adam_1, mlp_34/weights_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Setting to fine tune mode: 
+Loading previous PPO policy with minimum entropy 0.0
+
+Training each of the policies for 8000000 steps. 
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.026525544188916683 83.59485626220703 0.5181627929210663 9.700840759277344 11000 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.03450974561274052 13.988245964050293 0.7030029475688935 8.65426197052002 224187 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.028982152231037617 12.59669542312622 0.6286444067955017 8.934011077880859 436047 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.028763259761035442 15.341745853424072 0.6629833102226257 8.51896629333496 649153 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.02816315945237875 19.28357276916504 0.6864564478397369 8.3436203956604 864405 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.02331360653042793 18.3221342086792 0.6058661878108978 8.506329345703126 1080135 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.020311339385807516 19.017986488342284 0.5673061698675156 8.540119171142578 1296414 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.01830336367711425 19.28084545135498 0.566856586933136 8.866032314300536 1512202 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.01919583436101675 16.903012180328368 0.6505512654781341 8.408331203460694 1730132 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.01701720608398318 29.532625198364258 0.6100556790828705 8.452571487426757 1948827 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.015526129305362702 23.207190322875977 0.6419536709785462 8.549606037139892 2163365 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.014027020800858736 18.984902381896973 0.6104772567749024 8.68453769683838 2379635 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.012768255919218064 15.662141704559327 0.6526378273963929 8.425932788848877 2589687 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00932507929392159 13.09665756225586 0.6641934812068939 8.244066333770752 2797358 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.008631333708763123 21.686617279052733 0.6394646227359772 8.323940181732178 3006808 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.005669480259530246 18.562550735473632 0.4561664998531342 9.232956981658935 3217125 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0057989016873762015 20.808975791931154 0.6298695623874664 8.480033779144287 3426286 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0034010592382401226 27.636122703552246 0.6172381401062011 8.880628967285157 3635914 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0016406024689786137 27.621743774414064 0.5982553541660309 9.31372537612915 3842126 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -7.594439666718245e-05 28.250045013427734 0.5064356029033661 9.779515171051026 4050029 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0001958144857781008 12.311577320098877 0.5655984222888947 8.68745756149292 4258584 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00036912593786837534 19.478507423400877 0.5587701320648193 8.578835201263427 4466718 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0011028981947674766 14.392018699645996 0.5296601563692093 8.699288272857666 4674300 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00012542655022116378 19.420044326782225 0.5390533417463302 9.039754867553711 4883061 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00019094223680440336 11.853975200653077 0.4600372791290283 9.632777690887451 5090257 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  0.0001861274358816445 18.452793693542482 0.403232342004776 9.814483547210694 5298051 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0012268137823411962 12.403451824188233 0.3571601420640945 9.87051076889038 5504730 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.000662576564354822 14.038872051239014 0.2638334363698959 10.398915767669678 5711738 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0007460469219950028 33.43701877593994 0.21980753540992737 11.362219333648682 5921052 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00023555312518510618 26.771953201293947 0.2838471710681915 11.059204387664796 6130813 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00032150730039575136 20.91327476501465 0.3727677881717682 10.730628776550294 6338273 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  0.0001509295281721279 15.949608421325683 0.3814409554004669 10.690763664245605 6545829 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0002070796428597532 16.830235767364503 0.37169118225574493 10.863634014129639 6752868 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -6.850571371614933e-05 20.15675220489502 0.38385539054870604 11.047813320159912 6960881 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0009485207527177408 11.612565040588379 0.31189106702804564 11.158161640167236 7166806 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0021472293650731445 15.467009353637696 0.3378965049982071 11.618967056274414 7374452 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  0.0006467806291766464 23.809047126770018 0.32546748518943786 11.464062404632568 7582790 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0003428590367548168 14.434934902191163 0.461006760597229 11.372616004943847 7791291 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00039065005257725715 13.080028343200684 0.3820236653089523 11.566919040679931 7998254 0
+Recovering previous policy with expected return of 75.2089552238806. Long term value was 58.274 and short term was 62.115.
+
+
+Pure best response payoff estimated to be 91.745 for player 0. 
+No returns found for player 1. Defaulting to 0 for pure best response estimate
+
+
+
+Updating Empirical Game
+Estimating current strategies:  (5, 0)
+Current player 0 and current strategies (5, 0) took 80.07 seconds to finish estimate with resulting utilities: [157.955   3.375]
+Estimating current strategies:  (5, 1)
+Current player 0 and current strategies (5, 1) took 133.47 seconds to finish estimate with resulting utilities: [115.985  55.325]
+Estimating current strategies:  (5, 2)
+Current player 0 and current strategies (5, 2) took 136.3 seconds to finish estimate with resulting utilities: [78.835 62.12 ]
+Estimating current strategies:  (5, 3)
+Current player 0 and current strategies (5, 3) took 134.72 seconds to finish estimate with resulting utilities: [72.42  70.975]
+Estimating current strategies:  (5, 4)
+Current player 0 and current strategies (5, 4) took 135.7 seconds to finish estimate with resulting utilities: [70.845 69.7  ]
+Estimating current strategies:  (5, 5)
+Current player 0 and current strategies (5, 5) took 133.57 seconds to finish estimate with resulting utilities: [69.925 71.995]
+Computing meta_strategies
+Exited RRD with total regret 8.287131853461005 that was less than regret lambda 8.333333333333336 after 60 iterations 
+REGRET STEPS:  25
+NEW LAMBDA 7.916666666666669
+New explore mss minimum:  0.0
+
+ Metagame display:
+Player 0 Payoff matrix: 
+
+           0              1              2              3              4              5      
+    0    47.81           4.10           2.71           3.42           3.06           3.38      
+    1    186.01          95.34          56.62          51.98          53.87          55.33      
+    2    178.77          126.14          41.22          63.46          64.19          62.12      
+    3    161.28          118.44          76.68          67.96          70.17          70.97      
+    4    159.59          118.36          78.50          68.63          69.45          69.70      
+    5    157.96          115.98          78.83          72.42          70.84          70.96      
+
+ 
+
+Player 1 Payoff matrix: 
+
+           0              1              2              3              4              5      
+    0    47.81          186.01          178.77          161.28          159.59          157.96      
+    1     4.10          95.34          126.14          118.44          118.36          115.98      
+    2     2.71          56.62          41.22          76.68          78.50          78.83      
+    3     3.42          51.98          63.46          67.96          68.63          72.42      
+    4     3.06          53.87          64.19          70.17          69.45          70.84      
+    5     3.38          55.33          62.12          70.97          69.70          70.96      
+
+ 
+
+Social Welfare Sum Matrix: 
+
+           0              1              2              3              4              5      
+    0    95.62          190.11          181.49          164.69          162.64          161.33      
+    1    190.11          190.68          182.76          170.42          172.23          171.31      
+    2    181.49          182.76          82.44          140.14          142.69          140.95      
+    3    164.69          170.42          140.14          135.92          138.81          143.39      
+    4    162.64          172.23          142.69          138.81          138.90          140.55      
+    5    161.33          171.31          140.95          143.39          140.55          141.92      
+
+ 
+
+Metagame probabilities: 
+Player #0: 0.002  0.0928  0.1476  0.2477  0.2468  0.2632  
+Player #1: 0.002  0.0928  0.1476  0.2477  0.2468  0.2632  
+Iteration : 5
+Time so far: 47973.27396726608
+Approximating Best Response
+Training best response:  True 0.07500000000000001
+rtg values check:  (?,) (?, 1)
+2023-07-19 02:45:31.054235: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_41/weights_2/Adam_1/Assign' id:11735 op device:{requested: '', assigned: ''} def:{{{node mlp_41/weights_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_41/weights_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_41/weights_2/Adam_1, mlp_41/weights_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Setting to fine tune mode: 
+Loading previous PPO policy with minimum entropy 0.0
+
+Training each of the policies for 8000000 steps. 
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.02613462693989277 43.56489524841309 0.4982604384422302 9.733327770233155 10561 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.034055564738810065 12.121361923217773 0.7006253600120544 8.573594856262208 227308 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0318864019587636 13.179780101776123 0.6947845458984375 8.430862045288086 441987 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.029807207733392717 19.434375190734862 0.6905750334262848 7.965322685241699 655436 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.031132380850613116 15.467645263671875 0.7710255682468414 7.361451292037964 870843 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.030843927711248397 20.51660861968994 0.8250011026859283 7.146404457092285 1085929 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.024831960536539556 13.289516067504882 0.6986176431179046 7.545766401290893 1301199 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.025680935010313988 13.72160291671753 0.8013290107250214 7.247792100906372 1515161 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.02332662492990494 14.974077510833741 0.8041309237480163 7.170824956893921 1730663 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.023223422281444073 15.85894250869751 0.8584230720996857 6.972403907775879 1946673 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.01788919074460864 14.795580673217774 0.7751227557659149 7.329249477386474 2164324 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.014923498034477234 17.721321678161623 0.7133301258087158 7.482726001739502 2381617 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.013567632669582963 39.81278190612793 0.7107799291610718 7.597589826583862 2599625 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.012423186283558606 17.1743577003479 0.7202935576438904 7.472213077545166 2815536 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.009878802858293057 15.154713153839111 0.7166759073734283 7.670343542098999 3030169 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.008559877471998333 12.353970050811768 0.8207185685634613 7.207578229904175 3245069 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.006103043351322413 12.388064289093018 0.6905555725097656 7.949807643890381 3460050 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0029853052459657193 33.49517993927002 0.5761885583400727 8.711886119842529 3673959 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0027560578542761504 17.765566444396974 0.6328075230121613 8.367136001586914 3888697 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0010989018424879759 15.390025806427001 0.7147225737571716 7.546006202697754 4102333 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  0.00011146685646963306 18.809008979797362 0.6218228042125702 7.956595182418823 4313023 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  2.4094737455016e-06 12.937848472595215 0.4700674742460251 8.460393714904786 4521800 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  0.00021933939133305102 15.506962966918945 0.4587546199560165 8.316953945159913 4730549 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.001137610677687917 22.6959587097168 0.41087273955345155 8.761673069000244 4940779 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0007179294341767672 16.866475772857665 0.37736512124538424 8.505697250366211 5148963 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0008304150978801772 15.740946388244629 0.40142441987991334 9.077408599853516 5358291 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0007233994168927893 15.964930152893066 0.38189744353294375 8.990863609313966 5568384 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0007203266024589539 13.076158428192139 0.42325363457202914 8.704421424865723 5776744 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0004206634253932862 16.642669200897217 0.41097521781921387 9.082013416290284 5983646 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0007667912810575217 17.358117866516114 0.32630802392959596 8.960077476501464 6194173 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00038916094345040617 15.470662498474121 0.18794418275356292 9.839142417907714 6401809 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0005139449101989157 20.602227020263673 0.2125062271952629 9.933008098602295 6610505 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  0.00016591484600212426 14.10939712524414 0.306737893819809 9.298760032653808 6820352 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0006656873025349342 27.844892311096192 0.21282449662685393 10.134844303131104 7029745 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0014275099674705416 23.836395454406738 0.19294016510248185 9.958046817779541 7238566 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0006341404572594911 26.676799011230468 0.18723881840705872 10.623887825012208 7446139 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0010724304971517994 15.966919898986816 0.23438842594623566 9.894414520263672 7653272 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0010161607468035072 14.419585037231446 0.23698636293411254 10.202036666870118 7862833 0
+Recovering previous policy with expected return of 72.35820895522389. Long term value was 68.926 and short term was 70.21.
+
+
+Pure best response payoff estimated to be 94.4 for player 0. 
+No returns found for player 1. Defaulting to 0 for pure best response estimate
+
+
+
+Updating Empirical Game
+Estimating current strategies:  (6, 0)
+Current player 0 and current strategies (6, 0) took 80.68 seconds to finish estimate with resulting utilities: [160.1     3.145]
+Estimating current strategies:  (6, 1)
+Current player 0 and current strategies (6, 1) took 131.84 seconds to finish estimate with resulting utilities: [116.52  53.68]
+Estimating current strategies:  (6, 2)
+Current player 0 and current strategies (6, 2) took 135.71 seconds to finish estimate with resulting utilities: [79.43 64.86]
+Estimating current strategies:  (6, 3)
+Current player 0 and current strategies (6, 3) took 136.06 seconds to finish estimate with resulting utilities: [70.34 69.  ]
+Estimating current strategies:  (6, 4)
+Current player 0 and current strategies (6, 4) took 135.34 seconds to finish estimate with resulting utilities: [69.38 71.06]
+Estimating current strategies:  (6, 5)
+Current player 0 and current strategies (6, 5) took 134.29 seconds to finish estimate with resulting utilities: [71.185 71.865]
+Estimating current strategies:  (6, 6)
+Current player 0 and current strategies (6, 6) took 134.45 seconds to finish estimate with resulting utilities: [72.97 67.53]
+Computing meta_strategies
+Exited RRD with total regret 7.860529760174757 that was less than regret lambda 7.916666666666669 after 48 iterations 
+REGRET STEPS:  25
+NEW LAMBDA 7.500000000000002
+New explore mss minimum:  0.0
+
+ Metagame display:
+Player 0 Payoff matrix: 
+
+           0              1              2              3              4              5              6      
+    0    47.81           4.10           2.71           3.42           3.06           3.38           3.15      
+    1    186.01          95.34          56.62          51.98          53.87          55.33          53.68      
+    2    178.77          126.14          41.22          63.46          64.19          62.12          64.86      
+    3    161.28          118.44          76.68          67.96          70.17          70.97          69.00      
+    4    159.59          118.36          78.50          68.63          69.45          69.70          71.06      
+    5    157.96          115.98          78.83          72.42          70.84          70.96          71.86      
+    6    160.10          116.52          79.43          70.34          69.38          71.19          70.25      
+
+ 
+
+Player 1 Payoff matrix: 
+
+           0              1              2              3              4              5              6      
+    0    47.81          186.01          178.77          161.28          159.59          157.96          160.10      
+    1     4.10          95.34          126.14          118.44          118.36          115.98          116.52      
+    2     2.71          56.62          41.22          76.68          78.50          78.83          79.43      
+    3     3.42          51.98          63.46          67.96          68.63          72.42          70.34      
+    4     3.06          53.87          64.19          70.17          69.45          70.84          69.38      
+    5     3.38          55.33          62.12          70.97          69.70          70.96          71.19      
+    6     3.15          53.68          64.86          69.00          71.06          71.86          70.25      
+
+ 
+
+Social Welfare Sum Matrix: 
+
+           0              1              2              3              4              5              6      
+    0    95.62          190.11          181.49          164.69          162.64          161.33          163.25      
+    1    190.11          190.68          182.76          170.42          172.23          171.31          170.20      
+    2    181.49          182.76          82.44          140.14          142.69          140.95          144.29      
+    3    164.69          170.42          140.14          135.92          138.81          143.39          139.34      
+    4    162.64          172.23          142.69          138.81          138.90          140.55          140.44      
+    5    161.33          171.31          140.95          143.39          140.55          141.92          143.05      
+    6    163.25          170.20          144.29          139.34          140.44          143.05          140.50      
+
+ 
+
+Metagame probabilities: 
+Player #0: 0.0042  0.0877  0.1307  0.1891  0.192  0.2011  0.1952  
+Player #1: 0.0042  0.0877  0.1307  0.1891  0.192  0.2011  0.1952  
+Iteration : 6
+Time so far: 57092.96263933182
+Approximating Best Response
+Training best response:  True 0.06999999999999999
+rtg values check:  (?,) (?, 1)
+2023-07-19 05:17:30.916533: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_48/weights_2/Adam_1/Assign' id:13713 op device:{requested: '', assigned: ''} def:{{{node mlp_48/weights_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_48/weights_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_48/weights_2/Adam_1, mlp_48/weights_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Setting to fine tune mode: 
+Loading previous PPO policy with minimum entropy 0.0
+
+Training each of the policies for 8000000 steps. 
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.02845847737044096 37.73440723419189 0.5451896220445633 9.92773666381836 11000 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.033882567659020424 14.164196968078613 0.6988979876041412 8.650111389160156 226386 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.03232628591358662 14.713910961151123 0.7114588499069214 8.239655923843383 441079 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.029621960781514644 14.13180913925171 0.6983607411384583 8.025096750259399 656744 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.026278130896389484 19.653754234313965 0.6572543978691101 8.367127227783204 872236 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.026334338821470737 15.649113655090332 0.6851178467273712 8.110424852371215 1084953 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.025590065121650695 18.40686674118042 0.7478643000125885 7.949628639221191 1299004 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.02020185850560665 12.876451015472412 0.6253794610500336 8.393646860122681 1513930 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.019398247078061103 20.852535247802734 0.6375970482826233 8.477707386016846 1730606 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.017846728302538396 13.44800329208374 0.6842708110809326 8.31216549873352 1947144 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.016473362874239682 17.009828090667725 0.6966468572616578 8.230312824249268 2164243 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.01196790523827076 25.136937522888182 0.5281311333179474 9.127299880981445 2382036 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.013351166620850563 15.633234310150147 0.6762136161327362 8.250693750381469 2598729 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.010106676816940307 19.80541229248047 0.6336461901664734 8.373132467269897 2815559 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.01081862859427929 18.39170684814453 0.7404193103313446 8.109740161895752 3031102 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.007045762706547975 17.315193939208985 0.6641591966152192 8.33727970123291 3248157 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.004922035406343639 15.659539604187012 0.6659272074699402 8.23184084892273 3465167 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.003020436072256416 12.968622970581055 0.702634471654892 8.310356616973877 3683421 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0010423742874991148 18.651735687255858 0.6695873200893402 8.557012367248536 3899560 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0008443791011814028 14.237091636657714 0.6618616938591003 8.262804126739502 4113723 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0010784279962535947 22.243786239624022 0.6217271745204925 8.702632808685303 4324466 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00030640693148598075 26.34155616760254 0.5249211400747299 8.853973388671875 4532031 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0011036827898351475 21.643241119384765 0.5259791284799575 9.044190979003906 4741290 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0005817647563389983 13.668999767303466 0.5649849057197571 9.2376145362854 4950199 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.000755350024701329 17.07231397628784 0.5640760391950608 8.79988498687744 5160890 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0009794549609068782 14.149067401885986 0.5446080654859543 8.737471675872802 5372024 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0007496935926610604 30.300420188903807 0.4749982595443726 9.904465484619141 5580610 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.001429145218571648 23.046457862854005 0.458731409907341 9.767140865325928 5787294 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0009088746694033035 20.147945594787597 0.47181658148765565 9.661929512023926 5996894 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0012053839745931327 10.696934795379638 0.5076187252998352 9.27978048324585 6205938 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0011878189077833667 14.847918891906739 0.4391038179397583 9.594328308105469 6415237 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00025240662107535173 15.939642524719238 0.45414150059223174 9.987467765808105 6623537 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.001406479923753068 11.155993461608887 0.44950237572193147 9.437539768218993 6833127 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00030549275179510006 15.173271656036377 0.38317800760269166 9.997816371917725 7041541 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0015958204021444544 23.393744277954102 0.4694399356842041 9.946869659423829 7248892 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0014905738411471249 28.418580627441408 0.3800442308187485 10.224488353729248 7458420 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  0.00024105070624500514 17.188643741607667 0.4353549212217331 9.932875537872315 7666510 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  0.000292190245090751 13.917919254302978 0.4037446051836014 10.335224533081055 7875002 0
+Recovering previous policy with expected return of 72.34825870646766. Long term value was 57.61 and short term was 57.82.
+
+
+Pure best response payoff estimated to be 92.48 for player 0. 
+No returns found for player 1. Defaulting to 0 for pure best response estimate
+
+
+
+Updating Empirical Game
+Estimating current strategies:  (7, 0)
+Current player 0 and current strategies (7, 0) took 77.9 seconds to finish estimate with resulting utilities: [156.09    3.055]
+Estimating current strategies:  (7, 1)
+Current player 0 and current strategies (7, 1) took 126.5 seconds to finish estimate with resulting utilities: [114.77  50.29]
+Estimating current strategies:  (7, 2)
+Current player 0 and current strategies (7, 2) took 132.15 seconds to finish estimate with resulting utilities: [81.42  63.685]
+Estimating current strategies:  (7, 3)
+Current player 0 and current strategies (7, 3) took 133.42 seconds to finish estimate with resulting utilities: [68.81 68.14]
+Estimating current strategies:  (7, 4)
+Current player 0 and current strategies (7, 4) took 134.23 seconds to finish estimate with resulting utilities: [68.9  70.15]
+Estimating current strategies:  (7, 5)
+Current player 0 and current strategies (7, 5) took 134.87 seconds to finish estimate with resulting utilities: [71.845 68.155]
+Estimating current strategies:  (7, 6)
+Current player 0 and current strategies (7, 6) took 134.39 seconds to finish estimate with resulting utilities: [71.22  69.495]
+Estimating current strategies:  (7, 7)
+Current player 0 and current strategies (7, 7) took 132.28 seconds to finish estimate with resulting utilities: [69.305 68.965]
+Computing meta_strategies
+Exited RRD with total regret 7.4771383977814025 that was less than regret lambda 7.500000000000002 after 36 iterations 
+REGRET STEPS:  25
+NEW LAMBDA 7.083333333333335
+New explore mss minimum:  0.0
+
+ Metagame display:
+Player 0 Payoff matrix: 
+
+           0              1              2              3              4              5              6              7      
+    0    47.81           4.10           2.71           3.42           3.06           3.38           3.15           3.06      
+    1    186.01          95.34          56.62          51.98          53.87          55.33          53.68          50.29      
+    2    178.77          126.14          41.22          63.46          64.19          62.12          64.86          63.69      
+    3    161.28          118.44          76.68          67.96          70.17          70.97          69.00          68.14      
+    4    159.59          118.36          78.50          68.63          69.45          69.70          71.06          70.15      
+    5    157.96          115.98          78.83          72.42          70.84          70.96          71.86          68.16      
+    6    160.10          116.52          79.43          70.34          69.38          71.19          70.25          69.50      
+    7    156.09          114.77          81.42          68.81          68.90          71.84          71.22          69.14      
+
+ 
+
+Player 1 Payoff matrix: 
+
+           0              1              2              3              4              5              6              7      
+    0    47.81          186.01          178.77          161.28          159.59          157.96          160.10          156.09      
+    1     4.10          95.34          126.14          118.44          118.36          115.98          116.52          114.77      
+    2     2.71          56.62          41.22          76.68          78.50          78.83          79.43          81.42      
+    3     3.42          51.98          63.46          67.96          68.63          72.42          70.34          68.81      
+    4     3.06          53.87          64.19          70.17          69.45          70.84          69.38          68.90      
+    5     3.38          55.33          62.12          70.97          69.70          70.96          71.19          71.84      
+    6     3.15          53.68          64.86          69.00          71.06          71.86          70.25          71.22      
+    7     3.06          50.29          63.69          68.14          70.15          68.16          69.50          69.14      
+
+ 
+
+Social Welfare Sum Matrix: 
+
+           0              1              2              3              4              5              6              7      
+    0    95.62          190.11          181.49          164.69          162.64          161.33          163.25          159.15      
+    1    190.11          190.68          182.76          170.42          172.23          171.31          170.20          165.06      
+    2    181.49          182.76          82.44          140.14          142.69          140.95          144.29          145.11      
+    3    164.69          170.42          140.14          135.92          138.81          143.39          139.34          136.95      
+    4    162.64          172.23          142.69          138.81          138.90          140.55          140.44          139.05      
+    5    161.33          171.31          140.95          143.39          140.55          141.92          143.05          140.00      
+    6    163.25          170.20          144.29          139.34          140.44          143.05          140.50          140.72      
+    7    159.15          165.06          145.11          136.95          139.05          140.00          140.72          138.27      
+
+ 
+
+Metagame probabilities: 
+Player #0: 0.0089  0.0864  0.1194  0.1539  0.157  0.1597  0.158  0.1567  
+Player #1: 0.0089  0.0864  0.1194  0.1539  0.157  0.1597  0.158  0.1567  
+Iteration : 7
+Time so far: 66351.76500797272
+Approximating Best Response
+Training best response:  True 0.065
+rtg values check:  (?,) (?, 1)
+2023-07-19 07:51:49.809032: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_55/weights_2/Adam_1/Assign' id:15691 op device:{requested: '', assigned: ''} def:{{{node mlp_55/weights_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_55/weights_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_55/weights_2/Adam_1, mlp_55/weights_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Setting to fine tune mode: 
+Loading previous PPO policy with minimum entropy 0.0
+
+Training each of the policies for 8000000 steps. 
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.025976052135229112 54.732688903808594 0.4902487754821777 10.339603614807128 11000 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.030736757442355156 14.51111946105957 0.6207282900810241 9.282916736602782 225016 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.034818803891539574 19.53955421447754 0.7727736592292785 8.43821449279785 439496 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.03150615785270929 15.21078929901123 0.7198501288890838 8.462193584442138 656590 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.029625621065497397 15.190327453613282 0.7436087250709533 8.084453582763672 872875 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.027720982767641546 15.64380407333374 0.7525416016578674 7.794036626815796 1086427 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.029351222887635232 13.524727058410644 0.8462777376174927 7.506992959976197 1302469 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.026011321134865283 12.278707313537598 0.8012746751308442 7.186872816085815 1519338 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.024809887073934077 17.50451192855835 0.8294042587280274 6.9574672222137455 1736037 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.021591262705624104 18.23042211532593 0.8094950318336487 7.17270941734314 1953156 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.01734946174547076 16.231827831268312 0.7174252450466156 7.658288478851318 2166023 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.018310329504311086 14.621806049346924 0.842749935388565 7.034659147262573 2378610 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.013228157442063094 17.944893455505373 0.7172814309597015 7.410120105743408 2595626 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.010970405768603086 19.72444076538086 0.6995282173156738 7.590388393402099 2808734 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.009999141097068787 18.055194091796874 0.7417321085929871 8.083312892913819 3019219 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.007802975783124566 13.546418571472168 0.7544332981109619 7.707300519943237 3232189 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.006643591402098537 14.187943077087402 0.7510550796985627 7.739383172988892 3442307 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0041797267040237784 15.291315269470214 0.7348057746887207 7.685064268112183 3651223 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.002546251512831077 32.57830123901367 0.6313941061496735 8.54550256729126 3858606 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0004923181040794589 17.85748987197876 0.5683891713619232 8.335614967346192 4066699 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0005215222976403311 16.460630321502684 0.371123731136322 8.857089424133301 4277344 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0009786049777176231 13.443718910217285 0.4969738483428955 7.999289274215698 4487540 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0006606302796853924 20.67976779937744 0.4955940991640091 8.839999580383301 4693915 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0004407391905260738 20.646041488647462 0.47254815697669983 9.503037261962891 4905540 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0003716515129781328 21.374180793762207 0.4625417947769165 9.209063625335693 5113542 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0003338125388836488 36.059618186950686 0.2875663459300995 10.225412273406983 5322478 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0001382843478495488 16.95846061706543 0.38853993117809293 9.342919158935548 5533380 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -7.362499018199742e-05 20.876943588256836 0.39543718099594116 9.003230953216553 5740893 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0005711892452382016 17.482979774475098 0.3364553779363632 10.03844232559204 5949150 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0003312700748210773 22.756739616394043 0.20091591030359268 10.14747371673584 6156896 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00047867284301901237 11.285729217529298 0.21021972596645355 9.646218204498291 6366835 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0008219384028052446 18.780848503112793 0.23755578249692916 10.125506019592285 6572484 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0006617354250920471 24.76971492767334 0.35480724573135375 10.179179763793945 6782616 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  0.00011966344609390945 20.372279548645018 0.14234393760561942 10.582303524017334 6989669 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0009009618122945539 20.83191261291504 0.16540792733430862 10.32643756866455 7198429 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0005823148785566445 29.266108322143555 0.22364622801542283 10.635204982757568 7403658 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0008688209039974026 14.71988754272461 0.39463773667812346 10.457364749908447 7611758 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0001275758375413716 15.93370761871338 0.35072260200977323 9.916313648223877 7821503 0
+Recovering previous policy with expected return of 73.06965174129353. Long term value was 57.354 and short term was 59.48.
+
+
+Pure best response payoff estimated to be 93.35 for player 0. 
+No returns found for player 1. Defaulting to 0 for pure best response estimate
+
+
+
+Updating Empirical Game
+Estimating current strategies:  (8, 0)
+Current player 0 and current strategies (8, 0) took 97.27 seconds to finish estimate with resulting utilities: [155.84   3.04]
+Estimating current strategies:  (8, 1)
+Current player 0 and current strategies (8, 1) took 149.85 seconds to finish estimate with resulting utilities: [115.87   51.915]
+Estimating current strategies:  (8, 2)
+Current player 0 and current strategies (8, 2) took 133.6 seconds to finish estimate with resulting utilities: [76.585 59.925]
+Estimating current strategies:  (8, 3)
+Current player 0 and current strategies (8, 3) took 135.78 seconds to finish estimate with resulting utilities: [70.23 72.68]
+Estimating current strategies:  (8, 4)
+Current player 0 and current strategies (8, 4) took 134.78 seconds to finish estimate with resulting utilities: [69.125 67.055]
+Estimating current strategies:  (8, 5)
+Current player 0 and current strategies (8, 5) took 135.12 seconds to finish estimate with resulting utilities: [71.995 69.775]
+Estimating current strategies:  (8, 6)
+Current player 0 and current strategies (8, 6) took 135.24 seconds to finish estimate with resulting utilities: [67.615 71.81 ]
+Estimating current strategies:  (8, 7)
+Current player 0 and current strategies (8, 7) took 132.52 seconds to finish estimate with resulting utilities: [68.705 67.925]
+Estimating current strategies:  (8, 8)
+Current player 0 and current strategies (8, 8) took 133.65 seconds to finish estimate with resulting utilities: [69.835 72.89 ]
+Computing meta_strategies
+Exited RRD with total regret 7.028191124683104 that was less than regret lambda 7.083333333333335 after 33 iterations 
+REGRET STEPS:  25
+NEW LAMBDA 6.666666666666668
+New explore mss minimum:  0.0
+
+ Metagame display:
+Player 0 Payoff matrix: 
+
+           0              1              2              3              4              5              6              7              8      
+    0    47.81           4.10           2.71           3.42           3.06           3.38           3.15           3.06           3.04      
+    1    186.01          95.34          56.62          51.98          53.87          55.33          53.68          50.29          51.91      
+    2    178.77          126.14          41.22          63.46          64.19          62.12          64.86          63.69          59.92      
+    3    161.28          118.44          76.68          67.96          70.17          70.97          69.00          68.14          72.68      
+    4    159.59          118.36          78.50          68.63          69.45          69.70          71.06          70.15          67.06      
+    5    157.96          115.98          78.83          72.42          70.84          70.96          71.86          68.16          69.78      
+    6    160.10          116.52          79.43          70.34          69.38          71.19          70.25          69.50          71.81      
+    7    156.09          114.77          81.42          68.81          68.90          71.84          71.22          69.14          67.92      
+    8    155.84          115.87          76.58          70.23          69.12          72.00          67.61          68.70          71.36      
+
+ 
+
+Player 1 Payoff matrix: 
+
+           0              1              2              3              4              5              6              7              8      
+    0    47.81          186.01          178.77          161.28          159.59          157.96          160.10          156.09          155.84      
+    1     4.10          95.34          126.14          118.44          118.36          115.98          116.52          114.77          115.87      
+    2     2.71          56.62          41.22          76.68          78.50          78.83          79.43          81.42          76.58      
+    3     3.42          51.98          63.46          67.96          68.63          72.42          70.34          68.81          70.23      
+    4     3.06          53.87          64.19          70.17          69.45          70.84          69.38          68.90          69.12      
+    5     3.38          55.33          62.12          70.97          69.70          70.96          71.19          71.84          72.00      
+    6     3.15          53.68          64.86          69.00          71.06          71.86          70.25          71.22          67.61      
+    7     3.06          50.29          63.69          68.14          70.15          68.16          69.50          69.14          68.70      
+    8     3.04          51.91          59.92          72.68          67.06          69.78          71.81          67.92          71.36      
+
+ 
+
+Social Welfare Sum Matrix: 
+
+           0              1              2              3              4              5              6              7              8      
+    0    95.62          190.11          181.49          164.69          162.64          161.33          163.25          159.15          158.88      
+    1    190.11          190.68          182.76          170.42          172.23          171.31          170.20          165.06          167.78      
+    2    181.49          182.76          82.44          140.14          142.69          140.95          144.29          145.11          136.51      
+    3    164.69          170.42          140.14          135.92          138.81          143.39          139.34          136.95          142.91      
+    4    162.64          172.23          142.69          138.81          138.90          140.55          140.44          139.05          136.18      
+    5    161.33          171.31          140.95          143.39          140.55          141.92          143.05          140.00          141.77      
+    6    163.25          170.20          144.29          139.34          140.44          143.05          140.50          140.72          139.43      
+    7    159.15          165.06          145.11          136.95          139.05          140.00          140.72          138.27          136.63      
+    8    158.88          167.78          136.51          142.91          136.18          141.77          139.43          136.63          142.72      
+
+ 
+
+Metagame probabilities: 
+Player #0: 0.01  0.0778  0.1043  0.1346  0.1335  0.1368  0.1369  0.1337  0.1324  
+Player #1: 0.01  0.0778  0.1043  0.1346  0.1335  0.1368  0.1369  0.1337  0.1324  
+Iteration : 8
+Time so far: 75981.59324264526
+Approximating Best Response
+Training best response:  True 0.06
+rtg values check:  (?,) (?, 1)
+2023-07-19 10:32:19.772379: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_62/weights_2/Adam_1/Assign' id:17669 op device:{requested: '', assigned: ''} def:{{{node mlp_62/weights_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_62/weights_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_62/weights_2/Adam_1, mlp_62/weights_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Setting to fine tune mode: 
+Loading previous PPO policy with minimum entropy 0.0
+
+Training each of the policies for 8000000 steps. 
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0245236212387681 63.82511215209961 0.5019383400678634 9.541226482391357 10498 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.03459824062883854 12.090770435333251 0.7120367884635925 8.745691585540772 222296 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.029679138958454133 11.924670600891114 0.6589234113693238 8.980683040618896 438284 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.026614050939679147 15.882435035705566 0.6143590211868286 8.536479568481445 651676 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.028491688333451747 15.876957607269286 0.7009818613529205 8.24783296585083 866140 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.02682210337370634 16.867692756652833 0.7247894763946533 8.119707727432251 1081347 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.024481696262955665 12.678110504150391 0.703139328956604 7.975906562805176 1297691 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.026087100617587566 15.539542388916015 0.7935274422168732 7.516680479049683 1512538 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.02107809782028198 17.378302001953124 0.7317948162555694 7.453489017486572 1725184 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.01927283313125372 15.404834270477295 0.7374042391777038 7.742727518081665 1941126 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.019223662465810774 15.154544925689697 0.7766297221183777 7.622415971755982 2159096 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.01781822508201003 14.26581106185913 0.7541958689689636 7.9218841075897215 2374450 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.014027133770287036 16.10987768173218 0.7536318004131317 7.992248439788819 2591964 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.010302708903327584 11.506459712982178 0.6759158670902252 8.25041446685791 2806206 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.008073754515498877 20.746183776855467 0.7067101716995239 8.25155873298645 3019153 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.006360497139394283 23.864706611633302 0.6060274243354797 8.313202714920044 3234124 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.005577427009120584 12.248876762390136 0.7015781223773956 8.07835545539856 3447017 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0040181389078497885 15.614527606964112 0.543838632106781 8.897186756134033 3659828 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0021293840371072294 23.462421798706053 0.5925341486930847 8.466707324981689 3870732 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0017637652272242121 13.081112480163574 0.6766882956027984 8.37368106842041 4081771 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.001383163721766323 18.852621841430665 0.5286142200231552 8.456718063354492 4292440 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0017553229525219649 15.04756727218628 0.40792734622955323 8.847983455657959 4502690 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -1.3729648708249443e-05 13.707441902160644 0.3660945951938629 9.278126335144043 4709928 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0006244021176826208 14.059566879272461 0.39715075194835664 8.912908554077148 4918384 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0007653965119970962 21.538392066955566 0.2637529656291008 9.573352527618407 5127257 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0010123504092916847 15.999330139160156 0.3006783664226532 9.47952060699463 5337022 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00038729917287128046 16.71775703430176 0.2564915373921394 9.653217220306397 5547154 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -8.288159297080711e-05 16.654559421539307 0.2348944514989853 9.592275810241699 5754566 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0009815420788072515 12.60083646774292 0.25158810019493105 9.244898509979247 5960727 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00024635315057821574 18.285789680480956 0.23858239501714706 9.692418098449707 6171789 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0005749145409936318 24.65791187286377 0.1873529940843582 10.372953605651855 6379183 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0010313260980183258 18.326497650146486 0.1705396756529808 10.403685188293457 6589679 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0007442451311362675 20.300688362121583 0.15150011330842972 10.613146781921387 6802095 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0009917726449202747 20.112842178344728 0.17689622938632965 10.379595279693604 7011345 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.001028214745747391 30.448562812805175 0.17415622919797896 10.694291400909425 7221317 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.000459996635618154 17.78243932723999 0.13852925598621368 10.95865077972412 7431819 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0010925231501460076 15.117486381530762 0.2665868505835533 10.380014801025391 7638158 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0005882301827114134 16.729212474822997 0.21669863611459733 10.338090133666991 7847765 0
+
+
+Pure best response payoff estimated to be 91.715 for player 0. 
+No returns found for player 1. Defaulting to 0 for pure best response estimate
+
+
+
+Updating Empirical Game
+Estimating current strategies:  (9, 0)
+Current player 0 and current strategies (9, 0) took 44.23 seconds to finish estimate with resulting utilities: [84.38   3.035]
+Estimating current strategies:  (9, 1)
+Current player 0 and current strategies (9, 1) took 94.68 seconds to finish estimate with resulting utilities: [81.22  36.525]
+Estimating current strategies:  (9, 2)
+Current player 0 and current strategies (9, 2) took 109.02 seconds to finish estimate with resulting utilities: [62.435 38.56 ]
+Estimating current strategies:  (9, 3)
+slurmstepd: error: *** JOB 56042708 ON gl3040 CANCELLED AT 2023-07-19T12:59:49 ***

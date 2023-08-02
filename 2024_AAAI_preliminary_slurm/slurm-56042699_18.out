@@ -1,0 +1,252 @@
+Job Id listed below:
+56042732
+
+Lmod is automatically replacing "clang/2022.1.2" with "intel/2022.1.2".
+
+
+Lmod is automatically replacing "gcc/10.3.0" with "clang/2022.1.2".
+
+-------------------------------------------------------------------------------
+The following dependent module(s) are not currently loaded: gcc/10.3.0 (required by: python/3.10.4)
+-------------------------------------------------------------------------------
+
+Lmod is automatically replacing "clang/2022.1.2" with "gcc/10.3.0".
+
+2023-07-18 13:25:32.268759: I tensorflow/core/util/port.cc:110] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2023-07-18 13:25:32.312332: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2023-07-18 13:25:33.295100: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+WARNING:tensorflow:From /home/anrigu/.local/lib/python3.10/site-packages/tensorflow/python/compat/v2_compat.py:107: disable_resource_variables (from tensorflow.python.ops.variable_scope) is deprecated and will be removed in a future version.
+Instructions for updating:
+non-resource variables are not supported in the long term
+I0718 13:25:35.030307 22961578593152 rl_environment.py:187] Using game instance: harvest
+Num cpu cores:  36
+ 
+ Did not find gpu device. Using cpu. 
+ 
+Agent Arguments: 
+batch_size: 64
+discount_factor: 0.99
+double: True
+epsilon_decay_duration: 100000
+hidden_layers_sizes: [50, 50]
+learn_every: 1
+learning_rate: 0.0003
+min_buffer_size_to_learn: 20000
+num_actions: 8
+optimizer_str: adam
+replay_buffer_capacity: 100000
+session: <tensorflow.python.client.session.Session object at 0x14e1df7cad40>
+state_representation_size: 84
+symmetric: True
+update_target_network_every: 500
+
+
+Consensus Arguments: 
+alpha: 5.0
+batch_size: 128
+beta: 0.5
+clear_trajectories: False
+consensus_imitation: False
+consensus_oracle: trajectory_deep
+deep_network_lr: 0.0003
+device: /cpu:0
+discount: 0.99
+entropy_decay_duration: 0.5
+epochs_ppo: 10
+eps_clip: 0.1
+eps_clip_value: 0.5
+eta: 0.05
+fine_tune: True
+fine_tune_policy_lr: 3e-05
+fine_tune_value_lr: 0.0003
+hidden_layer_size: 50
+imitation_mode: prob_action
+joint_action: False
+max_buffer_size_fine_tune: 100000
+min_buffer_size_fine_tune: 10000
+minibatches_ppo: 50
+minimum_entropy: 0.8
+n_hidden_layers: 2
+num_players: 2
+num_simulations_fit: 1
+perturb_all: False
+policy_constraint: 0.1
+policy_constraint_steps: 20
+ppo_entropy_regularization: 0.05
+pretrained_policy_steps: 500
+recovery_window: 200
+regret_calculation_steps: 1500000
+rewards_joint: False
+session: <tensorflow.python.client.session.Session object at 0x14e1df7cad40>
+sims_per_entry: 200
+state_representation_size: 84
+steps_fine_tune: 8000000
+symmetric: True
+tau: 0.001
+training_epochs: 1
+training_steps: 1000
+transfer_policy_minimum_entropy: 0.0
+update_target_every: 1
+
+
+2023-07-18 13:25:35.345810: I tensorflow/compiler/mlir/mlir_graph_optimization_pass.cc:353] MLIR V1 optimization pass is not enabled
+2023-07-18 13:25:35.615252: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_2/bias_2/Adam_1/Assign' id:1071 op device:{requested: '', assigned: ''} def:{{{node mlp_2/bias_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_2/bias_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_2/bias_2/Adam_1, mlp_2/bias_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Using 200 sims per entry.
+Rectifier : 
+Perturbating oracle outputs : False
+Sampling from marginals : True
+Using prd_collab as strategy method.
+Using probabilistic as training strategy selector.
+Estimating current strategies:  (0, 0)
+Current player 0 and current strategies (0, 0) took 19.29 seconds to finish estimate with resulting utilities: [50.05  48.405]
+Exited RRD with total regret 0.0 that was less than regret lambda 2.0 after 0 iterations 
+
+ Metagame display:
+Player 0 Payoff matrix: 
+
+           0      
+    0    49.23      
+
+ 
+
+Player 1 Payoff matrix: 
+
+           0      
+    0    49.23      
+
+ 
+
+Social Welfare Sum Matrix: 
+
+           0      
+    0    98.45      
+
+ 
+
+Iteration : 0
+Time so far: 0.00013136863708496094
+Approximating Best Response
+Training best response:  True 0.1
+rtg values check:  (?,) (?, 1)
+2023-07-18 13:25:55.796166: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_6/weights_2/Adam_1/Assign' id:1925 op device:{requested: '', assigned: ''} def:{{{node mlp_6/weights_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_6/weights_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_6/weights_2/Adam_1, mlp_6/weights_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Setting to fine tune mode: 
+Loading policies from offline learning: 
+
+Training each of the policies for 8000000 steps. 
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.12526174485683442 29.48989200592041 2.0579478263854982 0.0014120579638984055 10176 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.10559819862246514 15.170981788635254 1.8843850255012513 0.26332727670669553 215059 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.09327704459428787 16.179162406921385 1.8613992571830749 0.3729187369346619 417549 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.08783464506268501 14.521122169494628 1.8347285509109497 0.5267725676298142 619242 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.07828776985406875 16.570460891723634 1.8010668396949767 0.5909597933292389 821016 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.07445187494158745 16.74791250228882 1.7886587262153626 0.7539093255996704 1023776 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.06775547713041305 15.920335674285889 1.7507293462753295 0.8535454154014588 1225919 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.05833791010081768 17.33485565185547 1.7075795888900758 0.9974241375923156 1428528 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.05963363461196423 15.431325912475586 1.6826318025588989 1.1285789251327514 1632720 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.04777936823666096 19.214992332458497 1.6365610241889954 1.343929386138916 1836831 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.040568707883358 19.15625915527344 1.5697348475456239 1.309805154800415 2040688 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.03412543646991253 19.79363021850586 1.5018669486045837 1.5073200821876527 2246396 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0292330302298069 21.096979904174805 1.4252385020256042 1.6937283992767334 2455018 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0244747931137681 23.611763572692873 1.3972105860710144 1.8150845289230346 2665226 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.018931830674409865 22.812086868286134 1.2817147254943848 1.919619047641754 2876735 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.01592020271345973 22.94365119934082 1.2124489903450013 2.2045937061309813 3083812 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.012888213712722063 21.005077743530272 1.20571608543396 2.207094740867615 3291461 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.008829685067757964 20.702335929870607 1.1309413194656373 2.4903297424316406 3504993 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0054442534456029534 19.51784553527832 1.0502171397209168 2.7541890382766723 3717129 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.002948293182998896 22.85796375274658 1.0041092038154602 2.984350657463074 3928523 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0016953124089923222 21.17398910522461 0.9025601983070374 3.1170593023300173 4139562 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0015300422295695172 22.560930442810058 0.8085473060607911 3.3811485290527346 4354349 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0012823999146348796 27.60029239654541 0.6850106894969941 3.7367486715316773 4570124 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.002314610272878781 26.36333351135254 0.6529101133346558 4.020401334762573 4784167 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0006575730629265308 24.45277633666992 0.6005711674690246 4.516194677352905 5000029 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0023673211653658655 21.189757919311525 0.5682494878768921 4.752930688858032 5216387 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0002564411814091727 24.813616943359374 0.5428701877593994 4.899474239349365 5431845 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0020650180929806085 24.779577827453615 0.5227695524692535 4.934575414657592 5648173 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.00017665537307038904 19.943608474731445 0.5405302464962005 5.163556385040283 5866364 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0007357089845754672 24.558142852783202 0.5411860525608063 5.223126316070557 6084747 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0008264327356300782 24.183779335021974 0.4945259213447571 5.72657151222229 6301704 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0011309079796774312 26.691359519958496 0.4805740237236023 5.790585613250732 6517435 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0009169190177999553 26.44526481628418 0.4574255675077438 5.841264963150024 6736287 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0013750506041105837 22.763391304016114 0.4449689626693726 6.044259166717529 6953998 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0007265230029588565 27.811029624938964 0.44074041545391085 6.342503213882447 7171574 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0004831742637179559 24.381344604492188 0.3883524894714355 6.634128189086914 7388590 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.001962553803969058 24.745173454284668 0.35740651190280914 6.637987470626831 7607877 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.0011033007089281456 23.08308639526367 0.34559541642665864 6.7169029235839846 7825038 0
+
+
+Pure best response payoff estimated to be 193.765 for player 0. 
+No returns found for player 1. Defaulting to 0 for pure best response estimate
+
+
+
+Updating Empirical Game
+Estimating current strategies:  (1, 0)
+Current player 0 and current strategies (1, 0) took 96.91 seconds to finish estimate with resulting utilities: [189.365   4.585]
+Estimating current strategies:  (1, 1)
+Current player 0 and current strategies (1, 1) took 160.07 seconds to finish estimate with resulting utilities: [97.4   95.745]
+Computing meta_strategies
+Exited RRD with total regret 1.9993710149333879 that was less than regret lambda 2.0 after 43 iterations 
+REGRET STEPS:  15
+NEW LAMBDA 1.8571428571428572
+New explore mss minimum:  0.0
+
+ Metagame display:
+Player 0 Payoff matrix: 
+
+           0              1      
+    0    49.23           4.58      
+    1    189.37          96.57      
+
+ 
+
+Player 1 Payoff matrix: 
+
+           0              1      
+    0    49.23          189.37      
+    1     4.58          96.57      
+
+ 
+
+Social Welfare Sum Matrix: 
+
+           0              1      
+    0    98.45          193.95      
+    1    193.95          193.15      
+
+ 
+
+Metagame probabilities: 
+Player #0: 0.0108  0.9892  
+Player #1: 0.0108  0.9892  
+Iteration : 1
+Time so far: 7174.810989141464
+Approximating Best Response
+Training best response:  True 0.095
+rtg values check:  (?,) (?, 1)
+2023-07-18 15:25:30.820868: W tensorflow/c/c_api.cc:300] Operation '{name:'mlp_13/weights_2/Adam_1/Assign' id:3823 op device:{requested: '', assigned: ''} def:{{{node mlp_13/weights_2/Adam_1/Assign}} = Assign[T=DT_FLOAT, _class=["loc:@mlp_13/weights_2"], _has_manual_control_dependencies=true, use_locking=true, validate_shape=true](mlp_13/weights_2/Adam_1, mlp_13/weights_2/Adam_1/Initializer/zeros)}}' was changed by setting attribute after it was run by a session. This mutation will have no effect, and will trigger an error in the future. Either don't modify nodes after running them or create a new session.
+Setting to fine tune mode: 
+Loading previous PPO policy with minimum entropy 0.0
+
+Training each of the policies for 8000000 steps. 
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.023145670257508754 103.7773422241211 0.4480223715305328 8.208866167068482 11000 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.02208417784422636 18.71994819641113 0.45459824800491333 7.539568710327148 230703 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.022959467396140097 17.88874683380127 0.5011488825082779 6.8654725551605225 449177 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.037231051921844484 14.142486572265625 0.8721452355384827 5.089770030975342 663981 0
+Mean PPO Actor + Value losses, entropy, and kl last 20 updates...and num env steps...and policy constraint weight:  -0.040584762766957286 14.792970275878906 0.9955249786376953 4.4469006061553955 874989 0
+Fatal Python error: Segmentation fault
+
+Current thread 0x000014e228bc4b80 (most recent call first):
+  File "/home/anrigu/srg_research/open_spiel/open_spiel/python/rl_environment.py", line 330 in step
+  File "/home/anrigu/srg_research/open_spiel/open_spiel/python/algorithms/psro_v2/rl_oracle_cooperative.py", line 481 in sample_episode
+  File "/home/anrigu/srg_research/open_spiel/open_spiel/python/algorithms/psro_v2/rl_oracle.py", line 223 in _rollout
+  File "/home/anrigu/srg_research/open_spiel/open_spiel/python/algorithms/psro_v2/rl_oracle_cooperative.py", line 190 in __call__
+  File "/home/anrigu/srg_research/open_spiel/open_spiel/python/algorithms/psro_v2/psro_v2.py", line 413 in update_agents
+  File "/home/anrigu/srg_research/open_spiel/open_spiel/python/algorithms/psro_v2/abstract_meta_trainer.py", line 201 in iteration
+  File "/home/anrigu/srg_research/open_spiel/open_spiel/python/examples/psro_v2_simultaneous.py", line 403 in gpsro_looper
+  File "/home/anrigu/srg_research/open_spiel/open_spiel/python/examples/psro_v2_simultaneous.py", line 482 in main
+  File "/home/anrigu/.local/lib/python3.10/site-packages/absl/app.py", line 254 in _run_main
+  File "/home/anrigu/.local/lib/python3.10/site-packages/absl/app.py", line 308 in run
+  File "/home/anrigu/srg_research/open_spiel/open_spiel/python/examples/psro_v2_simultaneous.py", line 485 in <module>
+
+Extension modules: numpy.core._multiarray_umath, numpy.core._multiarray_tests, numpy.linalg._umath_linalg, numpy.fft._pocketfft_internal, numpy.random._common, numpy.random.bit_generator, numpy.random._bounded_integers, numpy.random._mt19937, numpy.random.mtrand, numpy.random._philox, numpy.random._pcg64, numpy.random._sfc64, numpy.random._generator, google._upb._message, tensorflow.python.framework.fast_tensor_util, charset_normalizer.md, h5py._errors, h5py.defs, h5py._objects, h5py.h5, h5py.h5r, h5py.utils, h5py.h5s, h5py.h5ac, h5py.h5p, h5py.h5t, h5py._conv, h5py.h5z, h5py._proxy, h5py.h5a, h5py.h5d, h5py.h5ds, h5py.h5g, h5py.h5i, h5py.h5f, h5py.h5fd, h5py.h5pl, h5py.h5o, h5py.h5l, h5py._selector, scipy._lib._ccallback_c, scipy.sparse._sparsetools, _csparsetools, scipy.sparse._csparsetools, scipy.sparse.linalg._isolve._iterative, scipy.linalg._fblas, scipy.linalg._flapack, scipy.linalg._cythonized_array_utils, scipy.linalg._flinalg, scipy.linalg._solve_toeplitz, scipy.linalg._matfuncs_sqrtm_triu, scipy.linalg.cython_lapack, scipy.linalg.cython_blas, scipy.linalg._matfuncs_expm, scipy.linalg._decomp_update, scipy.sparse.linalg._dsolve._superlu, scipy.sparse.linalg._eigen.arpack._arpack, scipy.sparse.csgraph._tools, scipy.sparse.csgraph._shortest_path, scipy.sparse.csgraph._traversal, scipy.sparse.csgraph._min_spanning_tree, scipy.sparse.csgraph._flow, scipy.sparse.csgraph._matching, scipy.sparse.csgraph._reordering, PIL._imaging, pandas._libs.tslibs.np_datetime, pandas._libs.tslibs.dtypes, pandas._libs.tslibs.base, pandas._libs.tslibs.nattype, pandas._libs.tslibs.timezones, pandas._libs.tslibs.tzconversion, pandas._libs.tslibs.ccalendar, pandas._libs.tslibs.fields, pandas._libs.tslibs.timedeltas, pandas._libs.tslibs.timestamps, pandas._libs.properties, pandas._libs.tslibs.offsets, pandas._libs.tslibs.parsing, pandas._libs.tslibs.conversion, pandas._libs.tslibs.period, pandas._libs.tslibs.vectorized, pandas._libs.ops_dispatch, pandas._libs.missing, pandas._libs.hashtable, pandas._libs.algos, pandas._libs.interval, pandas._libs.tslib, pandas._libs.lib, pandas._libs.hashing, pandas._libs.ops, pandas._libs.arrays, pandas._libs.index, pandas._libs.join, pandas._libs.sparse, pandas._libs.reduction, pandas._libs.indexing, pandas._libs.internals, pandas._libs.writers, pandas._libs.window.aggregations, pandas._libs.window.indexers, pandas._libs.reshape, pandas._libs.tslibs.strptime, pandas._libs.groupby, pandas._libs.testing, pandas._libs.parsers, pandas._libs.json, scipy.ndimage._nd_image, scipy.special._ufuncs_cxx, scipy.special._ufuncs, scipy.special._specfun, scipy.special._comb, scipy.special._ellip_harm_2, _ni_label, scipy.ndimage._ni_label, cvxopt.base, cvxopt.blas, cvxopt.lapack (total: 117)
+/var/spool/slurmd.spool/job56042732/slurm_script: line 34: 4141163 Segmentation fault      (core dumped) python3 -u psro_v2_simultaneous.py --game_name=harvest --save_folder_path="../examples/data/harvest/vanilla_ppo_additional/($trial)_$parameter_id" --meta_strategy_method=prd_collab --gpsro_iterations=30 --consensus_imitation=False --regret_lambda_init=$curr_lambda --regret_steps=$curr_steps --policy_constraint_steps=20 --joint_action=False --rewards_joint=False --fine_tune=True --clear_trajectories=False --consensus_hidden_layer_size=50 --consensus_n_hidden_layers=2 --min_buffer_size_fine_tune=10000 --epochs_ppo=10 --minibatches_ppo=50 --number_training_steps=8000000 --symmetric_game=True --sims_per_entry=200 --eps_clip=.1 --eps_clip_value=.5 --entropy_decay_duration=.5 --ppo_entropy=.05 --fine_tune_policy_lr=.00003 --fine_tune_value_lr=.0003 --transfer_policy_minimum_entropy=0 --recovery_window=200 --hidden_layer_size=50 --n_hidden_layers=2 --batch_size=64 --dqn_learning_rate=3e-4 --update_target_network_every=500 --learn_every=1 --max_buffer_size=100000 --epsilon_decay_duration=100000 --min_buffer_size_to_learn=20000 --regret_calculation_steps=1500000
