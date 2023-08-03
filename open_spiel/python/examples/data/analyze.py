@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 
 #RRD Runner
 from open_spiel.python.algorithms import projected_replicator_dynamics
-import pyspiel
 import tensorflow.compat.v1 as tf
 import sys
 
@@ -166,20 +165,23 @@ def main(argv):
     ax.set_xlabel("Iteration")
     ax.set_ylabel("Welfare")
     _, end = ax.get_xlim()
-    ax.xaxis.set_ticks(np.arange(0, end, 1))
+    ax.xaxis.set_ticks(np.arange(0, end, 3))
     welfare_fig.savefig(folder_path + "max_welfare.jpg")
     plt.close()
 
   def graph_expected_welfare(data, folder_path):
     # Graph the expected welfare over iterations
     welfare_fig, ax = plt.subplots()
-    ax.scatter(x=[ind for ind in range(len(data))],
-      y=data, label="{}: expected welfare".format(name_of_method))
+    y = np.mean(data, axis=0)
+    stdev = np.std(data, axis=0)
+    x= [ind for ind in range(len(data[0]))]
+    ax.plot(x, y, label="{}: expected welfare".format(name_of_method))
+    ax.fill_between(x, y - stdev, y + stdev, alpha=0.2)
     ax.set_title("Expected Welfare Over Iterations")
     ax.set_xlabel("Iteration")
     ax.set_ylabel("Welfare")
-    start, end = ax.get_xlim()
-    ax.xaxis.set_ticks(np.arange(0, end, 1))
+    _, end = ax.get_xlim()
+    ax.xaxis.set_ticks(np.arange(0, end, 3))
     welfare_fig.savefig(folder_path + "expected_welfare.jpg")
     plt.close()
 
@@ -194,26 +196,32 @@ def main(argv):
     ax.set_xlabel("Iteration")
     ax.set_ylabel("Expected Individual Utility")
     _, end = ax.get_xlim()
-    ax.xaxis.set_ticks(np.arange(0, end, 1))
+    ax.xaxis.set_ticks(np.arange(0, end, 3))
     ax.legend()
-    expected_payoff_fig.savefig(folder_path + "expected_payoff.jpg")
+    expected_payoff_fig.savefig(folder_path + "expected_payoff_individual.jpg")
     plt.close()
 
   def graph_regret(data, folder_path):
     #Plot the individual regret values for each player on the same plot
     regret_fig, ax = plt.subplots()
     for player_index in range(len(data)):
-        ax.plot([ind + 1 for ind in range(len(data[player_index]))],
-          data[player_index],
+        x = [ind + 1 for ind in range(len(data[player_index][0]))]
+        y = np.mean(data[player_index], axis=0)
+        stdev = np.std(data[player_index], axis=0)
+        ax.plot(x, y,
           label= "{}: Player {}".format(name_of_method, player_index))
+        ax.fill_between(x, y - stdev, y + stdev, alpha=0.2)
     ax.set_title("Individual Regret Over Iterations")
     ax.set_xlabel("Iteration")
     ax.set_ylabel("Regret Values")
-    start, end = ax.get_xlim()
-    ax.xaxis.set_ticks(np.arange(0, end, 1))
+    _, end = ax.get_xlim()
+    ax.xaxis.set_ticks(np.arange(0, end, 3))
     ax.legend()
     regret_fig.savefig(folder_path + "regret.jpg")
     plt.close()
+
+  AGGREGATE_EXP_WELFARE = []
+  AGGREGATE_REGRET = [[] for _ in range(num_players)]
 
   def get_data(relative_folder_path):
     """
@@ -226,13 +234,12 @@ def main(argv):
     total_path = data_directory_path + relative_folder_path + "/"
     all_files = [f for f in os.listdir(total_path) if os.path.isfile(os.path.join(total_path, f))]
     max_social_welfare_over_iterations = []
-    aggregated_kl_values = [[],[]] if not is_symmetric else [[]]
-    expected_payoff_individual_players = [[], []] if not is_symmetric else [[]]
+    aggregated_kl_values = [[] for _ in range(num_players)]
+    expected_payoff_individual_players = [[] for _ in range(num_players)]
     expected_welfare = []
     iterations = len(all_files)
-    regret_individuals = [[],[]] if not is_symmetric else [[]]
-    player_profile_history = [[], []] if not is_symmetric else [[]] 
-    average_regret = []
+    regret_individuals = [[] for _ in range(num_players)]
+    player_profile_history = [[] for _ in range(num_players)]
     trial_graph_path = os.getcwd() + save_graph_path + relative_folder_path + "/"
     for i in range(iterations):
       print("ITERATION {}:".format(i))
@@ -252,11 +259,11 @@ def main(argv):
       list_of_meta_probabilities = [meta_probabilities[i] for i in range(meta_probabilities.shape[0])]
       for num_player in range(num_players):
         player_profile_history[num_player].append(list_of_meta_probabilities[num_player])
-        expected_payoff_vector = _partial_multi_dot(utilities[num_player], list_of_meta_probabilities, num_player)
+        expected_payoff_individual = _partial_multi_dot(utilities[num_player], list_of_meta_probabilities, num_player)
         player_profile = list_of_meta_probabilities[num_player]
         
-        expected_utility = np.dot(player_profile, expected_payoff_vector)
-        expected_payoff_individual_players[num_player].append(expected_utility)
+        expected_utility_individual = np.dot(player_profile, expected_payoff_individual)
+        expected_payoff_individual_players[num_player].append(expected_utility_individual)
         # ppo_training_data = [kl, entropy, actor-loss, value-loss]
         aggregated_kl_values[num_player].append(ppo_training_data[num_player][0])
 
@@ -271,20 +278,22 @@ def main(argv):
             best_response_payoffs = utilities[num_player][:, -1]
           prev_player_profile = player_profile_history[num_player][i-1]
           best_response_trunc = best_response_payoffs[:len(prev_player_profile)]
-          print(prev_player_profile, best_response_trunc)
           best_response_expected_payoff = np.dot(prev_player_profile, best_response_trunc)
-          regret_individuals[num_player].append(max(max(best_response_expected_payoff - expected_payoff_individual_players[num_player][i - 1], pure_br_returns[num_player]- expected_payoff_individual_players[num_player][i - 1]), 0))
+          regret_individuals[num_player].append(max(max(best_response_expected_payoff - expected_payoff_individual_players[num_player][i - 1], pure_br_returns[num_player] - expected_payoff_individual_players[num_player][i - 1]), 0))
           print("Individual regret vector: ", regret_individuals)
-
-       #PPO Training Returns
+          AGGREGATE_REGRET[num_player].append(regret_individuals[num_player])
+        #PPO Training Returns
         print("KL Divergence Data Individual {}: ".format(num_player), ppo_training_data[num_player][0])
 
 
       social_welfare = np.sum(utilities, axis=0)
       max_social_welfare_over_iterations.append(np.max(social_welfare))
 
-      expected_welfare_player_0 = _partial_multi_dot(social_welfare, list_of_meta_probabilities, 0)
-      expected_welfare_iteration = np.dot(list_of_meta_probabilities[0], expected_welfare_player_0)
+      # num_players is 1 if symmetric
+      expected_welfare_iteration = 0
+      for i in range(num_players):
+        expected_welfare_player = _partial_multi_dot(social_welfare, list_of_meta_probabilities, i)
+        expected_welfare_iteration += np.dot(list_of_meta_probabilities[i], expected_welfare_player)
       expected_welfare.append(expected_welfare_iteration)
       print("Expected welfare: ", expected_welfare_iteration)
       #Readability
@@ -294,15 +303,14 @@ def main(argv):
     if graph_mode:
       if not os.path.exists(trial_graph_path):
         os.makedirs(trial_graph_path)
-      graph_max_welfare(max_social_welfare_over_iterations, trial_graph_path)
-      graph_expected_welfare(expected_welfare, trial_graph_path)
+      #graph_max_welfare(max_social_welfare_over_iterations, trial_graph_path)
       graph_expected_payoff(expected_payoff_individual_players, trial_graph_path)
-      graph_regret(regret_individuals, trial_graph_path)
       graph_kl(aggregated_kl_values, trial_graph_path)
-
+    
+    AGGREGATE_EXP_WELFARE.append(expected_welfare)
     return utilities
 
-  def welfare_runner(meta_games):
+  def _prd_sims(meta_games):
     NUM_ITER = 1
 
     import random
@@ -333,7 +341,9 @@ def main(argv):
     #Do welfare prd once after all trials
     utilities = get_data(trial_data_directory)
   print("Calculating alternate RRD Welfares")
-  print(welfare_runner([utilities[0], utilities[1]]))
+  print(_prd_sims([utilities[0], utilities[1]]))
 
+  graph_expected_welfare(np.array(AGGREGATE_EXP_WELFARE), os.getcwd() + save_graph_path)
+  graph_regret(AGGREGATE_REGRET, os.getcwd() + save_graph_path)
 if __name__ == "__main__":
   app.run(main)
