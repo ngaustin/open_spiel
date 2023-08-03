@@ -211,6 +211,23 @@ def main(argv):
         ax.plot(x, y,
           label= "{}: Player {}".format(name_of_method, player_index))
         ax.fill_between(x, y - stdev, y + stdev, alpha=0.2)
+    ax.set_title("Average Regret Over Iterations")
+    ax.set_xlabel("Iteration")
+    ax.set_ylabel("Regret Values")
+    _, end = ax.get_xlim()
+    ax.xaxis.set_ticks(np.arange(0, end, 3))
+    ax.legend()
+    regret_fig.savefig(folder_path + "regret.jpg")
+    plt.close()
+
+  def graph_regret_iterations(data, folder_path):
+    '''
+      Graph regret for each player individually 
+    '''
+    regret_fig, ax = plt.subplots()
+    for player_index in range(len(data)):
+      ax.plot([ind + 1 for ind in range(len(data[player_index]))],
+          data[player_index], label= "{}: Player {}".format(name_of_method, player_index))
     ax.set_title("Individual Regret Over Iterations")
     ax.set_xlabel("Iteration")
     ax.set_ylabel("Regret Values")
@@ -306,6 +323,7 @@ def main(argv):
       #graph_max_welfare(max_social_welfare_over_iterations, trial_graph_path)
       graph_expected_payoff(expected_payoff_individual_players, trial_graph_path)
       graph_kl(aggregated_kl_values, trial_graph_path)
+      graph_regret_iterations(regret_individuals, trial_graph_path)
     
     AGGREGATE_EXP_WELFARE.append(expected_welfare)
     return utilities
