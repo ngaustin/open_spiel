@@ -173,11 +173,11 @@ def main(argv):
     # Graph the expected welfare over iterations
     welfare_fig, ax = plt.subplots()
     x = [ind for ind in range(len(data[0][0]))]
-    for sim_data in data:
+    for i, sim_data in enumerate(data):
       sim_data_np = np.array(sim_data)
       y = np.mean(sim_data_np, axis=0)
       stdev = np.std(sim_data_np, axis=0)
-      ax.plot(x, y, label="{}: expected welfare".format(name_of_method))
+      ax.plot(x, y, label="{}: File {}".format(name_of_method, i))
       ax.fill_between(x, y - stdev, y + stdev, alpha=0.2)
 
     ax.set_title("Expected Welfare Over Iterations")
@@ -395,5 +395,6 @@ def main(argv):
     AGGREGATE_REGRET.append(SIM_REGRET)  
   graph_expected_welfare(AGGREGATE_WELFARE, os.getcwd() + save_graph_path)
   graph_regret(AGGREGATE_REGRET, os.getcwd() + save_graph_path)
+  
 if __name__ == "__main__":
   app.run(main)
