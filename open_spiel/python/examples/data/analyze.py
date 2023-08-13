@@ -353,11 +353,11 @@ def main(argv):
 
     import random
     for _ in range(NUM_ITER):
-      random_nums = [np.array([random.randint(1,100) for _ in range(len(meta_games[0]))]) for _ in range(FLAGS.n_players)]
+      random_nums = [np.array([random.randint(1,5) for _ in range(len(meta_games[0]))]) for _ in range(FLAGS.n_players)]
       random_profile = [player_profile / np.sum(player_profile) for player_profile in random_nums]
       prd_profile = projected_replicator_dynamics.regularized_replicator_dynamics(
         meta_games,regret_lambda=0.001,
-        prd_initial_strategies=random_profile)
+        prd_initial_strategies=random_profile, symmetric=is_symmetric)
       max_welfare_profile = []
       max_welfare = 0
       combined_profile = []
@@ -394,6 +394,7 @@ def main(argv):
     AGGREGATE_WELFARE.append(SIM_WELFARE)
     AGGREGATE_REGRET.append(SIM_REGRET)  
   graph_expected_welfare(AGGREGATE_WELFARE, os.getcwd() + save_graph_path)
+
   graph_regret(AGGREGATE_REGRET, os.getcwd() + save_graph_path)
   
 if __name__ == "__main__":

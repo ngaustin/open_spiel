@@ -237,6 +237,7 @@ HarvestState::HarvestState(std::shared_ptr<const Game> game)
 
         int numOptions = validIndices.size();
         int choice = floor(randNumber / (1.0 / numOptions));
+        choice = std::max(std::min(choice, numOptions - 1), 0);
         std::pair<int, int> loc = agentSpawnPoints_[validIndices[choice]];
 
         SPIEL_CHECK_TRUE(grid_[loc.first][loc.second] == kempty);
@@ -624,6 +625,7 @@ void HarvestState::DoApplyActions(const std::vector<Action>& moves) {
 
       int numOptions = validIndices.size();
       int choice = floor(randNumber / (1.0 / numOptions));
+      choice = std::max(std::min(choice, numOptions - 1), 0);
       std::pair<int, int> loc = agentSpawnPoints_[validIndices[choice]];
 
       SPIEL_CHECK_TRUE(grid_[loc.first][loc.second] == kempty);

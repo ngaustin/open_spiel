@@ -84,6 +84,15 @@ flags.DEFINE_integer("n_top_trajectories", 1, "Number of trajectories to take fr
 flags.DEFINE_bool("rewards_joint", False, "Whether to select trajectories and optimize consensus policies on joint rewards")
 flags.DEFINE_bool("perturb_all", False, "Whether to use policy constraints on ALL policies after first iteration")
 
+# Parameter search-related model-saving functionality
+flags.DEFINE_bool("save_models", False, "Whether to save the policy network models after SAC training")
+flags.DEFINE_string("save_model_path", "./", "Relative path to save the policy network models if save_models is set to True")
+
+# SAC parameters
+flags.DEFINE_float("value_clip", .2)
+flags.DEFINE_float("alpha", .01)
+flags.DEFINE_integer("sac_batch_size", 64)
+flags.DEFINE_integer("sac_update_every", 10)
 
 
 # PPO parameters
@@ -121,7 +130,7 @@ flags.DEFINE_float("consensus_minimum_entropy", .8, "Entropy of policy required 
 flags.DEFINE_integer("consensus_update_target_every", 1, "Update target network")
 flags.DEFINE_float("consensus_tau", 1e-3, "Soft update for target q network")
 flags.DEFINE_integer("consensus_training_steps", int(1e3), "Number of training steps for offline RL training")
-flags.DEFINE_float("alpha", 5.0, "Hyperparameter for q value minimization")
+# flags.DEFINE_float("alpha", 5.0, "Hyperparameter for q value minimization")
 flags.DEFINE_float("eta", .05, "Gap between difference in values for regularization")
 flags.DEFINE_float("beta", .5, "Amount of weight put on difference between trajectory returns")
 
@@ -291,7 +300,13 @@ def init_dqn_responder(sess, env):
     "regret_calculation_steps": FLAGS.regret_calculation_steps,
     "sims_per_entry": FLAGS.sims_per_entry,
     "recovery_window": FLAGS.recovery_window,
-    "pretrained_policy_steps": FLAGS.pretrained_policy_steps
+    "pretrained_policy_steps": FLAGS.pretrained_policy_steps,
+    "save_models": FLAGS.save_models,
+    "save_model_path": FLAGS.save_model_path, 
+    "sac_value_clip", FLAGS.value_clip,
+    "sac_alpha", FLAGS.alpha, 
+    "sac_batch_size", FLAGS.sac_batch_size,
+    "sac_update_every", FLAGS.sac_update_every
   }
 
   print("Agent Arguments: ")
