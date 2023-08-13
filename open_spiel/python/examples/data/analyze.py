@@ -172,16 +172,20 @@ def main(argv):
   def graph_expected_welfare(data, folder_path):
     # Graph the expected welfare over iterations
     welfare_fig, ax = plt.subplots()
-    y = np.mean(data, axis=0)
-    stdev = np.std(data, axis=0)
-    x= [ind for ind in range(len(data[0]))]
-    ax.plot(x, y, label="{}: expected welfare".format(name_of_method))
-    ax.fill_between(x, y - stdev, y + stdev, alpha=0.2)
+    x = [ind for ind in range(len(data[0][0]))]
+    for sim_data in data:
+      sim_data_np = np.array(sim_data)
+      y = np.mean(sim_data_np, axis=0)
+      stdev = np.std(sim_data_np, axis=0)
+      ax.plot(x, y, label="{}: expected welfare".format(name_of_method))
+      ax.fill_between(x, y - stdev, y + stdev, alpha=0.2)
+
     ax.set_title("Expected Welfare Over Iterations")
     ax.set_xlabel("Iteration")
     ax.set_ylabel("Welfare")
     _, end = ax.get_xlim()
     ax.xaxis.set_ticks(np.arange(0, end, 3))
+    ax.legend()
     welfare_fig.savefig(folder_path + "expected_welfare.jpg")
     plt.close()
 
@@ -189,8 +193,8 @@ def main(argv):
     # Plot the expected payoff for each player on the same plot
     expected_payoff_fig, ax = plt.subplots()
     for player_index in range(num_players):
-      ax.scatter(x=[ind for ind in range(len(data[player_index]))],
-        y=data[player_index],
+      ax.plot([ind for ind in range(len(data[player_index]))],
+        data[player_index],
         label= "{}: Player {}".format(name_of_method, player_index))
     ax.set_title("Expected Individual Payoff Over Iterations")
     ax.set_xlabel("Iteration")
@@ -204,13 +208,18 @@ def main(argv):
   def graph_regret(data, folder_path):
     #Plot the individual regret values for each player on the same plot
     regret_fig, ax = plt.subplots()
-    for player_index in range(len(data)):
-        x = [ind + 1 for ind in range(len(data[player_index][0]))]
-        y = np.mean(data[player_index], axis=0)
-        stdev = np.std(data[player_index], axis=0)
+    for i, sim_data in enumerate(data):
+      sim_data_np = np.array(sim_data)
+      for player_index in range(num_players):
+        y = []
+        stdev = []
+        for ind in range(len(sim_data[0][0])):
+          y.append(np.mean(sim_data_np[:, player_index, ind]))
+          stdev.append(np.std(sim_data_np[:, player_index, ind], axis=0))
+        x = [ind + 1 for ind in range(len(sim_data[player_index][0]))]
         ax.plot(x, y,
-          label= "{}: Player {}".format(name_of_method, player_index))
-        ax.fill_between(x, y - stdev, y + stdev, alpha=0.2)
+          label= "{}: Player {}: File {}".format(name_of_method, player_index, i))
+        ax.fill_between(x, np.array(y) - np.array(stdev), np.array(y) + np.array(stdev), alpha=0.2)
     ax.set_title("Average Regret Over Iterations")
     ax.set_xlabel("Iteration")
     ax.set_ylabel("Regret Values")
@@ -237,8 +246,8 @@ def main(argv):
     regret_fig.savefig(folder_path + "regret.jpg")
     plt.close()
 
-  AGGREGATE_EXP_WELFARE = []
-  AGGREGATE_REGRET = [[] for _ in range(num_players)]
+  TRIAL_EXP_WELFARE = []
+  TRIAL_REGRET = [[] for _ in range(num_players)]
 
   def get_data(relative_folder_path):
     """
@@ -248,7 +257,7 @@ def main(argv):
       Note that the utility matrix corresponding to player 0 is to be read in rows,
         and player 1's should be read column-wise.
     """
-    total_path = data_directory_path + relative_folder_path + "/"
+    total_path = data_directory_path + relative_folder_path
     all_files = [f for f in os.listdir(total_path) if os.path.isfile(os.path.join(total_path, f))]
     max_social_welfare_over_iterations = []
     aggregated_kl_values = [[] for _ in range(num_players)]
@@ -262,6 +271,7 @@ def main(argv):
       print("ITERATION {}:".format(i))
       # save_folder_path + specific_string.format(i)
       save_data_path = [file for file in all_files if "iteration_{}.".format(i) in file][0]
+      print("FILE", save_data_path)
       save_data_path = data_directory_path + relative_folder_path + "/" + save_data_path
       with open(save_data_path, "rb") as npy_file:
           array_list = np.load(npy_file, allow_pickle=True)
@@ -298,7 +308,7 @@ def main(argv):
           best_response_expected_payoff = np.dot(prev_player_profile, best_response_trunc)
           regret_individuals[num_player].append(max(max(best_response_expected_payoff - expected_payoff_individual_players[num_player][i - 1], pure_br_returns[num_player] - expected_payoff_individual_players[num_player][i - 1]), 0))
           print("Individual regret vector: ", regret_individuals)
-          AGGREGATE_REGRET[num_player].append(regret_individuals[num_player])
+          TRIAL_REGRET[num_player] = regret_individuals[num_player]
         #PPO Training Returns
         print("KL Divergence Data Individual {}: ".format(num_player), ppo_training_data[num_player][0])
 
@@ -306,13 +316,24 @@ def main(argv):
       social_welfare = np.sum(utilities, axis=0)
       max_social_welfare_over_iterations.append(np.max(social_welfare))
 
-      # num_players is 1 if symmetric
+      # # num_players is 1 if symmetric
+      expected_welfare_iteration = 0
+      joint_profile = []
+      for val in list_of_meta_probabilities[0]:
+        for val2 in list_of_meta_probabilities[1]:
+          joint_profile.append(val * val2)
+      # for val in list_of_meta_probabilities[0]:
+      #   for val2 in list_of_meta_probabilities[1]:
+      #     joint_profile.append(val * val2)
+      flattened_social_welfare = np.array(social_welfare).flatten()
+      expected_welfare_iteration = np.dot(flattened_social_welfare, joint_profile)
       expected_welfare_iteration = 0
       for i in range(num_players):
         expected_welfare_player = _partial_multi_dot(social_welfare, list_of_meta_probabilities, i)
         expected_welfare_iteration += np.dot(list_of_meta_probabilities[i], expected_welfare_player)
-      expected_welfare.append(expected_welfare_iteration)
+
       print("Expected welfare: ", expected_welfare_iteration)
+      TRIAL_EXP_WELFARE.append(expected_welfare_iteration)
       #Readability
       print()
 
@@ -325,10 +346,9 @@ def main(argv):
       graph_kl(aggregated_kl_values, trial_graph_path)
       graph_regret_iterations(regret_individuals, trial_graph_path)
     
-    AGGREGATE_EXP_WELFARE.append(expected_welfare)
-    return utilities
+    return utilities, meta_probabilities
 
-  def _prd_sims(meta_games):
+  def _rrd_sims(meta_games):
     NUM_ITER = 1
 
     import random
@@ -354,14 +374,26 @@ def main(argv):
     print("GAME IS SYMMETRIC. ONLY 1 SET OF RETURNS\n")
 
   utilities = []
-  for i, trial_data_directory in enumerate(os.listdir(data_directory_path)):
-    print("TRIAL {}:\n".format(i))
-    #Do welfare prd once after all trials
-    utilities = get_data(trial_data_directory)
-  print("Calculating alternate RRD Welfares")
-  print(_prd_sims([utilities[0], utilities[1]]))
-
-  graph_expected_welfare(np.array(AGGREGATE_EXP_WELFARE), os.getcwd() + save_graph_path)
+  meta = []
+  AGGREGATE_WELFARE = []
+  AGGREGATE_REGRET = []
+  for i, epsiode_data_directory in enumerate(sorted(os.listdir(data_directory_path))):
+    SIM_WELFARE = []
+    SIM_REGRET = []
+    print("------------------------------FILE {}-------------------------------".format(epsiode_data_directory))
+    for j, trial_data_directory in enumerate(sorted(os.listdir(data_directory_path + "/" + epsiode_data_directory))):
+      print("TRIAL {}:\n".format(j))
+      #Do welfare prd once after all trials
+      utilities, meta = get_data(epsiode_data_directory + "/" + trial_data_directory)
+      SIM_WELFARE.append(TRIAL_EXP_WELFARE)
+      SIM_REGRET.append(TRIAL_REGRET)
+      TRIAL_EXP_WELFARE = []
+      TRIAL_REGRET = [[] for _ in range(num_players)]
+      print("Calculating alternate RRD Welfares")
+      #print(_rrd_sims([utilities[0], utilities[1]]))
+    AGGREGATE_WELFARE.append(SIM_WELFARE)
+    AGGREGATE_REGRET.append(SIM_REGRET)  
+  graph_expected_welfare(AGGREGATE_WELFARE, os.getcwd() + save_graph_path)
   graph_regret(AGGREGATE_REGRET, os.getcwd() + save_graph_path)
 if __name__ == "__main__":
   app.run(main)
