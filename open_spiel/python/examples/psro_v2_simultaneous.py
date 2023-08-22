@@ -87,12 +87,14 @@ flags.DEFINE_bool("perturb_all", False, "Whether to use policy constraints on AL
 # Parameter search-related model-saving functionality
 flags.DEFINE_bool("save_models", False, "Whether to save the policy network models after SAC training")
 flags.DEFINE_string("save_model_path", "./", "Relative path to save the policy network models if save_models is set to True")
+flags.DEFINE_bool("load_models", False, "Whether to load the networks that wer saved in save_model_path based on psro iteration")
+flags.DEFINE_integer("num_iterations_load_only", 0, "Number of iterations where PSRO should simply load models and not train BR")
 
 # SAC parameters
-flags.DEFINE_float("value_clip", .2)
-flags.DEFINE_float("alpha", .01)
-flags.DEFINE_integer("sac_batch_size", 64)
-flags.DEFINE_integer("sac_update_every", 10)
+flags.DEFINE_float("value_clip", .2, "Value function clipping for sac")
+flags.DEFINE_float("alpha", .01, "Entropy temperature for sac")
+flags.DEFINE_integer("sac_batch_size", 64, "Batch size for each sac update")
+flags.DEFINE_integer("sac_update_every", 10, "Sac performs one update every sac_update_every env steps")
 
 
 # PPO parameters
@@ -128,7 +130,6 @@ flags.DEFINE_float("consensus_minimum_entropy", .8, "Entropy of policy required 
 
 # R-BVE Offline training parameters (shouldn't be used)
 flags.DEFINE_integer("consensus_update_target_every", 1, "Update target network")
-flags.DEFINE_float("consensus_tau", 1e-3, "Soft update for target q network")
 flags.DEFINE_integer("consensus_training_steps", int(1e3), "Number of training steps for offline RL training")
 # flags.DEFINE_float("alpha", 5.0, "Hyperparameter for q value minimization")
 flags.DEFINE_float("eta", .05, "Gap between difference in values for regularization")
@@ -274,7 +275,6 @@ def init_dqn_responder(sess, env):
     "n_hidden_layers": FLAGS.consensus_n_hidden_layers,
     "num_players": FLAGS.n_players,
     "symmetric": FLAGS.symmetric_game,
-    "tau": FLAGS.consensus_tau,
     "discount": FLAGS.discount_factor,
     "eta": FLAGS.eta,
     "beta": FLAGS.beta,
@@ -303,10 +303,12 @@ def init_dqn_responder(sess, env):
     "pretrained_policy_steps": FLAGS.pretrained_policy_steps,
     "save_models": FLAGS.save_models,
     "save_model_path": FLAGS.save_model_path, 
-    "sac_value_clip", FLAGS.value_clip,
-    "sac_alpha", FLAGS.alpha, 
-    "sac_batch_size", FLAGS.sac_batch_size,
-    "sac_update_every", FLAGS.sac_update_every
+    "load_models": FLAGS.load_models,
+    "num_iterations_load_only": FLAGS.num_iterations_load_only,
+    "sac_value_clip": FLAGS.value_clip,
+    "sac_alpha": FLAGS.alpha, 
+    "sac_batch_size": FLAGS.sac_batch_size,
+    "sac_update_every": FLAGS.sac_update_every
   }
 
   print("Agent Arguments: ")
@@ -469,7 +471,7 @@ def main(argv):
   if FLAGS.game_name=="harvest":
     game = pyspiel.load_game(FLAGS.game_name, {"rng_seed": FLAGS.seed})
   elif FLAGS.game_name=="bargaining":
-    game = pyspiel.load_game(FLAGS.game_name, {"discount": 1.0})
+    game = pyspiel.load_game(FLAGS.game_name, {"discount": .95})
   else:
     game = pyspiel.load_game(FLAGS.game_name)  # The iterated prisoners dilemma does not have "players" info type
 
@@ -497,6 +499,7 @@ def main(argv):
       oracle, agents = init_tabular_q_responder(sess, env)"""
     sess.run(tf.global_variables_initializer())
     gpsro_looper(env, oracle, agents)
+  tf.reset_default_graph()
 
 if __name__ == "__main__":
   app.run(main)

@@ -164,7 +164,6 @@ class DQN(rl_agent.AbstractAgent):
     predictions = tf.gather_nd(self._q_values, action_indices)
 
     # print("shape predictions: ", predictions.shape)
-
     self._savers = [("q_network", tf.train.Saver(self._q_network.variables)),
                     ("target_q_network",
                      tf.train.Saver(self._target_q_network.variables))]

@@ -191,9 +191,9 @@ class Imitation(rl_agent.AbstractAgent):
             indices = indices + diff
         return indices
 
-    def set_to_fine_tuning_mode(self, train_best_response):
+    def set_to_fine_tuning_mode(self, train_best_response, psro_iteration):
         self._replay_buffer.reset()
-        self._fine_tune_module.set_to_fine_tuning_mode(train_best_response)
+        self._fine_tune_module.set_to_fine_tuning_mode(train_best_response, psro_iteration)
         self._fine_tune_mode = True
 
     def _initialize(self):

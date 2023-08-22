@@ -506,11 +506,13 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
             # TODO: Adapt this so that we get trajectories from updating the empirical gamestate
             import time
             prev = time.time()
-            print("Estimating current strategies: ", tuple(used_index))
+            print("\nEstimating current strategies: ", tuple(used_index))
             utility_estimates, trajectories, action_trajectories, all_returns = self.sample_episodes(estimated_policies,
                                                                                 self._sims_per_entry)
             print("Current player {} and current strategies {} took {} seconds to finish estimate with resulting utilities: {}".format(current_player, tuple(used_index), round(time.time() - prev, 2), utility_estimates))
-
+          
+            if self.consensus_imitation:
+              self._oracle.update_trajectories(["dummy variable to signify if symmetric" for _ in range(1 if self.symmetric_game else self._num_players)], trajectories, action_trajectories, all_returns)
             # Make a grouping of indices of used_index that are the same 
             computed_average_value = {}  # maps a strategy index to an average payoff
             utility_estimates_averaged = []

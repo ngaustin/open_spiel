@@ -28,6 +28,54 @@ import time
 _DEFAULT_STRATEGY_SELECTION_METHOD = "probabilistic"
 _DEFAULT_META_STRATEGY_METHOD = "prd"
 
+def get_time_step(state):
+    """Returns a `TimeStep` without updating the environment.
+
+    Returns:
+      A `TimeStep` namedtuple containing:
+        observation: list of dicts containing one observations per player, each
+          corresponding to `observation_spec()`.
+        reward: list of rewards at this timestep, or None if step_type is
+          `StepType.FIRST`.
+        discount: list of discounts in the range [0, 1], or None if step_type is
+          `StepType.FIRST`.
+        step_type: A `StepType` value.
+    """
+    observations = {
+        "info_state": [],
+        "legal_actions": [],
+        "current_player": [],
+        "serialized_state": [], 
+        "global_state": []
+    }
+    rewards = []
+    step_type = StepType.LAST if state.is_terminal() else StepType.MID
+
+    if not state.is_chance_node():
+      cur_rewards = state.rewards()
+    else:
+      cur_rewards = [None for _ in range(state.num_players())]
+
+    for player_id in range(state.num_players()):
+      rewards.append(cur_rewards[player_id])
+      observations["info_state"].append(
+          state.observation_tensor(player_id))
+
+      observations["legal_actions"].append(state.legal_actions(player_id))
+    observations["current_player"] = state.current_player()
+
+    discounts = [0. for _ in range(state.num_players())]
+
+    # For gym environments
+    if hasattr(state, "last_info"):
+      observations["info"] = state.last_info
+
+    return TimeStep(
+        observations=observations,
+        rewards=rewards,
+        discounts=discounts,
+        step_type=step_type)
+
 
 def _process_string_or_callable(string_or_callable, dictionary):
   """Process a callable or a string representing a callable.
@@ -69,9 +117,10 @@ def sample_episode(state, policies):
         Meant to be a win/loss integer.
   """
 
-  # timestep = get_time_step(state)
+  start = time.time()
+  timestep = get_time_step(state)
   if state.is_terminal():
-    return np.array(state.returns(), dtype=np.float32), None, None# [timestep], []
+    return np.array(state.returns(), dtype=np.float32), [timestep], [] # None, None#
 
   if state.is_simultaneous_node():
     actions = [None] * state.num_players()
@@ -81,8 +130,8 @@ def sample_episode(state, policies):
       outcomes, probs = zip(*state_policy.items())
       actions[player] = utils.random_choice(outcomes, probs)
     state.apply_actions(actions)
-    rets, _, _ = sample_episode(state, policies)
-    return rets, None, None# [timestep] + later_timesteps, [actions] + later_actions
+    rets, later_timesteps, later_actions = sample_episode(state, policies)
+    return rets, [timestep] + later_timesteps, [actions] + later_actions # None, None# 
     # return sample_episode(state, policies)
 
   # Not implemented
@@ -93,8 +142,10 @@ def sample_episode(state, policies):
     state_policy = policies[player](state, player)
     outcomes, probs = zip(*state_policy.items())
 
-  state.apply_action(utils.random_choice(outcomes, probs))
-  return sample_episode(state, policies)
+  applied_action = utils.random_choice(outcomes, probs)
+  state.apply_action(applied_action)
+  rets, later_timesteps, later_actions = sample_episode(state, policies)
+  return rets, [timestep] + later_timesteps, [applied_action] + later_actions # None, None# 
 
 
 class AbstractMetaTrainer(object):
@@ -237,18 +288,21 @@ class AbstractMetaTrainer(object):
       pol._policy.clear_state_tracking()
     
     for ep in range(num_episodes):
-      rets, _, _ = sample_episode(self._game.new_initial_state(),
+      start = time.time()
+      rets, trajectory, actions = sample_episode(self._game.new_initial_state(),
                                         policies)
       # print("Episode returns: ", rets)
       totals += rets.reshape(-1)
       all_returns.append(rets.reshape(-1))
+      all_trajectories.append(trajectory)
+      all_action_trajectories.append(actions)
     
     for k, pol in enumerate(policies):
       # NOTE: Clear the buffers for frozen policies...only when we are done analyzing these state coverage values
       pol._policy._replay_buffer.reset()  
       pol._policy.states_seen_in_evaluation = []
       
-    return totals / num_episodes, None, None, None# all_trajectories, all_action_trajectories, all_returns
+    return totals / num_episodes, all_trajectories, all_action_trajectories, all_returns #None, None, None#
 
   def get_meta_strategies(self):
     """Returns the Nash Equilibrium distribution on meta game matrix."""

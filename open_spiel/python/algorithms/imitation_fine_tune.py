@@ -101,8 +101,8 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         # BELOW is for R-BVE finetuning
         self.max_buffer_size_fine_tune = consensus_kwargs["max_buffer_size_fine_tune"]
         self.min_buffer_size_fine_tune = consensus_kwargs["min_buffer_size_fine_tune"]
-        self.fine_tune_bool = consensus_kwargs["fine_tune"]
         self.consensus_kwargs = consensus_kwargs
+        self.state_representation_size = state_representation_size
 
         self.layer_sizes = [self.hidden_layer_size] * self.n_hidden_layers
 
@@ -116,7 +116,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
 
         # Initialize the FF network
 
-        num_outputs = self._num_actions ** num_players if self.joint_action else self._num_actions
+        self.num_outputs = self._num_actions ** num_players if self.joint_action else self._num_actions
 
         self.trained_once = False
 
@@ -156,6 +156,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         # TODO: Insert a flag whether or not to save the model
         # TODO: Insert path to save model (use the current datetime as the name of the model)
         self._save_model_after_training = consensus_kwargs["save_models"]
+        self._load_model_before_training = consensus_kwargs["load_models"]
         self._save_model_path = consensus_kwargs["save_model_path"]
         ####### R-BVE/SARSA Start ########
 
@@ -306,8 +307,8 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         # Initialize policy network, exploration policy, 2 q networks, and 2 target q networks
         
         # Create policy network and exploration policy networks
-        self._policy_network = simple_nets.MLP(state_representation_size, self.layer_sizes, num_outputs)
-        self._exploration_policy_network = simple_nets.MLP(state_representation_size, self.layer_sizes, num_outputs)
+        self._policy_network = simple_nets.MLP(self.state_representation_size, self.layer_sizes, self.num_outputs)
+        self._exploration_policy_network = simple_nets.MLP(self.state_representation_size, self.layer_sizes, self.num_outputs)
 
         # Create 2 Q-networks and their respective target networks
         self._q1 = simple_nets.MLP(state_representation_size, self.layer_sizes, self._num_actions)
@@ -427,6 +428,17 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         self._update_q1_target = self._create_target_network_update_op(self._q1, self._q1_target)
         self._update_q2_target = self._create_target_network_update_op(self._q2, self._q2_target)
 
+        # Savers
+        files_in_checkpoint_dir = os.listdir(self._save_model_path)
+        num_checkpoints = len([f for f in files_in_checkpoint_dir if '.index' in f])
+
+        self._savers = [("policy_network_{}".format(num_checkpoints), tf.train.Saver(self._policy_network.variables))]
+                        #("exploration_network_{}".format(num_checkpoints), tf.train.Saver(self._exploration_policy_network.variables)),
+                        #("q1_network_{}".format(num_checkpoints), tf.train.Saver(self._q1.variables)),
+                        #("q2_network_{}".format(num_checkpoints), tf.train.Saver(self._q2.variables)),
+                        #("q1_target_network_{}".format(num_checkpoints), tf.train.Saver(self._q1_target.variables)),
+                        #("q2_target_{}".format(num_checkpoints), tf.train.Saver(self._q2_target.variables))]
+
 
         self._initialize()
 
@@ -458,22 +470,31 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         return 
 
     def _create_policy_network(self, policy_network, source_network):
-        source_variables = source_network.variables[:]
-        policy_variables = policy_network.variables[:]
-        assert source_variables
-        assert len(source_variables) == len(policy_variables)
-        return tf.group([
-            tf.assign(target_v, v)
-            for (target_v, v) in zip(policy_variables, source_variables)
-        ])
+        if source_network != None:
+            source_variables = source_network.variables[:]
+            policy_variables = policy_network.variables[:]
+            assert source_variables
+            assert len(source_variables) == len(policy_variables)
+            return tf.group([
+                tf.assign(target_v, v)
+                for (target_v, v) in zip(policy_variables, source_variables)
+            ])
+        else:
+            initialization_network = tf.group(
+                *[var.initializer for var in  policy_network.variables[:]]
+            )
 
-    def set_to_fine_tuning_mode(self, is_train_best_response):
+            return tf.group(*[initialization_network])                                     
+
+
+    def set_to_fine_tuning_mode(self, is_train_best_response, psro_iteration):
 
         self.is_train_best_response = is_train_best_response
 
-        self.recover_policy = is_train_best_response  # We only recover it if it is best response because, otherwise, we would always have a new policy initialized for consensus policies
-        self.epochs = self.consensus_kwargs["epochs_ppo"]
-        self.minibatches = self.consensus_kwargs["minibatches_ppo"]
+        # self.recover_policy = is_train_best_response  # We only recover it if it is best response because, otherwise, we would always have a new policy initialized for consensus policies
+        # self.epochs = self.consensus_kwargs["epochs_ppo"]
+        # self.minibatches = self.consensus_kwargs["minibatches_ppo"]
+
         self.session.run(self._initialize_exploration_policy_network)  # Initialize the old policy network with the imitation_deep trained network for policy constraint if necessary
 
         """
@@ -503,6 +524,13 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         #     self.session.run(self._initialize_policy_network)  # Initialize the policy with the imitation_deep trained network. If not consensus_imitation, the network initialization is random
         #     self.session.run(self._save_policy_network)
         """
+
+        if self._load_model_before_training and psro_iteration < self.consensus_kwargs["num_iterations_load_only"]:
+            
+            print("")
+            print("Attempting to load model for psro iteration ", psro_iteration)
+            self.restore(psro_iteration)
+            print("Successfully restored checkpoint for psro iteration ", psro_iteration, "\n")
 
         self.policy_constraint_weight = 0 if self.is_train_best_response else self.policy_constraint_weight
         
@@ -569,20 +597,20 @@ class ImitationFineTune(rl_agent.AbstractAgent):
             # self.curr_trajectory.append(time_step)
             # if action != None:
             #     self.action_trajectory.append([action])
-            self._env_steps += 1
+
+            if action != None:  # action could be 0
+                self._env_steps += 1
             
             if add_transition_record and self._prev_timestep:
-                # Call add_transition directly here for SAC
-
                 # If it is simultaneous, then pass in override symmetric True. This will indicate that we only want transitions from one of the agents (the one that is creating new strategy)
                 if not self._is_turn_based:
                     self.add_transition(self._prev_timestep, [self._prev_action], time_step, override_symmetric=True)
                 # If it is turn-based, then pass in override player [self.player_id]. This will indicate that we only want transitions from the agent corresponding to this policy.
                 else:
+                    # We note that in symmetric implementation, during BR calculation, player will always be 0 and self.player_id will also always be 0
                     self.add_transition(self._prev_timestep, [self._prev_action], time_step, override_player=[self.player_id])
             
             if len(self._replay_buffer) > self.min_buffer_size_fine_tune and self._env_steps % self.update_every == 0:
-                    # TODO: Change this conditional so that we check the size of the buffer
                 self.fine_tune()
 
             if time_step.last():
@@ -619,6 +647,26 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                         self.first_returns = sum(self.running_returns) / len(self.running_returns)
                 """
         return rl_agent.StepOutput(action=action, probs=probs)
+
+    def _full_checkpoint_name(self, checkpoint_dir, name):
+        return os.path.join(checkpoint_dir, name)
+    
+    def _latest_checkpoint_filename(self, name):
+        return name + "_latest"
+
+    def save(self, checkpoint_dir):
+        for name, saver in self._savers:
+            print("Saving model with full name: ", self._full_checkpoint_name(checkpoint_dir, name))
+            path = saver.save(
+                self.session,
+                self._full_checkpoint_name(checkpoint_dir, name)
+            )
+    
+    def restore(self, index):
+        for name, saver in self._savers:
+            full_checkpoint_dir = self._full_checkpoint_name(self._save_model_path, name[:-1] + str(index))
+            saver.restore(self.session, full_checkpoint_dir)
+            
     
     def post_training(self):
         # Post training, if we somehow find a policy worse than the one we initialized with, recover the previous policy
@@ -634,9 +682,11 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         """
 
         if self._save_model_after_training:
-            tf.saved_model.save(self._policy_network, self._save_model_path + str(datetime.datetime.now()))
+            checkpoint_dir = self._save_model_path
+            print("Saving model...")
+            self.save(checkpoint_dir)
+            print("Successfully saved model at checkpoint directory: ", checkpoint_dir, "\n")
         return
-
 
     def fine_tune(self):
                 
@@ -782,7 +832,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         if (self._fine_tune_print_counter <= 0):
             print("SAC env steps so far ", self._env_steps, self.policy_constraint_weight) # sum(config.entropy_list) / len(config.entropy_list), sum(config.kl_list) / len(config.kl_list),
             # print("Reward scaling mean, std: ", self.reward_scaler.rs.mean, self.reward_scaler.rs.std)
-            self._fine_tune_print_counter = 1000
+            self._fine_tune_print_counter = 20000
         
         # self._replay_buffer.reset()
 

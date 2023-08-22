@@ -154,7 +154,7 @@ class RLOracle(optimization_oracle.AbstractOracle):
     # self._number_training_episodes. Given the stochastic nature of our
     # training, some policies may have more training episodes than that value.
     return np.all(
-        steps_per_oracle.reshape(-1) > self._number_training_steps)
+        steps_per_oracle.reshape(-1) >= self._number_training_steps)
 
   def sample_policies_for_episode(self, new_policies, training_parameters,
                                   steps_per_oracle, strategy_sampler):
