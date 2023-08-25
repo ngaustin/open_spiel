@@ -161,7 +161,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         if self._fine_tune_bool or train_best_response:
             for i in range(len(new_policies)):
                 print("Setting to fine tune mode: ")
-                new_policies[i][0]._policy.set_to_fine_tuning_mode(train_best_response, num_policies_total-1)
+                new_policies[i][0]._policy.set_to_fine_tuning_mode(train_best_response, psro_iteration=num_policies_total-1)
 
         if (not self._fine_tune_bool) and not train_best_response:
             rl_oracle.freeze_all(new_policies)
@@ -331,9 +331,9 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         print("\n")
         if not train_best_response:
             steps_per_policy = np.array([[0 for _ in range(len(player_params))] for player_params in training_parameters])
-            new_policies_regret = self.create_consensus_policies(training_parameters, self.get_policy_constraint_weight(num_policies_total), self._most_recent_br_policies)
+            new_policies_regret = self.create_consensus_policies(training_parameters, self.get_policy_constraint_weight(num_policies_total), self._most_recent_br_policies, num_policies_total)
             for i in range(len(new_policies_regret)):
-                new_policies_regret[i][0]._policy.set_to_fine_tuning_mode(train_best_response=True)
+                new_policies_regret[i][0]._policy.set_to_fine_tuning_mode(train_best_response=True, psro_iteration=num_policies_total-1)
 
             # Keep in mind that we are starting from the policies provided by the perturbed best response...so they're already pretty good. 
             # So, let's assume we only need around half of the training steps to actually create a best response out of it
@@ -415,7 +415,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                 new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based, "prev_policy":recent_br_policies[i] if recent_br_policies else None, "policy_constraint":fine_tune_constraint}
                 if iteration_num <= self._consensus_kwargs["num_iterations_load_only"]:
                     kwargs = copy(self._consensus_kwargs)
-                    kwargs["hidden_layer_size"] = 50
+                    kwargs["hidden_layer_size"] = 100
                 else:
                     kwargs = self._consensus_kwargs
                 curr._policy = imitation_deep.Imitation(**{"player_id": i, "consensus_kwargs": kwargs}, **new_arguments)

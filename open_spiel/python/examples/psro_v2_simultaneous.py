@@ -405,7 +405,7 @@ def gpsro_looper(env, oracle, agents):
       number_policies_selected=FLAGS.number_policies_selected,
       meta_strategy_method=FLAGS.meta_strategy_method,
       prd_iterations=50000,
-      prd_gamma=1e-4,  # TODO: CHANGED THIS
+      prd_gamma=0,  # TODO: CHANGED THIS
       sample_from_marginals=sample_from_marginals,
       regret_lambda=FLAGS.regret_lambda_init,
       explore_mss=FLAGS.minimum_exploration_init,

@@ -145,7 +145,8 @@ def sample_episode(state, policies):
   applied_action = utils.random_choice(outcomes, probs)
   state.apply_action(applied_action)
   rets, later_timesteps, later_actions = sample_episode(state, policies)
-  return rets, [timestep] + later_timesteps, [applied_action] + later_actions # None, None# 
+  # We use [applied_action] because we keep consistency that actions are list of actions for each player
+  return rets, [timestep] + later_timesteps, [[applied_action]] + later_actions # None, None# 
 
 
 class AbstractMetaTrainer(object):
