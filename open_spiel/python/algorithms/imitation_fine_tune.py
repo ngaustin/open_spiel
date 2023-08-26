@@ -429,6 +429,11 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         self._update_q2_target = self._create_target_network_update_op(self._q2, self._q2_target)
 
         # Savers
+
+        # INSERT WAY TO CHECK IF SAVE_MODEL_PATH is a folder.If not, create recursively 
+        pathExists = os.path.exists(self._save_model_path)
+        if not pathExists:
+            os.makedirs(self._save_model_path)
         files_in_checkpoint_dir = os.listdir(self._save_model_path)
         num_checkpoints = len([f for f in files_in_checkpoint_dir if '.index' in f])
 

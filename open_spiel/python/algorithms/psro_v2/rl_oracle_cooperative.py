@@ -330,19 +330,16 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         self.pure_best_response_returns = []
         print("\n")
         if not train_best_response:
+            print("NOT creating pure best response. Saved models and will calculate true regret in a different run.")
+        if False: # not train_best_response:
+            """
             steps_per_policy = np.array([[0 for _ in range(len(player_params))] for player_params in training_parameters])
             new_policies_regret = self.create_consensus_policies(training_parameters, self.get_policy_constraint_weight(num_policies_total), self._most_recent_br_policies, num_policies_total)
             for i in range(len(new_policies_regret)):
                 new_policies_regret[i][0]._policy.set_to_fine_tuning_mode(train_best_response=True, psro_iteration=num_policies_total-1)
 
-            # Keep in mind that we are starting from the policies provided by the perturbed best response...so they're already pretty good. 
-            # So, let's assume we only need around half of the training steps to actually create a best response out of it
-            print("Training pure best response for {} steps.".format(self._number_training_steps // 2))
-            while not np.all(steps_per_policy > (self._number_training_steps // 2)):
-                """ Note: basically, this while loop cycles through each of the agent's new policies at a time. It will
-                use sample_policies_for_episode to determine which agent's new policy to train and what policies each of the
-                player targets will use. Then, it will do the rollout where it trains the new policy for an episode. Then,
-                update the number of episodes each new policy has been trained. """
+            print("Training pure best response for {} steps.".format(self._number_training_steps))
+            while not np.all(steps_per_policy > (self._number_training_steps)):
                 agents, indexes = self.sample_policies_for_episode(
                         new_policies_regret, training_parameters, steps_per_policy,
                         strategy_sampler)
@@ -368,6 +365,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                     averages = [all_player_rets[player] for all_player_rets in averages]
                     self.pure_best_response_returns.append(max(averages))  
                     print("Pure best response payoff estimated to be {} for player {}. ".format(max(averages), player)) 
+            """
         else: 
             # Otherwise, just take from train_br_returns, windows of length sims_per_entry, take max average window 
             for player, rets in enumerate(self._train_br_returns):
