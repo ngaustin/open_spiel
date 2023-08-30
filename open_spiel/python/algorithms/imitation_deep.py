@@ -209,6 +209,10 @@ class Imitation(rl_agent.AbstractAgent):
             ]))
     # FINE-TUNING END
 
+    def reset_buffers(self):
+        self._replay_buffer.reset()
+        self._fine_tune_module.reset_buffers()
+
     def step(self, time_step, is_evaluation=False, add_transition_record=True):
         """Applying trained FF network to test data
 

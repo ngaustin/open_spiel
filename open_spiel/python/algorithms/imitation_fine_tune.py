@@ -539,7 +539,8 @@ class ImitationFineTune(rl_agent.AbstractAgent):
 
         self.policy_constraint_weight = 0 if self.is_train_best_response else self.policy_constraint_weight
         
-
+    def reset_buffers(self):
+        self._replay_buffer.reset()
 
     def step(self, time_step, is_evaluation=False, add_transition_record=True):
         """Returns the action to be taken and updates the Q-network if needed.
@@ -553,6 +554,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
           A `rl_agent.StepOutput` containing the action probs and chosen action.
         """
         # Act step: don't act at terminal info states or if its not our turn.
+        print("LENGTH OF BUFFER: ", len(self._replay_buffer))
         if (not time_step.last()) and (
                 time_step.is_simultaneous_move() or
                 self.player_id == time_step.current_player() or self.symmetric):

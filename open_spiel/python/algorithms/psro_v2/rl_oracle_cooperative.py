@@ -325,6 +325,12 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         # policies in training iterations.
         rl_oracle.freeze_all(new_policies)
 
+        for k, policy_list in enumerate(new_policies):
+        # NOTE: Clear the buffers for frozen policies...only when we are done analyzing these state coverage values
+            for pol in policy_list:
+                pol._policy.reset_buffers()  
+                pol._policy.states_seen_in_evaluation = []
+
         ################### Regret Calculations #######################
         # If we didn't calculate a "true" best response before, then do it now 
         self.pure_best_response_returns = []

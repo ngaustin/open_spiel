@@ -297,11 +297,6 @@ class AbstractMetaTrainer(object):
       all_returns.append(rets.reshape(-1))
       all_trajectories.append(trajectory)
       all_action_trajectories.append(actions)
-    
-    for k, pol in enumerate(policies):
-      # NOTE: Clear the buffers for frozen policies...only when we are done analyzing these state coverage values
-      pol._policy._replay_buffer.reset()  
-      pol._policy.states_seen_in_evaluation = []
       
     return totals / num_episodes, all_trajectories, all_action_trajectories, all_returns #None, None, None#
 
