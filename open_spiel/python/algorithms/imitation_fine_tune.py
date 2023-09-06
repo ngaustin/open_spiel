@@ -429,6 +429,11 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         self._update_q2_target = self._create_target_network_update_op(self._q2, self._q2_target)
 
         # Savers
+
+        # INSERT WAY TO CHECK IF SAVE_MODEL_PATH is a folder.If not, create recursively 
+        pathExists = os.path.exists(self._save_model_path)
+        if not pathExists:
+            os.makedirs(self._save_model_path)
         files_in_checkpoint_dir = os.listdir(self._save_model_path)
         num_checkpoints = len([f for f in files_in_checkpoint_dir if '.index' in f])
 
@@ -534,7 +539,8 @@ class ImitationFineTune(rl_agent.AbstractAgent):
 
         self.policy_constraint_weight = 0 if self.is_train_best_response else self.policy_constraint_weight
         
-
+    def reset_buffers(self):
+        self._replay_buffer.reset()
 
     def step(self, time_step, is_evaluation=False, add_transition_record=True):
         """Returns the action to be taken and updates the Q-network if needed.
@@ -548,6 +554,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
           A `rl_agent.StepOutput` containing the action probs and chosen action.
         """
         # Act step: don't act at terminal info states or if its not our turn.
+        print("LENGTH OF BUFFER: ", len(self._replay_buffer))
         if (not time_step.last()) and (
                 time_step.is_simultaneous_move() or
                 self.player_id == time_step.current_player() or self.symmetric):
