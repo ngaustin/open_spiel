@@ -294,23 +294,29 @@ def main(argv):
         # ppo_training_data = [kl, entropy, actor-loss, value-loss]
         aggregated_kl_values[num_player].append(ppo_training_data[num_player][0])
 
-        if i > 0:
-          #Row player
-          if num_player == 0:
-            # Row corresponding to best_response utilities
-            best_response_payoffs = utilities[num_player][-1]
-          else:
-            # Will never get here if game is symmetric
-            # Column corresponding to best_response utilities
-            best_response_payoffs = utilities[num_player][:, -1]
-          prev_player_profile = player_profile_history[num_player][i-1]
-          best_response_trunc = best_response_payoffs[:len(prev_player_profile)]
-          best_response_expected_payoff = np.dot(prev_player_profile, best_response_trunc)
-          regret_individuals[num_player].append(max(max(best_response_expected_payoff - expected_payoff_individual_players[num_player][i - 1], pure_br_returns[num_player] - expected_payoff_individual_players[num_player][i - 1]), 0))
-          print("Individual regret vector: ", regret_individuals)
-          TRIAL_REGRET[num_player] = regret_individuals[num_player]
+        if i == (iterations - 1): 
+          for j in range(0, iterations):
+            #First index in player_profile_history is iteration 1's profile
+            prev_player_profile = player_profile_history[num_player][j]
+            best_response_expected_payoff = 0
+            for k in range(0, iterations):
+              #Calculate regret for all previous iterations
+              #Row player
+              if num_player == 0:
+                # Row corresponding to best_response utilities
+                best_response_payoffs = utilities[num_player][k]
+              else:
+                #if symmetric, never reaches here. num_player = 0 always
+                best_response_payoffs = utilities[num_player][:, k]
+              best_response_trunc = best_response_payoffs[:len(prev_player_profile)]
+              best_response_expected_payoff = max(np.dot(prev_player_profile, best_response_trunc), best_response_expected_payoff)
+            #regret_individuals[num_player].append(max(max(best_response_expected_payoff - expected_payoff_individual_players[num_player][i - 1], pure_br_returns[num_player] - expected_payoff_individual_players[num_player][i - 1]), 0))
+            regret_individuals[num_player].append(best_response_expected_payoff - expected_payoff_individual_players[num_player][j])
+            TRIAL_REGRET[num_player] = regret_individuals[num_player]
+          print("Individual regret vector: ", regret_individuals[num_player])
         #PPO Training Returns
-        print("KL Divergence Data Individual {}: ".format(num_player), ppo_training_data[num_player][0])
+        #KL Divergence not used 
+        #print("KL Divergence Data Individual {}: ".format(num_player), ppo_training_data[num_player][0])
 
 
       social_welfare = np.sum(utilities, axis=0)
@@ -331,7 +337,7 @@ def main(argv):
       for i in range(num_players):
         expected_welfare_player = _partial_multi_dot(social_welfare, list_of_meta_probabilities, i)
         expected_welfare_iteration += np.dot(list_of_meta_probabilities[i], expected_welfare_player)
-
+  
       print("Expected welfare: ", expected_welfare_iteration)
       TRIAL_EXP_WELFARE.append(expected_welfare_iteration)
       #Readability
@@ -381,10 +387,11 @@ def main(argv):
     SIM_WELFARE = []
     SIM_REGRET = []
     print("------------------------------FILE {}-------------------------------".format(epsiode_data_directory))
-    for j, trial_data_directory in enumerate(sorted(os.listdir(data_directory_path + "/" + epsiode_data_directory))):
+    for j, trial_data_directory in enumerate(sorted(os.listdir(data_directory_path + "/" + epsiode_data_directory + "/data"))):
+      print(trial_data_directory)
       print("TRIAL {}:\n".format(j))
       #Do welfare prd once after all trials
-      utilities, meta = get_data(epsiode_data_directory + "/" + trial_data_directory)
+      utilities, meta = get_data(epsiode_data_directory + "/data/" + trial_data_directory)
       SIM_WELFARE.append(TRIAL_EXP_WELFARE)
       SIM_REGRET.append(TRIAL_REGRET)
       TRIAL_EXP_WELFARE = []
