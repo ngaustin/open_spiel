@@ -417,11 +417,11 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             new_arguments = {"num_actions": self._best_response_kwargs["num_actions"]}
             if self._consensus_oracle == "trajectory_deep":
                 new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based, "prev_policy":recent_br_policies[i] if recent_br_policies else None, "policy_constraint":fine_tune_constraint}
-                if iteration_num <= self._consensus_kwargs["num_iterations_load_only"]:
-                    kwargs = copy(self._consensus_kwargs)
-                    kwargs["hidden_layer_size"] = 100
-                else:
-                    kwargs = self._consensus_kwargs
+                # if iteration_num <= self._consensus_kwargs["num_iterations_load_only"]:
+                #     kwargs = copy(self._consensus_kwargs)
+                #     kwargs["hidden_layer_size"] = 50
+                # else:
+                kwargs = self._consensus_kwargs
                 curr._policy = imitation_deep.Imitation(**{"player_id": i, "consensus_kwargs": kwargs}, **new_arguments)
 
             elif self._consensus_oracle == "cql_deep":

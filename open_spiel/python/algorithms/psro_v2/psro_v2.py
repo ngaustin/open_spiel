@@ -565,6 +565,19 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
   def meta_games(self):
     return self._meta_games
 
+  def set_meta_game(self, new_meta_game):
+    # TODO: Implement this
+    self._meta_games = new_meta_game
+    return 
+
+  def set_meta_strategies(self, new_meta_strategies):
+    # TODO: Implement this
+    if self.symmetric_game:
+      self._meta_strategy_probabilities = [new_meta_strategies[0]]
+    else:
+      self._meta_strategy_probabilities = new_meta_strategies
+    return 
+
   def get_policies(self):
     """Returns a list, each element being a list of each player's policies."""
     policies = self._policies

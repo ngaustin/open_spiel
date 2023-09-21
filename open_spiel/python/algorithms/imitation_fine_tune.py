@@ -554,7 +554,7 @@ class ImitationFineTune(rl_agent.AbstractAgent):
           A `rl_agent.StepOutput` containing the action probs and chosen action.
         """
         # Act step: don't act at terminal info states or if its not our turn.
-        print("LENGTH OF BUFFER: ", len(self._replay_buffer))
+        # print("LENGTH OF BUFFER: ", len(self._replay_buffer))
         if (not time_step.last()) and (
                 time_step.is_simultaneous_move() or
                 self.player_id == time_step.current_player() or self.symmetric):
@@ -671,7 +671,8 @@ class ImitationFineTune(rl_agent.AbstractAgent):
     
     def restore(self, index):
         for name, saver in self._savers:
-            full_checkpoint_dir = self._full_checkpoint_name(self._save_model_path, name[:-1] + str(index))
+            name_without_last_index = "_".join(name.split('_')[:-1]) + "_"
+            full_checkpoint_dir = self._full_checkpoint_name(self._save_model_path, name_without_last_index + str(index))
             saver.restore(self.session, full_checkpoint_dir)
             
     

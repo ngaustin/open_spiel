@@ -314,6 +314,7 @@ def main(argv):
             regret_individuals[num_player].append(best_response_expected_payoff - expected_payoff_individual_players[num_player][j])
             TRIAL_REGRET[num_player] = regret_individuals[num_player]
           print("Individual regret vector: ", regret_individuals[num_player])
+
         #PPO Training Returns
         #KL Divergence not used 
         #print("KL Divergence Data Individual {}: ".format(num_player), ppo_training_data[num_player][0])
@@ -339,6 +340,7 @@ def main(argv):
         expected_welfare_iteration += np.dot(list_of_meta_probabilities[i], expected_welfare_player)
   
       print("Expected welfare: ", expected_welfare_iteration)
+
       TRIAL_EXP_WELFARE.append(expected_welfare_iteration)
       #Readability
       print()
@@ -383,6 +385,7 @@ def main(argv):
   meta = []
   AGGREGATE_WELFARE = []
   AGGREGATE_REGRET = []
+  indices_of_jobs_needed = [None for i in range(75)]
   for i, epsiode_data_directory in enumerate(sorted(os.listdir(data_directory_path))):
     SIM_WELFARE = []
     SIM_REGRET = []
@@ -391,15 +394,28 @@ def main(argv):
       print(trial_data_directory)
       print("TRIAL {}:\n".format(j))
       #Do welfare prd once after all trials
+
       utilities, meta = get_data(epsiode_data_directory + "/data/" + trial_data_directory)
+      """
+      This is my code for analyzing welfare. I've commented it out for you :)
+
+      job_id = int(epsiode_data_directory.split('_')[-1]) * 5 + int(trial_data_directory.split('_')[-1])
+
+      utilities, meta = get_data(epsiode_data_directory + "/" + trial_data_directory)
+      print("Length: ", len(utilities[0]), len(indices_of_jobs_needed), job_id)
+      if len(utilities[0]) > 30 and job_id < 75 and job_id >= 0: # < 75: # 
+        print("Ending expected welfare: ", TRIAL_EXP_WELFARE[-1])
+        indices_of_jobs_needed[job_id - 0] = TRIAL_EXP_WELFARE[-1]
+      """
       SIM_WELFARE.append(TRIAL_EXP_WELFARE)
       SIM_REGRET.append(TRIAL_REGRET)
       TRIAL_EXP_WELFARE = []
       TRIAL_REGRET = [[] for _ in range(num_players)]
-      print("Calculating alternate RRD Welfares")
+      #print("Calculating alternate RRD Welfares")
       #print(_rrd_sims([utilities[0], utilities[1]]))
     AGGREGATE_WELFARE.append(SIM_WELFARE)
     AGGREGATE_REGRET.append(SIM_REGRET)  
+  print("Comma separated best response utilities: ", indices_of_jobs_needed)
   graph_expected_welfare(AGGREGATE_WELFARE, os.getcwd() + save_graph_path)
 
   graph_regret(AGGREGATE_REGRET, os.getcwd() + save_graph_path)
