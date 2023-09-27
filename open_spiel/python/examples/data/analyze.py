@@ -310,6 +310,8 @@ def main(argv):
               unregularized_regret_array_list = np.load(npy_file, allow_pickle=True)
             unreg_meta_probabilities, unreg_utilities, _, _, _, _ = unregularized_regret_array_list
             regret_iter_options = len(unreg_meta_probabilities[0])
+          else: 
+            unreg_utilities = utilities
           for j in range(0, iterations):
             #First index in player_profile_history is iteration 1's profile
             prev_player_profile = player_profile_history[num_player][j]
@@ -375,15 +377,15 @@ def main(argv):
     return utilities, meta_probabilities
 
   def _rrd_sims(meta_games):
-    NUM_ITER = 100
+    NUM_ITER = 250
     import random
     for _ in range(NUM_ITER):
       random_nums = [np.array([random.randint(1,5) for _ in range(len(meta_games[0]))]) for _ in range(FLAGS.n_players)]
       random_profile = [player_profile / np.sum(player_profile) for player_profile in random_nums]
       #prd_dt default = 1e-3 (0.001)
       prd_profile = projected_replicator_dynamics.regularized_replicator_dynamics(
-        meta_games,regret_lambda=0.0001,
-        prd_initial_strategies=random_profile, prd_dt=1e-3, symmetric=is_symmetric)
+        meta_games,regret_lambda=0.01,
+        prd_initial_strategies=random_profile, prd_dt=1e-2, symmetric=is_symmetric)
       max_welfare_profile = []
       max_welfare = 0
       combined_profile = []
