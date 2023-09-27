@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from open_spiel.python.algorithms import projected_replicator_dynamics
 import tensorflow.compat.v1 as tf
 import sys
+import time
 
 FLAGS = flags.FLAGS
 
@@ -20,6 +21,7 @@ flags.DEFINE_string("game_name",  "Harvest", "Name of game.")
 flags.DEFINE_integer("n_players", 2, "Number of players")
 flags.DEFINE_boolean("graph_mode", True, "Will/won't graph.")
 flags.DEFINE_boolean("is_symmetric", True, "Symmetric game?")
+flags.DEFINE_boolean("expsro", False, "ExPSRO Run?")
 
 # NOTE: File is designed to analyze one game at a time.
 
@@ -229,7 +231,7 @@ def main(argv):
     regret_fig.savefig(folder_path + "regret.jpg")
     plt.close()
 
-  def graph_regret_iterations(data, folder_path):
+  def graph_regret_iter_options(data, folder_path):
     '''
       Graph regret for each player individually 
     '''
@@ -258,12 +260,13 @@ def main(argv):
         and player 1's should be read column-wise.
     """
     total_path = data_directory_path + relative_folder_path
-    all_files = [f for f in os.listdir(total_path) if os.path.isfile(os.path.join(total_path, f))]
+    all_files = sorted([f for f in os.listdir(total_path) if os.path.isfile(os.path.join(total_path, f))])
+    print("ALLFILES", all_files)
     max_social_welfare_over_iterations = []
     aggregated_kl_values = [[] for _ in range(num_players)]
     expected_payoff_individual_players = [[] for _ in range(num_players)]
     expected_welfare = []
-    iterations = len(all_files)
+    iterations = len(all_files) if not FLAGS.expsro else 30
     regret_individuals = [[] for _ in range(num_players)]
     player_profile_history = [[] for _ in range(num_players)]
     trial_graph_path = os.getcwd() + save_graph_path + relative_folder_path + "/"
@@ -295,23 +298,38 @@ def main(argv):
         aggregated_kl_values[num_player].append(ppo_training_data[num_player][0])
 
         if i == (iterations - 1): 
+          # The iterations allowed as options for regret (for allowing unregularized regret for ExPSRO)
+          regret_iter_options = iterations
+          br_iteration = 0
+          if FLAGS.expsro:
+            # works only if all_files is sorted and the last file in the directory is the last iteration.
+            # this assumption should be true most of the time. 
+            save_path = data_directory_path + relative_folder_path + "/" + all_files[-1]
+            # Account for unregularized regret
+            with open(save_path, "rb") as npy_file:
+              unregularized_regret_array_list = np.load(npy_file, allow_pickle=True)
+            unreg_meta_probabilities, unreg_utilities, _, _, _, _ = unregularized_regret_array_list
+            regret_iter_options = len(unreg_meta_probabilities[0])
           for j in range(0, iterations):
             #First index in player_profile_history is iteration 1's profile
             prev_player_profile = player_profile_history[num_player][j]
             best_response_expected_payoff = 0
-            for k in range(0, iterations):
+            for k in range(0, regret_iter_options):
               #Calculate regret for all previous iterations
               #Row player
               if num_player == 0:
                 # Row corresponding to best_response utilities
-                best_response_payoffs = utilities[num_player][k]
+                best_response_payoffs = unreg_utilities[num_player][k]
               else:
                 #if symmetric, never reaches here. num_player = 0 always
-                best_response_payoffs = utilities[num_player][:, k]
+                best_response_payoffs = unreg_utilities[num_player][:, k]
               best_response_trunc = best_response_payoffs[:len(prev_player_profile)]
+              if np.dot(prev_player_profile, best_response_trunc) > best_response_expected_payoff:
+                br_iteration = k
               best_response_expected_payoff = max(np.dot(prev_player_profile, best_response_trunc), best_response_expected_payoff)
             #regret_individuals[num_player].append(max(max(best_response_expected_payoff - expected_payoff_individual_players[num_player][i - 1], pure_br_returns[num_player] - expected_payoff_individual_players[num_player][i - 1]), 0))
             regret_individuals[num_player].append(best_response_expected_payoff - expected_payoff_individual_players[num_player][j])
+            print("DEBUGGING. BR Iteration: ", br_iteration)
             TRIAL_REGRET[num_player] = regret_individuals[num_player]
           print("Individual regret vector: ", regret_individuals[num_player])
 
@@ -352,20 +370,20 @@ def main(argv):
       #graph_max_welfare(max_social_welfare_over_iterations, trial_graph_path)
       graph_expected_payoff(expected_payoff_individual_players, trial_graph_path)
       graph_kl(aggregated_kl_values, trial_graph_path)
-      graph_regret_iterations(regret_individuals, trial_graph_path)
+      graph_regret_iter_options(regret_individuals, trial_graph_path)
     
     return utilities, meta_probabilities
 
   def _rrd_sims(meta_games):
-    NUM_ITER = 1
-
+    NUM_ITER = 100
     import random
     for _ in range(NUM_ITER):
       random_nums = [np.array([random.randint(1,5) for _ in range(len(meta_games[0]))]) for _ in range(FLAGS.n_players)]
       random_profile = [player_profile / np.sum(player_profile) for player_profile in random_nums]
+      #prd_dt default = 1e-3 (0.001)
       prd_profile = projected_replicator_dynamics.regularized_replicator_dynamics(
-        meta_games,regret_lambda=0.001,
-        prd_initial_strategies=random_profile, symmetric=is_symmetric)
+        meta_games,regret_lambda=0.0001,
+        prd_initial_strategies=random_profile, prd_dt=1e-3, symmetric=is_symmetric)
       max_welfare_profile = []
       max_welfare = 0
       combined_profile = []
@@ -385,6 +403,7 @@ def main(argv):
   meta = []
   AGGREGATE_WELFARE = []
   AGGREGATE_REGRET = []
+  overall_start_time = time.time()
   indices_of_jobs_needed = [None for i in range(75)]
   for i, epsiode_data_directory in enumerate(sorted(os.listdir(data_directory_path))):
     SIM_WELFARE = []
@@ -411,14 +430,17 @@ def main(argv):
       SIM_REGRET.append(TRIAL_REGRET)
       TRIAL_EXP_WELFARE = []
       TRIAL_REGRET = [[] for _ in range(num_players)]
-      #print("Calculating alternate RRD Welfares")
+      print("Calculating alternate RRD Welfares")
+      start_time = time.time()
       #print(_rrd_sims([utilities[0], utilities[1]]))
+      print("Individual rrd runtime in seconds: ", time.time() - start_time)
     AGGREGATE_WELFARE.append(SIM_WELFARE)
     AGGREGATE_REGRET.append(SIM_REGRET)  
-  print("Comma separated best response utilities: ", indices_of_jobs_needed)
+  #print("Comma separated best response utilities: ", indices_of_jobs_needed)
   graph_expected_welfare(AGGREGATE_WELFARE, os.getcwd() + save_graph_path)
 
   graph_regret(AGGREGATE_REGRET, os.getcwd() + save_graph_path)
+  print("TIME OVERALL: ", time.time() - overall_start_time)
   
 if __name__ == "__main__":
   app.run(main)
