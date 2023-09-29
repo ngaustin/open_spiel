@@ -218,7 +218,7 @@ def main(argv):
         for ind in range(len(sim_data[0][0])):
           y.append(np.mean(sim_data_np[:, player_index, ind]))
           stdev.append(np.std(sim_data_np[:, player_index, ind], axis=0))
-        x = [ind + 1 for ind in range(len(sim_data[player_index][0]))]
+        x = [ind for ind in range(len(sim_data[player_index][0]))]
         ax.plot(x, y,
           label= "{}: Player {}: File {}".format(name_of_method, player_index, i))
         ax.fill_between(x, np.array(y) - np.array(stdev), np.array(y) + np.array(stdev), alpha=0.2)
@@ -237,7 +237,7 @@ def main(argv):
     '''
     regret_fig, ax = plt.subplots()
     for player_index in range(len(data)):
-      ax.plot([ind + 1 for ind in range(len(data[player_index]))],
+      ax.plot([ind for ind in range(len(data[player_index]))],
           data[player_index], label= "{}: Player {}".format(name_of_method, player_index))
     ax.set_title("Individual Regret Over Iterations")
     ax.set_xlabel("Iteration")
