@@ -264,6 +264,7 @@ def main(argv):
         for ind in range(len(sim_data[0][0])):
           y.append(np.mean(sim_data_np[:, player_index, ind]))
           stdev.append(np.std(sim_data_np[:, player_index, ind], axis=0))
+          
         x = [ind + 1 for ind in range(len(sim_data[player_index][0]))]
         
         if FLAGS.expsro:
@@ -275,6 +276,7 @@ def main(argv):
           if FLAGS.with_std:
             ax.fill_between(x, np.array(y) - np.array(stdev), np.array(y) + np.array(stdev), alpha=0.2)
     ax.set_title("Regret Over Iterations: {}, λ={}".format(FLAGS.game_name, folder_path.split('_')[-1][:-1]))
+
     ax.set_xlabel("Iteration")
     ax.set_ylabel("Regret")
     _, end = ax.get_xlim()
@@ -290,7 +292,7 @@ def main(argv):
     '''
     regret_fig, ax = plt.subplots()
     for player_index in range(len(data)):
-      ax.plot([ind + 1 for ind in range(len(data[player_index]))],
+      ax.plot([ind for ind in range(len(data[player_index]))],
           data[player_index], label= "{}: Player {}".format(name_of_method, player_index))
     ax.set_title("Individual Regret Over Iterations")
     ax.set_xlabel("Iteration")
@@ -439,7 +441,7 @@ def main(argv):
     return utilities, meta_probabilities
 
   def _rrd_sims(meta_games):
-    NUM_ITER = 100
+    NUM_ITER = 250
     import random
     max_welfare = 0
     max_welfare_profile = []
@@ -451,6 +453,7 @@ def main(argv):
         meta_games,regret_lambda=0.001,
         prd_initial_strategies=random_profile, prd_dt=1e-3, symmetric=is_symmetric, prd_iterations=int(1e5))
       
+
       combined_profile = []
       for prob in prd_profile[0]:
         for p2_prob in prd_profile[1]:
