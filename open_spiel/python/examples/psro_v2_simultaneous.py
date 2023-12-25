@@ -83,6 +83,7 @@ flags.DEFINE_string("trajectory_mode", "prob_action", "How to fit to a trajector
 flags.DEFINE_integer("n_top_trajectories", 1, "Number of trajectories to take from each of the BR simulations")
 flags.DEFINE_bool("rewards_joint", False, "Whether to select trajectories and optimize consensus policies on joint rewards")
 flags.DEFINE_bool("perturb_all", False, "Whether to use policy constraints on ALL policies after first iteration")
+flags.DEFINE_string("exploration_policy_type", "Ex2PSRO", "Type of policy to regularize towards. Options: Ex2PSRO, MaxWelfare, MinWelfare, Uniform, PreviousBR")
 
 # Parameter search-related model-saving functionality
 flags.DEFINE_bool("save_models", False, "Whether to save the policy network models after SAC training")
@@ -309,7 +310,8 @@ def init_dqn_responder(sess, env):
     "sac_value_clip": FLAGS.value_clip,
     "sac_alpha": FLAGS.alpha, 
     "sac_batch_size": FLAGS.sac_batch_size,
-    "sac_update_every": FLAGS.sac_update_every
+    "sac_update_every": FLAGS.sac_update_every,
+    "exploration_policy_type": FLAGS.exploration_policy_type
   }
 
   print("Agent Arguments: ")
@@ -444,6 +446,7 @@ def gpsro_looper(env, oracle, agents):
           print("Loading the meta game from save_data_path: ", save_data_path)
           g_psro_solver.set_meta_game(utilities)
 
+        """
         curr_meta_strategy = g_psro_solver.get_meta_strategies()
         new_meta_strategy = []
         # print("curr: ", curr_meta_strategy)
@@ -456,7 +459,15 @@ def gpsro_looper(env, oracle, agents):
         print("Using saved meta strategy: ", new_meta_strategy)
         g_psro_solver.set_meta_strategies(new_meta_strategy)
         print("Confirming new meta strategy: ", g_psro_solver.get_meta_strategies())
+        """
+    
 
+    if gpsro_iteration < 30 and FLAGS.regret_calculation_mode:
+      g_psro_solver._sims_per_entry = 1
+    else:
+      g_psro_solver._sims_per_entry = FLAGS.sims_per_entry
+
+    print("Sims per entry set to: ", g_psro_solver._sims_per_entry)
     g_psro_solver.iteration()
     
     training_returns = oracle.get_training_returns()
@@ -469,6 +480,56 @@ def gpsro_looper(env, oracle, agents):
     g_psro_solver.update_regret_threshold(FLAGS.regret_lambda_final, FLAGS.regret_steps - gpsro_iteration - 1)
     g_psro_solver.update_explore_threshold(FLAGS.final_exploration, FLAGS.regret_steps - gpsro_iteration - 1)
 
+    """
+    # NOTE: The following was for regret confirmation of max welfare profiles
+    # TODO: Manually set the meta_strategy here using RRD sims!!!! 
+
+    def _rrd_sims(meta_games):
+      from open_spiel.python.algorithms import projected_replicator_dynamics
+      NUM_ITER = 100
+      max_welfare = 0
+      max_welfare_profile = []
+      print("for ", NUM_ITER, "")
+      import random
+      for _ in range(NUM_ITER):
+        random_nums = [np.array([random.randint(1,5) for _ in range(len(meta_games[0]))]) for _ in range(2)]
+        random_profile = [player_profile / np.sum(player_profile) for player_profile in random_nums]
+        #prd_dt default = 1e-3 (0.001)
+        prd_profile = projected_replicator_dynamics.regularized_replicator_dynamics(
+          meta_games,regret_lambda=0.001,
+          prd_initial_strategies=random_profile, prd_dt=1e-3, symmetric=True, prd_iterations=int(1e5))
+      
+        combined_profile = []
+        for prob in prd_profile[0]:
+          for p2_prob in prd_profile[1]:
+            combined_profile.append(prob * p2_prob)
+        welfare = np.mean([np.dot(combined_profile, np.array(meta_games[0]).flatten()), np.dot(combined_profile, np.array(meta_games[1]).flatten())])
+        if welfare > max_welfare:
+          max_welfare_profile = prd_profile
+          max_welfare = welfare
+      return max_welfare_profile, max_welfare 
+
+
+    if FLAGS.regret_calculation_mode and gpsro_iteration == 29:
+        all_files = [f for f in os.listdir(FLAGS.save_folder_path) if os.path.isfile(os.path.join(FLAGS.save_folder_path, f))]
+        save_data_path = [file for file in all_files if "iteration_{}.".format(29) in file][0] # NOTE: This might be wrong
+        save_data_path = FLAGS.save_folder_path + "/" + save_data_path
+        with open(save_data_path, "rb") as npy_file:
+          array_list = np.load(npy_file, allow_pickle=True)
+        _, utilities, _, _, _, _ = array_list
+        print("Loading the meta game from save_data_path: ", save_data_path)
+        g_psro_solver.set_meta_game(utilities)
+        meta_game = g_psro_solver.get_meta_game()
+        
+    if gpsro_iteration == 29:
+      print("Starting RRD sims...")
+      profile, max_welfare = _rrd_sims(g_psro_solver.get_meta_game())
+      print("Found profile with max welfare of : ", 2*max_welfare, " ... setting meta strategy to this: ", profile)
+      
+      g_psro_solver.set_meta_strategies(profile)
+      meta_probabilities = g_psro_solver.get_meta_strategies()
+
+    """
     if FLAGS.verbose:
       utils.display_meta_game(meta_game)
       print("Metagame probabilities: ")
@@ -481,7 +542,7 @@ def gpsro_looper(env, oracle, agents):
       # env.game.display_policies_in_context(policies)
 
       save_folder_path = FLAGS.save_folder_path if FLAGS.save_folder_path[-1] == "/" else FLAGS.save_folder_path + "/"
-      if gpsro_iteration >= FLAGS.num_iterations_load_only:  # NOTE: this might be wrong
+      if gpsro_iteration >= FLAGS.num_iterations_load_only - 1:  # NOTE: I SUBTRACTED ONE SO THAT THE REASSIGNINED PROFILE WOULD BE SAVED
         save_iteration_data(gpsro_iteration, meta_probabilities, meta_game, save_folder_path, training_returns, regret_training_returns, config.ppo_training_data, pure_br_returns)
 
     # The following lines only work for sequential games for the moment.
@@ -511,7 +572,7 @@ def main(argv):
   if FLAGS.game_name=="harvest":
     game = pyspiel.load_game(FLAGS.game_name, {"rng_seed": FLAGS.seed})
   elif FLAGS.game_name=="bargaining":
-    game = pyspiel.load_game(FLAGS.game_name, {"discount": .95})
+    game = pyspiel.load_game(FLAGS.game_name, {"discount": 0.99})
   else:
     game = pyspiel.load_game(FLAGS.game_name)  # The iterated prisoners dilemma does not have "players" info type
 

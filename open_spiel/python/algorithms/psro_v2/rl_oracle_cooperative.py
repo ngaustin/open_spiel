@@ -40,13 +40,11 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             currently training strategy (Which will be trained as well).
           **kwargs: kwargs
         """
-        # TODO: add the number of simulations to take here
         self._env = env
         self._is_turn_based = env.is_turn_based
 
         self._best_response_class = best_response_class
         self._best_response_kwargs = best_response_kwargs
-
 
         self._self_play_proportion = self_play_proportion
         self.num_players = env.num_players
@@ -54,6 +52,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         self._imitation_mode = consensus_kwargs["imitation_mode"]
         self._rewards_joint = consensus_kwargs["rewards_joint"]
         self._num_simulations_fit = consensus_kwargs["num_simulations_fit"]
+        self._exploration_policy_type = consensus_kwargs["exploration_policy_type"]
 
         self._consensus_kwargs = consensus_kwargs
         self._fine_tune_bool = consensus_kwargs["fine_tune"]
@@ -112,7 +111,6 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         steps_per_oracle = np.array(steps_per_oracle)
         is_symmetric = len(training_parameters) == 1 and len(training_parameters) < self.num_players
 
-        # TODO: Check the number of policies in total_policies of training parameters. If odd, then do BR. If even, do consensus policies
         num_policies_total = len(training_parameters[0][0]["total_policies"][0])
 
         if self._consensus_kwargs["consensus_imitation"]:
@@ -167,13 +165,17 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             rl_oracle.freeze_all(new_policies)
             return new_policies
 
-
         all_policies = [old_pol + new_pol for old_pol, new_pol in zip(training_parameters[0][0]["total_policies"], new_policies)]
 
         rollout_trajectories, rollout_actions, rollout_returns = [], [], []
-        rollout_min_returns = []
 
-        cutoff_returns = [self._high_returns[i][-1] if len(self._high_returns[i]) > 0 else -np.inf for i in range(self.num_players)]
+        rollout_criteria_values = []
+
+        # Cutoff_returns is
+        cutoff_returns = self.get_cutoff_returns(is_symmetric)
+
+        # print("Cutoff returns: ", cutoff_returns)
+        # print("high returns: ", [r for r in zip(self._high_returns[0], self._high_returns[1])])
 
         self._train_br_returns = [[] for _ in range(self.num_players)]
         self._train_regret_returns = [[] for _ in range(self.num_players)]
@@ -182,6 +184,9 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         self._number_training_steps = 0 if (num_policies_total) <= self._consensus_kwargs["num_iterations_load_only"] else self._number_training_steps_if_training
 
         print("\nTraining each of the policies for {} steps. ".format(self._number_training_steps))
+
+        criteria = self.get_criteria_function()
+        training_start_time = time.time() 
 
         while not self._has_terminated(steps_per_oracle):
             """ Note: basically, this while loop cycles through each of the agent's new policies at a time. It will
@@ -212,113 +217,69 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             values, the distribution of returns for any player can be skewed.
             ###########################################################################################################################
             """
-            invalid_candidate = (returns[0] < cutoff_returns[0]) or (returns[1] < cutoff_returns[1]) if is_symmetric else (returns[0] < cutoff_returns[0]) and (returns[1] < cutoff_returns[1])
 
-            self._train_br_returns[indexes[0][0]].append(np.array(returns))
+            invalid_candidate = criteria(returns) < criteria(cutoff_returns)
+
+            # self._train_br_returns[indexes[0][0]].append(np.array(returns))
             if not invalid_candidate and self._consensus_kwargs["consensus_imitation"]:
 
                 if not is_symmetric:
+                    raise NotImplementedError
                     rollout_trajectories.append(trajectory)
                     rollout_returns.append(returns)
                     rollout_actions.append(actions)
                 else:
-                    # Look at rollout_min_returns. Take the min of the current return and find the index in which it would be added.
-                    metric = min(returns)
-                    chosen_index = 0
-                    if len(rollout_min_returns) > 0:
-                        for k in range(len(rollout_min_returns)):
-                            if rollout_min_returns[k] > metric: 
+                    metric = criteria(returns) # min(returns)
+
+                    # NOTE: Bargaining does a LOT of work when inserting sorted. So, just get rid of this functionality for the first iteration?
+                    """chosen_index = 0
+                    if len(rollout_criteria_values) > 0:
+                        for k in range(len(rollout_criteria_values)):
+                            if rollout_criteria_values[k] > metric: 
                                 break 
                             chosen_index = k+1
                         rollout_trajectories.insert(chosen_index, trajectory)
                         rollout_returns.insert(chosen_index, returns)
                         rollout_actions.insert(chosen_index, actions)
-                        rollout_min_returns.insert(chosen_index, metric)
-                    else:
-                        rollout_trajectories.append(trajectory)
-                        rollout_returns.append(returns)
-                        rollout_actions.append(actions)
-                        rollout_min_returns.append(metric)
-
-                ############## This is just for space saving on the first iteration ####################
-                if len(rollout_returns) > self._num_simulations_fit and is_symmetric:
+                        rollout_criteria_values.insert(chosen_index, metric)
+                    else:"""
+                    rollout_trajectories.append(trajectory)
+                    rollout_returns.append(returns)
+                    rollout_actions.append(actions)
+                    # rollout_criteria_values.append(metric)
+                # print("Length of rollout returns: ", len(rollout_returns))
+                ############## This is for space saving on the first iteration ####################
+                if len(rollout_returns) > self.get_num_simulations_to_take(is_symmetric=is_symmetric) and is_symmetric:
 
                     # Pop the first index (because that corresponds to the trajectory with the smallest min return across players)
-                    rollout_trajectories.pop(0)
+                    """rollout_trajectories.pop(0)
                     rollout_returns.pop(0)
                     rollout_actions.pop(0)
-                    rollout_min_returns.pop(0)
-                    cutoff_returns = [max(cutoff_returns[0], rollout_returns[0][0]), max(cutoff_returns[1], rollout_returns[0][1])]
+                    rollout_criteria_values.pop(0)"""
+                    start_update = time.time()
+                    self.update_trajectories(training_parameters, rollout_trajectories, rollout_actions, rollout_returns)
+                    print("Updating trajectories took {} seconds ".format(time.time() - start_update))
 
+                    rollout_trajectories, rollout_actions, rollout_returns = [], [], []
+                    cutoff_returns = self.get_cutoff_returns(is_symmetric)
+                    # cutoff_returns = cutoff_returns if criterion_value_overall_dataset > min_criterion_value else rollout_returns[min_index]
+                    
+                """
                 elif len(rollout_returns) > self._num_simulations_fit and not is_symmetric:
                     # In order to not influence the estimated distributions of returns, both returns need to be the minimum
                     # Get the min values of each of the rollout returns 
-                    if all([np.isinf(val) for val in self.min_returns_in_buffer]):
-                        ret_0 = [ret[0] for ret in rollout_returns]
-                        ret_1 = [ret[1] for ret in rollout_returns]
-
-                        min_0 = min(ret_0)
-                        min_1 = min(ret_1)
-
-                        self.min_returns_in_buffer = [min_0, min_1] 
-
-                    if (returns[0] <= self.min_returns_in_buffer[0]) and (returns[1] <= self.min_returns_in_buffer[1]): 
-                        rollout_trajectories.pop()
-                        rollout_returns.pop()
-                        rollout_actions.pop()                                       
-                    else:
-                        self.min_returns_in_buffer = [min(self.min_returns_in_buffer[0], returns[0]), min(self.min_returns_in_buffer[1], returns[1])]
-
-                    if len(rollout_returns) > self._num_simulations_fit * 2:
-                        # Only if it is VERY large do we iterate through the entire list. Prune it so that we only take the top certain number of trajectories 
-
-                        num_taken = 0
-
-                        # Sort the arrays
-                        sorted_by_players = [sorted(enumerate(rollout_returns), key=lambda x: (x[1][i], x[0])) for i in range(self.num_players)]
-
-                        in_queue = [0 for _ in range(len(rollout_returns))]
-                        to_keep = [None for _ in range(self._num_simulations_fit)]
-
-                        # Iterate backwards through both arrays 
-                        for k in range(len(rollout_returns) - 1, -1, -1):
-                            indices = [sorted_by_players[i][k][0] for i in range(self.num_players)]
-                            if indices[0] == indices[1]:
-                                to_keep[num_taken] = (indices[0])
-                                num_taken += 1
-                            else:
-                                # Check if either of them are in queue 
-                                for l in range(2):
-                                    if in_queue[indices[l]]:
-                                        to_keep[num_taken] = (indices[l])
-                                        num_taken += 1
-                                        in_queue[indices[l]] = 0
-                                    else:
-                                        in_queue[indices[l]] = 1
-                                    if num_taken == self._num_simulations_fit:
-                                        break 
-                            if num_taken == self._num_simulations_fit:
-                                break 
-                        
-                        for k in range(len(in_queue)):
-                            if in_queue[k]:
-                                to_keep.append(k)
-                        
-                        print("Only kept {} trajectories out of {}".format(len(to_keep), len(rollout_returns)))
-
-                        rollout_trajectories = [trajectory for k, trajectory in enumerate(rollout_trajectories) if k in to_keep]
-                        rollout_actions = [action for k, action in enumerate(rollout_actions) if k in to_keep]
-                        rollout_returns = [returns for k, returns in enumerate(rollout_returns) if k in to_keep]
+                    raise NotImplementedError """
                                 
             # Update the number of episodes we have trained per oracle
             steps_per_oracle = rl_oracle.update_steps_per_oracles(steps_per_oracle, indexes, len([t for t in trajectory if t.current_player() == indexes[0][0]]) if self._is_turn_based else len(actions))
+        
+        print("Training response took {} seconds.".format(time.time() - training_start_time))
 
         for pol in new_policies:
             pol[0]._policy.post_training()
 
         if self._consensus_kwargs["consensus_imitation"]:
             self.update_trajectories(training_parameters, rollout_trajectories, rollout_actions, rollout_returns)
-
 
         # Freeze the new policies to keep their weights static. This allows us to
         # later not have to make the distinction between static and training
@@ -390,6 +351,18 @@ class RLOracleCooperative(rl_oracle.RLOracle):
 
         return new_policies
 
+    def get_num_simulations_to_take(self, is_symmetric, upper_bound=np.inf):
+        return min(self._num_simulations_fit // self.num_players, upper_bound) if is_symmetric and (not self._consensus_kwargs["joint_action"]) else min(self._num_simulations_fit, upper_bound)
+
+    def get_cutoff_returns(self, is_symmetric):
+        print("Updating cutoff return. \n")
+        for i in range(self.num_players):
+            if len(self._high_returns[i]) != self.get_num_simulations_to_take(is_symmetric):
+                print("Defaulting to infinite bounds for player {}'s cutoff returns. ".format(i))
+
+        # NOTE: self._high_returns is implemented such that the zeroth element is the trajectory with lowest criterion value. Therefore, it is the first to go if some new trajectory beats it.
+        return [self._high_returns[i][0] if len(self._high_returns[i]) == self.get_num_simulations_to_take(is_symmetric) else (np.inf if self._exploration_policy_type == "MinWelfare" else -np.inf) for i in range(self.num_players)]
+
     def get_training_returns(self):
         # rets = [np.array(rets) for rets in self._train_br_returns]
         # Reset for next iteration
@@ -416,7 +389,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             curr = consensus_policies[i][0]
             new_arguments = {"num_actions": self._best_response_kwargs["num_actions"]}
             if self._consensus_oracle == "trajectory_deep":
-                new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based, "prev_policy":recent_br_policies[i] if recent_br_policies else None, "policy_constraint":fine_tune_constraint}
+                new_arguments = {"num_actions": self._best_response_kwargs["num_actions"], "state_representation_size": self._consensus_kwargs["state_representation_size"], "num_players": self._consensus_kwargs["num_players"], "turn_based": self._is_turn_based, "prev_policy":recent_br_policies[i]._policy._fine_tune_module._policy_network if recent_br_policies else None, "policy_constraint":fine_tune_constraint, "exploration_policy_type":self._exploration_policy_type}
                 # if iteration_num <= self._consensus_kwargs["num_iterations_load_only"]:
                 #     kwargs = copy(self._consensus_kwargs)
                 #     kwargs["hidden_layer_size"] = 50
@@ -432,9 +405,27 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                 raise NotImplementedError
         return consensus_policies
 
+    def get_criteria_function(self):
+        if self._exploration_policy_type in ["Ex2PSRO", "PreviousBR", "Uniform"]: # The latter two don't rely on trajectories anyway
+            print("Using Ex2PSRO criteria for trajectory selection. ")
+            criteria_function = lambda rank_list: min(rank_list)
+        elif self._exploration_policy_type in ["MinWelfare"]:
+            # NOTE: only valid for symmetric at the moment (because needs to be returns not rankings)
+            print("Using minimum welfare criteria for trajectory selection. ")
+            criteria_function = lambda rank_list: -sum(rank_list)  # negative because we prioritize low welfare
+        elif self._exploration_policy_type in ["MaxWelfare"]:
+            # NOTE: only valid for symmetric at the moment (because needs to be returns not rankings)
+            print("Using max welfare criteria for trajectory selection. ")
+            criteria_function = lambda rank_list: sum(rank_list)
+        else:
+            print("Invalid exploration policy type. Cannot create criteria function when selecting trajectories. ")
+            raise NotImplementedError
+        return criteria_function
+
     def update_trajectories(self, training_parameters, rollout_trajectories, rollout_actions, rollout_returns):
-        # If the number of training parameters is 1 and we are working in a multi-agent gamge, we are training in the symmetric setting
+        # If the number of training parameters is 1 and we are working in a multi-agent game, we are training in the symmetric setting
         is_symmetric = len(training_parameters) == 1 and len(training_parameters) < self.num_players
+        
         # Add the most recently found trajectories
         self._high_return_trajectories.extend(rollout_trajectories)
         self._high_return_actions.extend(rollout_actions)
@@ -464,12 +455,13 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                 else:
                     rankings[info[0]].append(trajectory_index)  # we insert the ranking (index i) in the list to the list corresponding to trajectory index (info[0])
 
-        # Take the min rank for each of the trajectories
-        rankings = [min(ranking_list) for ranking_list in rankings]
+        criteria_function = self.get_criteria_function()
+
+        rankings = [criteria_function(ranking_list) for ranking_list in rankings]
 
         # Take the top self._num_simulations trajectories in terms of rank
-        num_simulations_take = min(self._num_simulations_fit // self.num_players, len(rankings)) if is_symmetric and (not self._consensus_kwargs["joint_action"]) else min(self._num_simulations_fit, len(rankings))
-        sorted_indices = sorted(range(len(rankings)), key=lambda i: rankings[i])
+        num_simulations_take = self.get_num_simulations_to_take(is_symmetric=is_symmetric, upper_bound=len(rankings))
+        # sorted_indices = sorted(range(len(rankings)), key=lambda i: rankings[i])
         selected_trajectory_indices = sorted(range(len(rankings)), key=lambda i: rankings[i])[-num_simulations_take:]
 
         # Only take the selected trajectories and reassign self._high_return_trajectories
@@ -477,6 +469,8 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         self._high_return_actions = [self._high_return_actions[i] for i in selected_trajectory_indices]
         for player in range(self.num_players):
             self._high_returns[player] = [self._high_returns[player][i] for i in selected_trajectory_indices]
+
+        # print("High returns? ", self._high_returns)
 
         # Print out metrics for manual inspection
         difference = [abs(self._high_returns[0][i] - self._high_returns[1][i]) for i in range(len(selected_trajectory_indices))]

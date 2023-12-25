@@ -52,7 +52,8 @@ class Imitation(rl_agent.AbstractAgent):
                  num_players,
                  turn_based,
                  prev_policy, 
-                 policy_constraint):
+                 policy_constraint,
+                 exploration_policy_type):
 
         # This call to locals() is used to store every argument used to initialize
         # the class instance, so it can be copied with no hyperparameter change.
@@ -60,6 +61,7 @@ class Imitation(rl_agent.AbstractAgent):
         self.session = consensus_kwargs["session"]
         self.device = consensus_kwargs["device"]
         self._is_turn_based = turn_based
+        self._exploration_policy_type = exploration_policy_type
 
         self.player_id = player_id
         self.symmetric = consensus_kwargs["symmetric"]
@@ -161,15 +163,16 @@ class Imitation(rl_agent.AbstractAgent):
         self._optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
         self._learn_step = self._optimizer.minimize(self._loss)
 
+        if self._exploration_policy_type == "PreviousBR":
+            print("Passing in previous BR to regularize towards. ")
 
-        self._fine_tune_module = ImitationFineTune(self.net,
+        self._fine_tune_module = ImitationFineTune(prev_policy if self._exploration_policy_type == "PreviousBR" else self.net,
                  player_id,
                  consensus_kwargs,
                  num_actions,
                  state_representation_size,
                  num_players,
                  self._is_turn_based, 
-                 prev_policy,
                  policy_constraint)
 
 
@@ -362,7 +365,6 @@ class Imitation(rl_agent.AbstractAgent):
           ret: return of the trajectory associated with
           override_player: player this trajectory is associated with. If empty, then default.
         """
-        # TODO: If symmetric, then add transitions from both players
         if self.joint_action:
             o = prev_time_step.observations["global_state"][0][:]
             r = sum(time_step.rewards)
@@ -426,6 +428,11 @@ class Imitation(rl_agent.AbstractAgent):
         length = len(self._replay_buffer)
         dataset = self._replay_buffer.sample(length)  # samples without replacement so take the entire thing. Random order
         loss = 0
+
+        if self._exploration_policy_type == "Uniform":
+            self.epochs = 0
+            print("Setting number of BC training epochs to 0 because exploration policy type is uniform action.")
+
         for ep in range(self.epochs):
             i, batches, loss_total, entropy_total = 0, 0, 0, 0  # entropy_total is just an estimate
             dataset = random.sample(dataset, len(dataset))

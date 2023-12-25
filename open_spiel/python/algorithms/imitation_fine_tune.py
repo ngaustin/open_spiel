@@ -73,7 +73,6 @@ class ImitationFineTune(rl_agent.AbstractAgent):
                  state_representation_size, 
                  num_players, 
                  turn_based, 
-                 prev_policy, 
                  policy_constraint):
 
         """Initialize the DQN agent."""
@@ -198,106 +197,6 @@ class ImitationFineTune(rl_agent.AbstractAgent):
         self.policy_constraint_weight = policy_constraint
         self._prev_timestep = None
         self._prev_action = None
-
-        """
-        # Create a policy network same size as Q network
-        self._policy_network = simple_nets.MLP(state_representation_size,
-                                            self.layer_sizes, num_outputs)
-        self._policy_network_variables = self._policy_network.variables[:]
-        self._exploration_policy_network = simple_nets.MLP(state_representation_size,
-                                            self.layer_sizes, num_outputs)
-        self._exploration_policy_network_variables = self._exploration_policy_network.variables[:]
-        # self._policy_network_copy = simple_nets.MLP(state_representation_size, 
-        #                                     self.layer_sizes, num_outputs)
-        # self._policy_network_copy_variables = self._policy_network_copy.variables[:]
-
-
-        # Create a VALUE network same size as Q network
-        self._value_network = simple_nets.MLP(state_representation_size, self.layer_sizes, 1)  # self._num_actions)
-        self._value_network_variables = self._value_network.variables[:]
-
-        # self._initialize_policy_network = self._create_policy_network(self._policy_network, pre_trained_network)
-        self._initialize_exploration_policy_network = self._create_policy_network(self._exploration_policy_network, pre_trained_network)
-        # self._save_policy_network = self._create_policy_network(self._policy_network_copy, self._policy_network)
-        # self._recover_policy_network = self._create_policy_network(self._policy_network, self._policy_network_copy)
-        # self._prev_policy_copy_from = prev_policy
-
-        # Pass observations to policy
-        logits = self._policy_network(self._info_state_ph) # [?, num_actions]
-
-        self.probs = tf.nn.softmax(logits, axis=1)  # exps / normalizer # [?, num_actions]
-
-        # Then do tf.log on them to get logprobs
-        all_log_probs = tf.math.log(tf.clip_by_value(self.probs, 1e-10, 1.0)) # [?, num_actions]
-        self.log_probs = tf.gather(all_log_probs, self._action_ph, axis=1, batch_dims=1) # [?, 1]
-
-        ###################################
-        #### Policy constraint section ####
-        constrain_logits = self._exploration_policy_network(self._info_state_ph)
-        constrain_probs = tf.nn.softmax(constrain_logits, axis=1)
-
-        constrain_all_log_probs = tf.stop_gradient(tf.math.log(tf.clip_by_value(constrain_probs, 1e-10, 1.0)))
-        self.constrain_kl_divergence = tf.reduce_mean(tf.reduce_sum(tf.math.multiply(tf.math.exp(constrain_all_log_probs), constrain_all_log_probs - all_log_probs), axis=1))
-        ###################################
-
-        ###################################
-        # PPO Implementation 
-        # Pass observations to value network to get value baseline 
-        eps_clip = consensus_kwargs["eps_clip"]
-        eps_clip_value = consensus_kwargs["eps_clip_value"]
-
-        self.values = self._value_network(self._info_state_ph) # [?, 1]
-
-        # self.running_returns = []
-        # self.average_window = consensus_kwargs["recovery_window"]
-        # self.first_returns = None 
-        # self.running_return = 0
-        # self.curr_returns = 0
-
-        # Subtract from the rewards to go to get advantage values
-        print("rtg values check: ", self._rewards_to_go_ph.get_shape(), self.values.get_shape())
-        assert (tf.reshape(self._rewards_to_go_ph, [-1, 1])).get_shape() == self.values.get_shape()
-        assert self._old_values_ph.get_shape() == self.values.get_shape()
-        value_clipped = tf.stop_gradient(self._old_values_ph) + tf.clip_by_value(self.values - tf.stop_gradient(self._old_values_ph), -eps_clip_value, eps_clip_value)
-
-        assert tf.reshape(self._rewards_to_go_ph, [-1, 1]).get_shape() == value_clipped.get_shape()
-        value_delta_1 = tf.reshape(self._rewards_to_go_ph, [-1, 1]) - value_clipped
-        value_delta_2 = tf.reshape(self._rewards_to_go_ph, [-1, 1]) - self.values  # [?, 1]
-        assert value_delta_1.get_shape() == value_delta_2.get_shape()
-
-        advantages = tf.reshape(self._gae_ph, [-1, 1])
-
-        # Calculate entropy
-        assert self.probs.get_shape() == all_log_probs.get_shape()
-        self.entropy = tf.reduce_mean(-(tf.reduce_sum(self.probs * all_log_probs, axis=1)))
-
-        # L2 regularization 
-        # policy_vars = self._policy_network.trainable_variables
-        # lossL2 = tf.add_n([tf.nn.l2_loss(v) for v in policy_vars])
-
-        # Calculate actor loss by negative weighting log probs by DETACHED advantage values and adding in entropy regularization with .01 weight
-        assert self.log_probs.get_shape() == advantages.get_shape()
-        normalized_advantages = (advantages - tf.reduce_mean(advantages)) / (tf.math.reduce_std(advantages) + 1e-7)
-
-        assert self.log_probs.get_shape() == tf.reshape(tf.stop_gradient(self._old_log_probs_ph), [-1, 1]).get_shape()
-        ratios = tf.math.exp(self.log_probs - tf.reshape(tf.stop_gradient(self._old_log_probs_ph), [-1, 1]))
-        assert ratios.get_shape() == normalized_advantages.get_shape()
-        surr1 = ratios * tf.stop_gradient(normalized_advantages)
-        surr2 = tf.clip_by_value(ratios, 1-eps_clip, 1+eps_clip) * tf.stop_gradient(normalized_advantages)
-        self.actor_loss = -tf.reduce_mean(tf.math.minimum(surr1, surr2)) + (self._policy_constraint_weight_ph * self.constrain_kl_divergence) - (self._entropy_regularization_ph * self.entropy) # + lossL2 * self.entropy_regularization #
-
-
-        # Calculcate critic loss by taking the square of advantages 
-        self.critic_loss = tf.reduce_mean(tf.maximum(tf.math.square(value_delta_1), tf.math.square(value_delta_2)))
-
-        # Create separate optimizers for the policy and value network
-        self._ppo_policy_optimizer = tf.train.AdamOptimizer(learning_rate=self.consensus_kwargs["fine_tune_policy_lr"])
-        self._ppo_value_optimizer = tf.train.AdamOptimizer(learning_rate=self.consensus_kwargs["fine_tune_value_lr"])
-
-        # Learn step
-        self._ppo_value_learn_step = self._ppo_value_optimizer.minimize(self.critic_loss)
-        self._ppo_policy_learn_step = self._ppo_policy_optimizer.minimize(self.actor_loss)
-        """
 
         self.update_every = consensus_kwargs["sac_update_every"]
         self.batch_size = consensus_kwargs["sac_batch_size"]
@@ -502,33 +401,6 @@ class ImitationFineTune(rl_agent.AbstractAgent):
 
         self.session.run(self._initialize_exploration_policy_network)  # Initialize the old policy network with the imitation_deep trained network for policy constraint if necessary
 
-        """
-        if self._prev_policy_copy_from: # and is_train_best_response:  # Consider initializing it with the previous BR regardless. Might help the pooping out of the policy training
-            ref_object = self._prev_policy_copy_from._policy._fine_tune_module 
-            ref_policy_network = getattr(ref_object, "_policy_network")
-
-
-            if self.consensus_kwargs["transfer_policy"]:
-                print("Loading previous PPO policy with minimum entropy {}".format(self.consensus_kwargs["transfer_policy_minimum_entropy"]))
-                copy_weights = tf.group([
-                    tf.assign(vb, va)
-                    for (va, vb) in zip(ref_policy_network.variables, self._policy_network.variables)
-                ])
-                self.session.run(copy_weights)
-                # self.session.run(self._save_policy_network)  # Save the network WITHOUT noise. That way, we don't compound noise over PSRO iterations
-
-                # TODO: Consider adding noise here. Lots of the issues with "pooping out" has to do with the starting point it seems. Getting a variety of starting points might help to get it out of there
-                copy_weights = tf.group([
-                    tf.assign(vb, va * (1 + .05 * tf.random.normal(va.shape)))
-                    for (va, vb) in zip(ref_policy_network.variables, self._policy_network.variables)
-                ])
-                self.session.run(copy_weights)
-                
-        # else:
-        #     print("Loading policies from offline learning: ")
-        #     self.session.run(self._initialize_policy_network)  # Initialize the policy with the imitation_deep trained network. If not consensus_imitation, the network initialization is random
-        #     self.session.run(self._save_policy_network)
-        """
 
         if self._load_model_before_training and psro_iteration < self.consensus_kwargs["num_iterations_load_only"]:
             

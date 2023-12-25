@@ -21,6 +21,7 @@ flags.DEFINE_string("game_name",  "Harvest", "Name of game.")
 flags.DEFINE_integer("n_players", 2, "Number of players")
 flags.DEFINE_boolean("graph_mode", True, "Will/won't graph.")
 flags.DEFINE_boolean("is_symmetric", True, "Symmetric game?")
+flags.DEFINE_boolean("with_std", True, "Use std error bars?")
 flags.DEFINE_boolean("expsro", False, "ExPSRO Run?")
 
 # NOTE: File is designed to analyze one game at a time.
@@ -171,23 +172,32 @@ def main(argv):
     welfare_fig.savefig(folder_path + "max_welfare.jpg")
     plt.close()
 
-  def graph_expected_welfare(data, folder_path):
+  def graph_expected_welfare(data, names, folder_path):
     # Graph the expected welfare over iterations
     welfare_fig, ax = plt.subplots()
+    line_colors, display_order = get_color_gradient_for_ex2psro(names) if FLAGS.expsro else None
     x = [ind for ind in range(len(data[0][0]))]
     for i, sim_data in enumerate(data):
       sim_data_np = np.array(sim_data)
       y = np.mean(sim_data_np, axis=0)
       stdev = np.std(sim_data_np, axis=0)
-      ax.plot(x, y, label="{}: File {}".format(name_of_method, i))
-      ax.fill_between(x, y - stdev, y + stdev, alpha=0.2)
+      
+      if FLAGS.expsro:
+        ax.plot(x, y, label=names[i], color=line_colors[i], linewidth=2)
+        if FLAGS.with_std:
+          ax.fill_between(x, y - stdev, y + stdev, alpha=0.2, color=line_colors[i])
+      else:
+        ax.plot(x, y, label=names[i], linewidth=2)
+        if FLAGS.with_std:
+          ax.fill_between(x, y - stdev, y + stdev, alpha=0.2)
 
-    ax.set_title("Expected Welfare Over Iterations")
+    ax.set_title("Expected Welfare Over Iterations: {}, λ={}".format(FLAGS.game_name, folder_path.split('_')[-1][:-1]))
     ax.set_xlabel("Iteration")
-    ax.set_ylabel("Welfare")
+    ax.set_ylabel("Expected Welfare")
     _, end = ax.get_xlim()
     ax.xaxis.set_ticks(np.arange(0, end, 3))
-    ax.legend()
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend([handles[idx] for idx in display_order],[labels[idx] for idx in display_order])
     welfare_fig.savefig(folder_path + "expected_welfare.jpg")
     plt.close()
 
@@ -207,9 +217,45 @@ def main(argv):
     expected_payoff_fig.savefig(folder_path + "expected_payoff_individual.jpg")
     plt.close()
 
-  def graph_regret(data, folder_path):
+  def get_color_gradient_for_ex2psro(names):
+    # Returns a list of colors to give to ex2psro lines
+    color_result = [None for _ in names]
+    from matplotlib import cm 
+    colors_used = cm.get_cmap("viridis", 4).colors 
+    ex2psro_names = []
+    for i, name in enumerate(names):
+      if "vanilla" in name.lower():
+        color_result[i] = colors_used[0]
+      else:
+        ex2psro_names.append(name)
+
+    def get_steps(name):
+      return int(name.split('|')[1]) 
+    
+    def get_exponent(name):
+      return -int(name.split('-')[1][0])  # make it negative for sorting purposes. Higher exponent means less regularization
+    
+    def get_weight(name):
+      return int(name.split('e')[0])
+    
+    ex2psro_colors = colors_used[1:4]
+    sorted_names = sorted(ex2psro_names, key=lambda x: (get_steps(x), get_exponent(x), get_weight(x)))
+    display_order = [None for _ in names]
+
+    for i, name in enumerate(names):
+      if name in sorted_names:
+        index_in_sort = sorted_names.index(name)
+        color_result[i] = ex2psro_colors[index_in_sort]
+        display_order[index_in_sort + 1] = i
+      else:
+        # Vanilla 
+        display_order[0] = i
+    return color_result, display_order
+
+  def graph_regret(data, names, folder_path):
     #Plot the individual regret values for each player on the same plot
     regret_fig, ax = plt.subplots()
+    line_colors, display_order = get_color_gradient_for_ex2psro(names) if FLAGS.expsro else None
     for i, sim_data in enumerate(data):
       sim_data_np = np.array(sim_data)
       for player_index in range(num_players):
@@ -219,15 +265,22 @@ def main(argv):
           y.append(np.mean(sim_data_np[:, player_index, ind]))
           stdev.append(np.std(sim_data_np[:, player_index, ind], axis=0))
         x = [ind + 1 for ind in range(len(sim_data[player_index][0]))]
-        ax.plot(x, y,
-          label= "{}: Player {}: File {}".format(name_of_method, player_index, i))
-        ax.fill_between(x, np.array(y) - np.array(stdev), np.array(y) + np.array(stdev), alpha=0.2)
-    ax.set_title("Average Regret Over Iterations")
+        
+        if FLAGS.expsro:
+          ax.plot(x, y,label=names[i], color=line_colors[i], linewidth=2)
+          if FLAGS.with_std:
+            ax.fill_between(x, np.array(y) - np.array(stdev), np.array(y) + np.array(stdev), alpha=0.2, color=line_colors[i])
+        else:
+          ax.plot(x, y,label=names[i], linewidth=2)
+          if FLAGS.with_std:
+            ax.fill_between(x, np.array(y) - np.array(stdev), np.array(y) + np.array(stdev), alpha=0.2)
+    ax.set_title("Regret Over Iterations: {}, λ={}".format(FLAGS.game_name, folder_path.split('_')[-1][:-1]))
     ax.set_xlabel("Iteration")
-    ax.set_ylabel("Regret Values")
+    ax.set_ylabel("Regret")
     _, end = ax.get_xlim()
     ax.xaxis.set_ticks(np.arange(0, end, 3))
-    ax.legend()
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend([handles[idx] for idx in display_order],[labels[idx] for idx in display_order])
     regret_fig.savefig(folder_path + "regret.jpg")
     plt.close()
 
@@ -266,14 +319,14 @@ def main(argv):
     aggregated_kl_values = [[] for _ in range(num_players)]
     expected_payoff_individual_players = [[] for _ in range(num_players)]
     expected_welfare = []
-    iterations = len(all_files) if not FLAGS.expsro else 30
+    iterations = len(all_files) if (not FLAGS.expsro) or len(all_files) < 30 else 30
     regret_individuals = [[] for _ in range(num_players)]
-    player_profile_history = [[] for _ in range(num_players)]
+    player_profile_history = [[np.array([1])] for _ in range(num_players)]
     trial_graph_path = os.getcwd() + save_graph_path + relative_folder_path + "/"
     for i in range(iterations):
       print("ITERATION {}:".format(i))
       # save_folder_path + specific_string.format(i)
-      save_data_path = [file for file in all_files if "iteration_{}.".format(i) in file][0]
+      save_data_path = [file for file in all_files if "iteration_{}.".format(i) in file][-1]  # Get the most RECENT one
       print("FILE", save_data_path)
       save_data_path = data_directory_path + relative_folder_path + "/" + save_data_path
       with open(save_data_path, "rb") as npy_file:
@@ -288,8 +341,16 @@ def main(argv):
       # utilities were vstacked at the first dimension for each player as well
       list_of_meta_probabilities = [meta_probabilities[i] for i in range(meta_probabilities.shape[0])]
       for num_player in range(num_players):
+        if i == 0:
+          expected_payoff_individual_players[num_player].append(utilities[num_player][0][0])
         player_profile_history[num_player].append(list_of_meta_probabilities[num_player])
+        #print(utilities[num_player])
+        #input(list_of_meta_probabilities)
         expected_payoff_individual = _partial_multi_dot(utilities[num_player], list_of_meta_probabilities, num_player)
+        # print("current", expected_payoff_individual)
+        # if i == 2:
+        #   input()
+        #expected_payoff_individual = _partial_multi_dot(utilities[num_player][:, :len(player_prof_history_temp[i]) - 1], player_prof_history_temp[i], num_player)
         player_profile = list_of_meta_probabilities[num_player]
         
         expected_utility_individual = np.dot(player_profile, expected_payoff_individual)
@@ -310,6 +371,8 @@ def main(argv):
               unregularized_regret_array_list = np.load(npy_file, allow_pickle=True)
             unreg_meta_probabilities, unreg_utilities, _, _, _, _ = unregularized_regret_array_list
             regret_iter_options = len(unreg_meta_probabilities[0])
+          else:
+            unreg_utilities = utilities
           for j in range(0, iterations):
             #First index in player_profile_history is iteration 1's profile
             prev_player_profile = player_profile_history[num_player][j]
@@ -329,9 +392,10 @@ def main(argv):
               best_response_expected_payoff = max(np.dot(prev_player_profile, best_response_trunc), best_response_expected_payoff)
             #regret_individuals[num_player].append(max(max(best_response_expected_payoff - expected_payoff_individual_players[num_player][i - 1], pure_br_returns[num_player] - expected_payoff_individual_players[num_player][i - 1]), 0))
             regret_individuals[num_player].append(best_response_expected_payoff - expected_payoff_individual_players[num_player][j])
-            print("DEBUGGING. BR Iteration: ", br_iteration)
+            # print("DEBUGGING. BR Iteration: ", br_iteration)
             TRIAL_REGRET[num_player] = regret_individuals[num_player]
           print("Individual regret vector: ", regret_individuals[num_player])
+          print("Last elements of regret vector: ", regret_individuals[num_player][-5:])
 
         #PPO Training Returns
         #KL Divergence not used 
@@ -377,15 +441,16 @@ def main(argv):
   def _rrd_sims(meta_games):
     NUM_ITER = 100
     import random
+    max_welfare = 0
+    max_welfare_profile = []
     for _ in range(NUM_ITER):
       random_nums = [np.array([random.randint(1,5) for _ in range(len(meta_games[0]))]) for _ in range(FLAGS.n_players)]
       random_profile = [player_profile / np.sum(player_profile) for player_profile in random_nums]
       #prd_dt default = 1e-3 (0.001)
       prd_profile = projected_replicator_dynamics.regularized_replicator_dynamics(
-        meta_games,regret_lambda=0.0001,
-        prd_initial_strategies=random_profile, prd_dt=1e-3, symmetric=is_symmetric)
-      max_welfare_profile = []
-      max_welfare = 0
+        meta_games,regret_lambda=0.001,
+        prd_initial_strategies=random_profile, prd_dt=1e-3, symmetric=is_symmetric, prd_iterations=int(1e5))
+      
       combined_profile = []
       for prob in prd_profile[0]:
         for p2_prob in prd_profile[1]:
@@ -403,43 +468,52 @@ def main(argv):
   meta = []
   AGGREGATE_WELFARE = []
   AGGREGATE_REGRET = []
+  AGGREGATE_METHOD_NAMES = []
   overall_start_time = time.time()
-  indices_of_jobs_needed = [None for i in range(75)]
+  indices_of_jobs_needed = [None for i in range(120)]
+
   for i, epsiode_data_directory in enumerate(sorted(os.listdir(data_directory_path))):
     SIM_WELFARE = []
     SIM_REGRET = []
     print("------------------------------FILE {}-------------------------------".format(epsiode_data_directory))
-    for j, trial_data_directory in enumerate(sorted(os.listdir(data_directory_path + "/" + epsiode_data_directory + "/data"))):
+    for j, trial_data_directory in enumerate(sorted(os.listdir(data_directory_path + "/" + epsiode_data_directory))):
       print(trial_data_directory)
       print("TRIAL {}:\n".format(j))
       #Do welfare prd once after all trials
 
-      utilities, meta = get_data(epsiode_data_directory + "/data/" + trial_data_directory)
-      """
-      This is my code for analyzing welfare. I've commented it out for you :)
-
-      job_id = int(epsiode_data_directory.split('_')[-1]) * 5 + int(trial_data_directory.split('_')[-1])
-
       utilities, meta = get_data(epsiode_data_directory + "/" + trial_data_directory)
+      
+      # This is my code for analyzing welfare. I've commented it out for you :)
+      """
+      job_id = int(trial_data_directory.split('_')[1][1:-1]) * 5 + int(trial_data_directory.split('_')[-1])
+
       print("Length: ", len(utilities[0]), len(indices_of_jobs_needed), job_id)
-      if len(utilities[0]) > 30 and job_id < 75 and job_id >= 0: # < 75: # 
-        print("Ending expected welfare: ", TRIAL_EXP_WELFARE[-1])
+      if len(utilities[0]) > 0 and job_id < 120 and job_id >= 0: # < 75: # 
+        print("Length of the EXP_WELFARE: ", len(TRIAL_EXP_WELFARE))
+        print("Ending expected welfare: ", TRIAL_EXP_WELFARE[-1], len(TRIAL_EXP_WELFARE))
         indices_of_jobs_needed[job_id - 0] = TRIAL_EXP_WELFARE[-1]
       """
+      
       SIM_WELFARE.append(TRIAL_EXP_WELFARE)
       SIM_REGRET.append(TRIAL_REGRET)
+
       TRIAL_EXP_WELFARE = []
       TRIAL_REGRET = [[] for _ in range(num_players)]
       print("Calculating alternate RRD Welfares")
       start_time = time.time()
-      #print(_rrd_sims([utilities[0], utilities[1]]))
-      print("Individual rrd runtime in seconds: ", time.time() - start_time)
+      if "vanilla" not in epsiode_data_directory.lower():
+        # _, max_welfare_sims = _rrd_sims([utilities[0][:30, :30], utilities[1][:30, :30]])
+        # print(_rrd_sims([utilities[0], utilities[1]]))
+        # print("Max welfare from sims: ", max_welfare_sims, 2*max_welfare_sims)
+        # indices_of_jobs_needed[job_id] = max(indices_of_jobs_needed[job_id], 2*max_welfare_sims)
+        print("Individual rrd runtime in seconds: ", time.time() - start_time)
     AGGREGATE_WELFARE.append(SIM_WELFARE)
     AGGREGATE_REGRET.append(SIM_REGRET)  
-  #print("Comma separated best response utilities: ", indices_of_jobs_needed)
-  graph_expected_welfare(AGGREGATE_WELFARE, os.getcwd() + save_graph_path)
+    AGGREGATE_METHOD_NAMES.append(epsiode_data_directory)
+  print("Comma separated welfare numbers: ", indices_of_jobs_needed)
+  graph_expected_welfare(AGGREGATE_WELFARE, AGGREGATE_METHOD_NAMES, os.getcwd() + save_graph_path)
 
-  graph_regret(AGGREGATE_REGRET, os.getcwd() + save_graph_path)
+  graph_regret(AGGREGATE_REGRET, AGGREGATE_METHOD_NAMES, os.getcwd() + save_graph_path)
   print("TIME OVERALL: ", time.time() - overall_start_time)
   
 if __name__ == "__main__":
