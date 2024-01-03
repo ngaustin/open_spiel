@@ -121,6 +121,7 @@ class HarvestState : public SimMoveState {
 
   std::vector<std::vector<int>> grid_; 
 
+  int NumApples() const;
 
  protected:
   void DoApplyActions(const std::vector<Action>& moves) override;   
@@ -141,6 +142,7 @@ class HarvestState : public SimMoveState {
   std::vector<int> LaserAction(Player player);
 
   std::vector<std::pair<int, int>> appleCheck;
+  int numApples = 0;
 
   std::vector<std::string> mapInput_ = {  "WWWWWWWWW",
                                           "WP     PW",

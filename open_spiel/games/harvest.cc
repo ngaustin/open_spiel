@@ -314,6 +314,10 @@ void HarvestState::InformationStateTensor(Player player,
   game.info_state_observer_->WriteTensor(*this, player, &allocator);
 }
 
+int HarvestState::NumApples() const {
+  return numApples;
+}
+
 void HarvestState::ObservationTensor(Player player, absl::Span<float> values) const {
   ContiguousAllocator allocator(values); 
   const HarvestGame& game = 
@@ -720,7 +724,7 @@ void HarvestState::SpawnApples() {
     int row = (*spawnPoint).first, col = (*spawnPoint).second;
 
     if (grid_[row][col] == kempty) {
-      int numApples = 0;
+      numApples = 0;
 
       for (int l = 0; l < appleCheck.size(); l++) {
         std::pair<int, int>* place = &appleCheck[l];
