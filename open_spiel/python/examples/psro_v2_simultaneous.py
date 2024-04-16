@@ -446,11 +446,10 @@ def gpsro_looper(env, oracle, agents):
           print("Loading the meta game from save_data_path: ", save_data_path)
           g_psro_solver.set_meta_game(utilities)
 
-        """
+        
         curr_meta_strategy = g_psro_solver.get_meta_strategies()
         new_meta_strategy = []
-        # print("curr: ", curr_meta_strategy)
-        # print("from save: ", meta_probabilities)
+
         for i, strategy in enumerate(curr_meta_strategy):
           curr = np.zeros(strategy.size)
           for j, elem in enumerate(meta_probabilities[i]):
@@ -459,7 +458,7 @@ def gpsro_looper(env, oracle, agents):
         print("Using saved meta strategy: ", new_meta_strategy)
         g_psro_solver.set_meta_strategies(new_meta_strategy)
         print("Confirming new meta strategy: ", g_psro_solver.get_meta_strategies())
-        """
+        
     
 
     if gpsro_iteration < 30 and FLAGS.regret_calculation_mode:
@@ -542,7 +541,7 @@ def gpsro_looper(env, oracle, agents):
       # env.game.display_policies_in_context(policies)
 
       save_folder_path = FLAGS.save_folder_path if FLAGS.save_folder_path[-1] == "/" else FLAGS.save_folder_path + "/"
-      if gpsro_iteration >= FLAGS.num_iterations_load_only - 1:  # NOTE: I SUBTRACTED ONE SO THAT THE REASSIGNINED PROFILE WOULD BE SAVED
+      if gpsro_iteration >= FLAGS.num_iterations_load_only: 
         save_iteration_data(gpsro_iteration, meta_probabilities, meta_game, save_folder_path, training_returns, regret_training_returns, config.ppo_training_data, pure_br_returns)
 
     # The following lines only work for sequential games for the moment.
@@ -571,12 +570,16 @@ def main(argv):
 
   if FLAGS.game_name=="harvest":
     game = pyspiel.load_game(FLAGS.game_name, {"rng_seed": FLAGS.seed})
+    obs_type = rl_environment.ObservationType.OBSERVATION
   elif FLAGS.game_name=="bargaining":
     game = pyspiel.load_game(FLAGS.game_name, {"discount": 0.99})
+    obs_type = rl_environment.ObservationType.INFORMATION_STATE
   else:
     game = pyspiel.load_game(FLAGS.game_name)  # The iterated prisoners dilemma does not have "players" info type
+    obs_type = rl_environment.ObservationType.INFORMATION_STATE
 
-  env = rl_environment.Environment(game, observation_type=rl_environment.ObservationType.OBSERVATION)
+  if FLAGS.game_name == "harvest"
+  env = rl_environment.Environment(game, observation_type=obs_type)
 
   import os
   num_cpus = os.cpu_count()
