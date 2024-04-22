@@ -135,7 +135,7 @@ class HarvestState : public SimMoveState {
   std::pair<int,int> subtractPairs(std::pair<int,int> pair1, std::pair<int,int> pair2) const;
   std::pair<int,int> scalarMultiplyPair(int scale, std::pair<int,int>pair);
 
-  std::vector<float> spawnProbs{0, .005, .02, .05};
+  std::vector<float> spawnProbs{0, 0, .01, .025}; // 0, .005, .02, .05
 
   void SpawnApples();
   std::vector<int> LaserAction(Player player);

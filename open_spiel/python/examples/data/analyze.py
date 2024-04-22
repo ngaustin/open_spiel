@@ -525,15 +525,15 @@ def main(argv):
       utilities, meta = get_data(epsiode_data_directory + "/" + trial_data_directory)
       
       # This is my code for analyzing welfare. I've commented it out for you :)
-      """
-      job_id = int(trial_data_directory.split('_')[1][1:-1]) * 10 + int(trial_data_directory.split('_')[-1])
+      
+      job_id = int(trial_data_directory.split('_')[1][1:-1]) * 5 + int(trial_data_directory.split('_')[-1])
 
       print("Length: ", len(utilities[0]), len(indices_of_jobs_needed), job_id)
       if len(utilities[0]) > 0 and job_id < 120 and job_id >= 0: # < 75: # 
         print("Length of the EXP_WELFARE: ", len(TRIAL_EXP_WELFARE))
         print("Ending expected welfare: ", TRIAL_EXP_WELFARE[-1], len(TRIAL_EXP_WELFARE))
         indices_of_jobs_needed[job_id - 0] = TRIAL_EXP_WELFARE[-1]
-      """
+      
       
       SIM_WELFARE.append(TRIAL_EXP_WELFARE)
       SIM_REGRET.append(TRIAL_REGRET)

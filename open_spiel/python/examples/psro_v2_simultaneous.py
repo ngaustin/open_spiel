@@ -572,13 +572,12 @@ def main(argv):
     game = pyspiel.load_game(FLAGS.game_name, {"rng_seed": FLAGS.seed})
     obs_type = rl_environment.ObservationType.OBSERVATION
   elif FLAGS.game_name=="bargaining":
-    game = pyspiel.load_game(FLAGS.game_name, {"discount": 0.99})
-    obs_type = rl_environment.ObservationType.INFORMATION_STATE
+    game = pyspiel.load_game(FLAGS.game_name, {"discount": 0.95})
+    obs_type = rl_environment.ObservationType.OBSERVATION
   else:
     game = pyspiel.load_game(FLAGS.game_name)  # The iterated prisoners dilemma does not have "players" info type
     obs_type = rl_environment.ObservationType.INFORMATION_STATE
 
-  if FLAGS.game_name == "harvest"
   env = rl_environment.Environment(game, observation_type=obs_type)
 
   import os
