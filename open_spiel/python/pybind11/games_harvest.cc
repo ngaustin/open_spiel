@@ -24,7 +24,8 @@ using open_spiel::harvest::HarvestState;
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(HarvestState);
 
 void open_spiel::init_pyspiel_games_harvest(py::module& m) {
-  py::classh<HarvestState, State> state_class(m, "HarvestState");
+  py::module_ harvest = m.def_submodule("harvest");
+  py::classh<HarvestState, State> state_class(harvest, "HarvestState");
     state_class
         .def("num_apples", &HarvestState::NumApples);
 }

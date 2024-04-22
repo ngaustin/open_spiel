@@ -12,18 +12,19 @@ from open_spiel.python.algorithms import projected_replicator_dynamics
 import tensorflow.compat.v1 as tf
 import sys
 import time
+from matplotlib import cm
 
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string("game_data_path",  "", "Directory for retrieving game data. Assuming iteration structure.")
 flags.DEFINE_string("save_graph_path",  "", "Directory for saving graphs. Directory will be created if doesn't exist.")
-flags.DEFINE_string("game_name",  "Harvest", "Name of game.")
+flags.DEFINE_string("game_name",  "harvest", "Name of game.")
 flags.DEFINE_integer("n_players", 2, "Number of players")
 flags.DEFINE_boolean("graph_mode", True, "Will/won't graph.")
 flags.DEFINE_boolean("is_symmetric", True, "Symmetric game?")
 flags.DEFINE_boolean("with_std", True, "Use std error bars?")
 flags.DEFINE_boolean("expsro", False, "ExPSRO Run?")
-
+flags.DEFINE_boolean("iter29", False, "Just iteration 29?")
 # NOTE: File is designed to analyze one game at a time.
 
 # For the simple one state game:
@@ -285,6 +286,48 @@ def main(argv):
     ax.legend([handles[idx] for idx in display_order],[labels[idx] for idx in display_order])
     regret_fig.savefig(folder_path + "regret.jpg")
     plt.close()
+  
+  def graph_apples(data, folder_path):
+    colors_used = cm.get_cmap("viridis", len(data)).colors
+    apples_fig, ax = plt.subplots()
+    mean_psro = np.mean(data[0], axis=0)
+    timesteps = [ind for ind in range(len(data[0][0]))]
+    # mean_psro = np.mean(data[0], axis=0)
+    # print("MEAN PSRO", mean_psro)
+    # print("PLEASE HELP", len(avg_apples[0]))
+    ax.plot(timesteps, mean_psro, label="Vanilla", color=colors_used[0], linewidth=2)
+    # std_deviation_0 = np.std(data[0], axis=0)
+    # print("STDEV PSRO", std_deviation_0)
+    #ax.fill_between(timesteps, np.array(mean_psro) - np.array(std_deviation_0), np.array(mean_psro) + np.array(std_deviation_0), alpha=0.2, color=colors_used[0])
+    mean_expsro = np.mean(data[1], axis=0)
+    # mean_expsro = np.mean(data[1], axis=0)
+    ax.plot(timesteps, mean_expsro, label="Ex2PSRO", color=colors_used[1], linewidth=2)
+    # std_deviation_1 = np.std(data[1], axis=0)
+    # print("MEAN EXPSRO", mean_expsro)
+    # print("STDEV EXPSRO", std_deviation_1)
+    #ax.fill_between(timesteps, np.array(mean_expsro) - np.array(std_deviation_1), np.array(mean_expsro) + np.array(std_deviation_1), alpha=0.2, color=colors_used[1])
+    ax.set_title("Average Apples on the Map Over Timesteps")
+    ax.set_xlabel("Timesteps")
+    ax.set_ylabel("Number of Apples")
+    _, end = ax.get_xlim()
+    ax.xaxis.set_ticks(np.arange(0, end, 100))
+    ax.legend()
+    folder_path = folder_path + "/" if folder_path[-1] != "/" else folder_path
+    apples_fig.savefig(folder_path + "apples_fig.jpg")
+    plt.close()
+  
+
+  def graph_episode_lengths(all_episode_lengths, folder_path):
+    episode_length, ax = plt.subplots()
+    ax.hist(all_episode_lengths, bins=np.arange(min(all_episode_lengths), max(all_episode_lengths) + 1.5) - 0.5, edgecolor='black', alpha=0.7)
+    # Set labels and title
+    ax.set_xlabel('Episode length')
+    ax.set_ylabel('Frequency')
+    ax.set_title('Episode Length Histogram')
+    ax.set_yticks(np.arange(ax.get_ylim()[0], ax.get_ylim()[1] + 1, 2000))
+    folder_path = folder_path + "/" if folder_path[-1] != "/" else folder_path
+    episode_length.savefig(folder_path + "ep_length_{}.jpg".format(len(all_episode_lengths)))
+    plt.close()
 
   def graph_regret_iter_options(data, folder_path):
     '''
@@ -475,49 +518,88 @@ def main(argv):
   overall_start_time = time.time()
   indices_of_jobs_needed = [None for i in range(120)]
 
-  for i, epsiode_data_directory in enumerate(sorted(os.listdir(data_directory_path))):
-    SIM_WELFARE = []
-    SIM_REGRET = []
-    print("------------------------------FILE {}-------------------------------".format(epsiode_data_directory))
-    for j, trial_data_directory in enumerate(sorted(os.listdir(data_directory_path + "/" + epsiode_data_directory))):
-      print(trial_data_directory)
-      print("TRIAL {}:\n".format(j))
-      #Do welfare prd once after all trials
+  if FLAGS.iter29:
+      if FLAGS.game_name == "harvest":
+        apples = [[],[]]
+        for j, psro_directory in enumerate(sorted(os.listdir(data_directory_path))): 
+          print("--------------", psro_directory, j, "-------------------------")
+          save_data_path = data_directory_path + "/" if data_directory_path[-1] != "/" else data_directory_path
+          save_data_path = save_data_path + psro_directory
+          save_data_path = save_data_path + "/" if save_data_path[-1] != "/" else save_data_path
+          temp_path_copy = save_data_path
+          #Will only be 5 iterations since we only save iteration 29 data
+          for i, episode_data_directory in enumerate(sorted(os.listdir(temp_path_copy))):
+            print("PSRO", psro_directory, "Episode", episode_data_directory)
+            save_data_path = temp_path_copy
+            save_data_path = save_data_path + episode_data_directory
+            save_data_path += "/" + os.listdir(save_data_path)[0]
+            with open(save_data_path, "rb") as npy_file:
+              array_list = np.load(npy_file, allow_pickle=True)
+            all_sim_apples = array_list[0]
+            for sim_apples in all_sim_apples:
+              apples[j].append(sim_apples)
+        save_data_path = data_directory_path + "/" if data_directory_path[-1] != "/" else data_directory_path
+        graph_apples(apples, save_data_path)
+        return
+      elif FLAGS.game_name == "bargaining":
+        all_episode_lengths = []
+        for _, episode_data_directory in enumerate(sorted(os.listdir(data_directory_path))): 
+          print("--------------", episode_data_directory, "-------------------------")
+          save_data_path = data_directory_path + "/" if data_directory_path[-1] != "/" else data_directory_path
+          save_data_path = save_data_path + episode_data_directory
+          save_data_path += "/" + os.listdir(save_data_path)[0]
+          with open(save_data_path, "rb") as npy_file:
+            array_list = np.load(npy_file, allow_pickle=True)
+          episode_lengths = array_list[0]
+          all_episode_lengths.extend(episode_lengths)
+        save_data_path = data_directory_path + "/" if data_directory_path[-1] != "/" else data_directory_path
+        graph_episode_lengths(all_episode_lengths, save_data_path)
+        return
 
-      utilities, meta = get_data(epsiode_data_directory + "/" + trial_data_directory)
-      
-      # This is my code for analyzing welfare. I've commented it out for you :)
-      """
-      job_id = int(trial_data_directory.split('_')[1][1:-1]) * 5 + int(trial_data_directory.split('_')[-1])
+  if not FLAGS.iter29:
+    for i, episode_data_directory in enumerate(sorted(os.listdir(data_directory_path))):
+      SIM_WELFARE = []
+      SIM_REGRET = []
+      print("------------------------------FILE {}-------------------------------".format(episode_data_directory))
+      for j, trial_data_directory in enumerate(sorted(os.listdir(data_directory_path + "/" + episode_data_directory))):
+        print(trial_data_directory)
+        print("TRIAL {}:\n".format(j))
+        #Do welfare prd once after all trials
 
-      print("Length: ", len(utilities[0]), len(indices_of_jobs_needed), job_id)
-      if len(utilities[0]) > 0 and job_id < 120 and job_id >= 0: # < 75: # 
-        print("Length of the EXP_WELFARE: ", len(TRIAL_EXP_WELFARE))
-        print("Ending expected welfare: ", TRIAL_EXP_WELFARE[-1], len(TRIAL_EXP_WELFARE))
-        indices_of_jobs_needed[job_id - 0] = TRIAL_EXP_WELFARE[-1]
-      """
-      
-      SIM_WELFARE.append(TRIAL_EXP_WELFARE)
-      SIM_REGRET.append(TRIAL_REGRET)
+        utilities, meta = get_data(episode_data_directory + "/" + trial_data_directory)
+        
+        # This is my code for analyzing welfare. I've commented it out for you :)
+        """
+        job_id = int(trial_data_directory.split('_')[1][1:-1]) * 5 + int(trial_data_directory.split('_')[-1])
 
-      TRIAL_EXP_WELFARE = []
-      TRIAL_REGRET = [[] for _ in range(num_players)]
-      print("Calculating alternate RRD Welfares")
-      start_time = time.time()
-      if "vanilla" not in epsiode_data_directory.lower():
-        # _, max_welfare_sims = _rrd_sims([utilities[0][:30, :30], utilities[1][:30, :30]])
-        # print(_rrd_sims([utilities[0], utilities[1]]))
-        # print("Max welfare from sims: ", max_welfare_sims, 2*max_welfare_sims)
-        # indices_of_jobs_needed[job_id] = max(indices_of_jobs_needed[job_id], 2*max_welfare_sims)
-        print("Individual rrd runtime in seconds: ", time.time() - start_time)
-    AGGREGATE_WELFARE.append(SIM_WELFARE)
-    AGGREGATE_REGRET.append(SIM_REGRET)  
-    AGGREGATE_METHOD_NAMES.append(epsiode_data_directory)
-  print("Comma separated welfare numbers: ", indices_of_jobs_needed)
-  graph_expected_welfare(AGGREGATE_WELFARE, AGGREGATE_METHOD_NAMES, os.getcwd() + save_graph_path)
+        print("Length: ", len(utilities[0]), len(indices_of_jobs_needed), job_id)
+        if len(utilities[0]) > 0 and job_id < 120 and job_id >= 0: # < 75: # 
+          print("Length of the EXP_WELFARE: ", len(TRIAL_EXP_WELFARE))
+          print("Ending expected welfare: ", TRIAL_EXP_WELFARE[-1], len(TRIAL_EXP_WELFARE))
+          indices_of_jobs_needed[job_id - 0] = TRIAL_EXP_WELFARE[-1]
+        """
+        
+        SIM_WELFARE.append(TRIAL_EXP_WELFARE)
+        SIM_REGRET.append(TRIAL_REGRET)
 
-  graph_regret(AGGREGATE_REGRET, AGGREGATE_METHOD_NAMES, os.getcwd() + save_graph_path)
-  print("TIME OVERALL: ", time.time() - overall_start_time)
-  
+        TRIAL_EXP_WELFARE = []
+        TRIAL_REGRET = [[] for _ in range(num_players)]
+        print("Calculating alternate RRD Welfares")
+        start_time = time.time()
+        if "vanilla" not in episode_data_directory.lower():
+          # _, max_welfare_sims = _rrd_sims([utilities[0][:30, :30], utilities[1][:30, :30]])
+          # print(_rrd_sims([utilities[0], utilities[1]]))
+          # print("Max welfare from sims: ", max_welfare_sims, 2*max_welfare_sims)
+          # indices_of_jobs_needed[job_id] = max(indices_of_jobs_needed[job_id], 2*max_welfare_sims)
+          print("Individual rrd runtime in seconds: ", time.time() - start_time)
+      AGGREGATE_WELFARE.append(SIM_WELFARE)
+      AGGREGATE_REGRET.append(SIM_REGRET)  
+      AGGREGATE_METHOD_NAMES.append(episode_data_directory)
+    print("Comma separated welfare numbers: ", indices_of_jobs_needed)
+    graph_expected_welfare(AGGREGATE_WELFARE, AGGREGATE_METHOD_NAMES, os.getcwd() + save_graph_path)
+
+    graph_regret(AGGREGATE_REGRET, AGGREGATE_METHOD_NAMES, os.getcwd() + save_graph_path)
+    print("TIME OVERALL: ", time.time() - overall_start_time)
+    
 if __name__ == "__main__":
   app.run(main)

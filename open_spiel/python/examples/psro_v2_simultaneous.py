@@ -15,7 +15,7 @@
 """Example running PSRO on OpenSpiel Sequential games.
 
 To reproduce results from (Muller et al., "A Generalized Training Approach for
-Multiagent Learning", ICLR 2020; https://arxiv.org/abs/1909.12823), run this
+Multiagent Learning", ICLR 2020; https://arxiv.org//1909.12823), run this
 script with:
   - `game_name` in ['kuhn_poker', 'leduc_poker']
   - `n_players` in [2, 3, 4, 5]
@@ -47,6 +47,7 @@ from open_spiel.python.algorithms import policy_aggregator
 from open_spiel.python.algorithms.psro_v2 import best_response_oracle
 from open_spiel.python.algorithms.psro_v2 import psro_v2
 from open_spiel.python.algorithms.psro_v2 import rl_oracle
+from open_spiel.python.algorithms.psro_v2 import abstract_meta_trainer
 
 from open_spiel.python.algorithms.psro_v2 import rl_oracle_cooperative
 from open_spiel.python.algorithms.psro_v2 import rl_policy
@@ -199,7 +200,7 @@ flags.DEFINE_integer("seed", 1, "Seed.")
 flags.DEFINE_bool("local_launch", False, "Launch locally or not.")
 flags.DEFINE_bool("verbose", True, "Enables verbose printing and profiling.")
 
-def save_iteration_data(iteration_number, meta_probabilities, U, save_folder_path, training_returns, train_regret_returns, ppo_training_data, pure_br_returns):
+def save_iteration_data(iteration_number, meta_probabilities, U, save_folder_path, training_returns, train_regret_returns, ppo_training_data, pure_br_returns, qual_analy_data):
       """ How to save the iteration data? """
       date_time_string = str(datetime.now())
       date_time_string = date_time_string.replace(':', '_')
@@ -210,13 +211,30 @@ def save_iteration_data(iteration_number, meta_probabilities, U, save_folder_pat
         os.makedirs(save_folder_path)
 
       all_meta_probabilities = np.vstack(meta_probabilities)
-      array_list = [all_meta_probabilities, np.stack(U, axis=0), training_returns, train_regret_returns, ppo_training_data, pure_br_returns]
+      array_list = [all_meta_probabilities, np.stack(U, axis=0), training_returns, train_regret_returns, ppo_training_data, pure_br_returns, qual_analy_data]
       object_array_list = np.empty(len(array_list), object)
       object_array_list[:] = array_list
 
       with open(save_data_path, "wb") as npy_file:
           np.save(npy_file, object_array_list)
       return
+
+def save_iteration_data_qual(apples, save_folder_path):
+  date_time_string = str(datetime.now())
+  date_time_string = date_time_string.replace(':', '_')
+  save_data_path = save_folder_path + "APPLES" + "_" + "iteration_{}.npy".format(29)
+
+  pathExists = os.path.exists(save_folder_path)
+  if not pathExists:
+    os.makedirs(save_folder_path)
+
+  array_list = [apples]
+  object_array_list = np.empty(len(array_list), object)
+  object_array_list[:] = array_list
+
+  with open(save_data_path, "wb") as npy_file:
+      np.save(npy_file, object_array_list)
+  return
 
 
 def init_dqn_responder(sess, env):
@@ -398,6 +416,7 @@ def gpsro_looper(env, oracle, agents):
   sample_from_marginals = True  # TODO(somidshafiei) set False for alpharank
   training_strategy_selector = FLAGS.training_strategy_selector or strategy_selectors.probabilistic
   training_returns = []
+  meta_probabilities = []
   g_psro_solver = psro_v2.PSROSolver(
       env.game,
       oracle,
@@ -417,18 +436,20 @@ def gpsro_looper(env, oracle, agents):
 
   start_time = time.time()
   utils.display_meta_game(g_psro_solver.get_meta_game())
-  for gpsro_iteration in range(FLAGS.gpsro_iterations):
+  for gpsro_iteration in range(FLAGS.gpsro_iterations + 1):
     if FLAGS.verbose:
       print("Iteration : {}".format(gpsro_iteration))
       print("Time so far: {}".format(time.time() - start_time))
 
     # TODO: Insert conditional that if we are in regret mode, ensure we are 1. loading models 2. num_load_model_iterations > 0 and 3. save_folder_path is not None and 4. gpsro_iteration < num_load_iterations
     # TODO: Insert a conditional here that, if we are in regret mode, we can call g_psro_solver.set_meta_game and g_psro_solver.set_meta_strategies
+    print("GPSRO IT", gpsro_iteration, FLAGS.num_iterations_load_only)
     if FLAGS.regret_calculation_mode:
       assert FLAGS.load_models and FLAGS.num_iterations_load_only > 0 and FLAGS.save_folder_path != None 
       if gpsro_iteration >= FLAGS.num_iterations_load_only: # NOTE: this conditional might be wrong
         # Read from the respective iteration data in save_folder_path
         all_files = [f for f in os.listdir(FLAGS.save_folder_path) if os.path.isfile(os.path.join(FLAGS.save_folder_path, f))]
+        #save_data_path = [file for file in all_files if "iteration_{}.".format(gpsro_iteration-FLAGS.num_iterations_load_only) in file][0] # NOTE: This might be wrong
         save_data_path = [file for file in all_files if "iteration_{}.".format(gpsro_iteration-FLAGS.num_iterations_load_only) in file][0] # NOTE: This might be wrong
         save_data_path = FLAGS.save_folder_path + "/" + save_data_path
         print("Retrieving data from save_data_path: ", save_data_path)
@@ -437,16 +458,17 @@ def gpsro_looper(env, oracle, agents):
         meta_probabilities, _, _, _, _, _ = array_list
 
         if gpsro_iteration == FLAGS.num_iterations_load_only:
+          print("NEED TO ENTER HERE")
           all_files = [f for f in os.listdir(FLAGS.save_folder_path) if os.path.isfile(os.path.join(FLAGS.save_folder_path, f))]
           save_data_path = [file for file in all_files if "iteration_{}.".format(gpsro_iteration-1) in file][0] # NOTE: This might be wrong
           save_data_path = FLAGS.save_folder_path + "/" + save_data_path
+          print("SAVE_DATA_PATH", save_data_path)
           with open(save_data_path, "rb") as npy_file:
             array_list = np.load(npy_file, allow_pickle=True)
-          _, utilities, _, _, _, _ = array_list
+          meta_probabilities, utilities, _, _, _, _ = array_list
           print("Loading the meta game from save_data_path: ", save_data_path)
           g_psro_solver.set_meta_game(utilities)
-
-        """
+        
         curr_meta_strategy = g_psro_solver.get_meta_strategies()
         new_meta_strategy = []
         # print("curr: ", curr_meta_strategy)
@@ -459,27 +481,23 @@ def gpsro_looper(env, oracle, agents):
         print("Using saved meta strategy: ", new_meta_strategy)
         g_psro_solver.set_meta_strategies(new_meta_strategy)
         print("Confirming new meta strategy: ", g_psro_solver.get_meta_strategies())
-        """
-    
-
     if gpsro_iteration < 30 and FLAGS.regret_calculation_mode:
       g_psro_solver._sims_per_entry = 1
     else:
       g_psro_solver._sims_per_entry = FLAGS.sims_per_entry
 
     print("Sims per entry set to: ", g_psro_solver._sims_per_entry)
-    g_psro_solver.iteration()
-    
-    training_returns = oracle.get_training_returns()
-    regret_training_returns = oracle.get_training_regret_returns()
-    pure_br_returns = oracle.get_pure_br_returns()
-    meta_game = g_psro_solver.get_meta_game()
-    meta_probabilities = g_psro_solver.get_meta_strategies()
-    policies = g_psro_solver.get_policies()
+    if gpsro_iteration < 30:
+      g_psro_solver.iteration()
+      training_returns = oracle.get_training_returns()
+      regret_training_returns = oracle.get_training_regret_returns()
+      pure_br_returns = oracle.get_pure_br_returns()
+      meta_game = g_psro_solver.get_meta_game()
+      meta_probabilities = g_psro_solver.get_meta_strategies()
+      policies = g_psro_solver.get_policies()
 
-    g_psro_solver.update_regret_threshold(FLAGS.regret_lambda_final, FLAGS.regret_steps - gpsro_iteration - 1)
-    g_psro_solver.update_explore_threshold(FLAGS.final_exploration, FLAGS.regret_steps - gpsro_iteration - 1)
-
+      g_psro_solver.update_regret_threshold(FLAGS.regret_lambda_final, FLAGS.regret_steps - gpsro_iteration - 1)
+      g_psro_solver.update_explore_threshold(FLAGS.final_exploration, FLAGS.regret_steps - gpsro_iteration - 1)
     """
     # NOTE: The following was for regret confirmation of max welfare profiles
     # TODO: Manually set the meta_strategy here using RRD sims!!!! 
@@ -530,6 +548,44 @@ def gpsro_looper(env, oracle, agents):
       meta_probabilities = g_psro_solver.get_meta_strategies()
 
     """
+    all_apples = []
+    all_rets = []
+    if FLAGS.game_name == "harvest":
+      num_simulations = 7500
+      if gpsro_iteration == 30: 
+        for _ in range(num_simulations):
+          policies = g_psro_solver.get_policies()
+          sampled_policies = []
+          meta_probs = meta_probabilities
+          for i in range(FLAGS.n_players):
+            sampled_policies.append(np.random.choice(policies[i], p=meta_probs[i]))
+          rets, _, _, apples = abstract_meta_trainer.qualitative_analysis_sample_episode(env.game.new_initial_state(), sampled_policies)
+          all_apples.append(apples)
+          all_rets.append(rets)
+        max_length = max(len(subarray) for subarray in all_apples)
+        for apples_subarray in all_apples:
+          if len(apples_subarray) < max_length:
+            for i in range(max_length - len(apples_subarray)):
+              apples_subarray.append(0)
+        save_folder_path = save_folder_path + "/" if save_folder_path[-1] != "/" else save_folder_path
+        save_iteration_data_qual(all_apples, save_folder_path)
+        print("ALLRETS", all_rets)
+
+    all_lengths = []
+    if FLAGS.game_name == "bargaining":
+      num_simulations = 7500
+      if gpsro_iteration == 30: 
+        for _ in range(num_simulations):
+          policies = g_psro_solver.get_policies()
+          sampled_policies = []
+          meta_probs = meta_probabilities
+          for i in range(FLAGS.n_players):
+            sampled_policies.append(np.random.choice(policies[i], p=meta_probs[i]))
+          _, episode_length, _ = abstract_meta_trainer.bargaining_qualitative_analysis_sample_episode(env.game.new_initial_state(), sampled_policies)
+          all_lengths.append(len(episode_length))
+        save_folder_path = save_folder_path + "/" if save_folder_path[-1] != "/" else save_folder_path
+        save_iteration_data_qual(all_lengths, save_folder_path)
+              
     if FLAGS.verbose:
       utils.display_meta_game(meta_game)
       print("Metagame probabilities: ")
@@ -539,11 +595,13 @@ def gpsro_looper(env, oracle, agents):
       if FLAGS.meta_strategy_method =='mgce':
           joint = g_psro_solver.get_joint_meta_probabilities()
           print("Joint meta strategy: ", joint)
-      # env.game.display_policies_in_context(policies)
-
+      #env.game.display_policies_in_context(policies)
       save_folder_path = FLAGS.save_folder_path if FLAGS.save_folder_path[-1] == "/" else FLAGS.save_folder_path + "/"
-      if gpsro_iteration >= FLAGS.num_iterations_load_only - 1:  # NOTE: I SUBTRACTED ONE SO THAT THE REASSIGNINED PROFILE WOULD BE SAVED
-        save_iteration_data(gpsro_iteration, meta_probabilities, meta_game, save_folder_path, training_returns, regret_training_returns, config.ppo_training_data, pure_br_returns)
+      if gpsro_iteration >= FLAGS.num_iterations_load_only:  # NOTE: I SUBTRACTED ONE SO THAT THE REASSIGNINED PROFILE WOULD BE SAVED
+        if FLAGS.game_name == "harvest":
+          save_iteration_data(gpsro_iteration, meta_probabilities, meta_game, save_folder_path, training_returns, regret_training_returns, config.ppo_training_data, pure_br_returns, all_apples)
+        elif FLAGS.game_name == "bargaining":
+          save_iteration_data(gpsro_iteration, meta_probabilities, meta_game, save_folder_path, training_returns, regret_training_returns, config.ppo_training_data, pure_br_returns, all_lengths)
 
     # The following lines only work for sequential games for the moment.
     """

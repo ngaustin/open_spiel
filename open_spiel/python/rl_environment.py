@@ -250,14 +250,11 @@ class Environment(object):
           else self._state.information_state_tensor(player_id))
 
       # print("Player {}".format(player_id), self._state.observation_tensor(player_id))
-
       observations["legal_actions"].append(self._state.legal_actions(player_id))
     observations["current_player"] = self._state.current_player()
     discounts = self._discounts
-
     if self._game.get_type().provides_information_state_tensor:
       observations["global_state"].append(self._state.information_state_tensor(0))
-
     # TODO: This is the discount factor. But just make sure that we separate between DONE and iteration DONE
     if step_type == StepType.LAST:
       # When the game is in a terminal state set the discount to 0.

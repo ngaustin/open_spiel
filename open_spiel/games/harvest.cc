@@ -654,7 +654,7 @@ void HarvestState::DoApplyActions(const std::vector<Action>& moves) {
   //printOut = "Lasered: ";
   // std::cout << printOut << agentLasered_ << std::endl;
 
-  //printOut = "Grid:";
+  // printOut = "Grid:";
   // std::cout << printOut << std::endl;
   // for (int i = 0; i < x_max_; i++) {
   //   std::cout << grid_[i] << std::endl;
@@ -679,6 +679,18 @@ void HarvestState::DoApplyActions(const std::vector<Action>& moves) {
   SpawnApples();
 
   currentIteration_++;
+
+  // printOut = "Num Apples";
+  // std::cout << printOut << " " << currentIteration_ << std::endl;
+  // int num_apps = 0;
+  // for (int i = 0; i < x_max_; i++){
+  //   for (int j = 0; j < y_max_; j++){
+  //     if (grid_[i][j] == kapple) {
+  //       num_apps ++;
+  //     }
+  //   }
+  // }
+  // std::cout << num_apps << std::endl;
   
   // Check if apples are gone
   bool applesAreGone = true; 

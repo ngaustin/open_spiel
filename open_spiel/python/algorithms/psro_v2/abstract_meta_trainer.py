@@ -63,7 +63,6 @@ def get_time_step(state):
 
       observations["legal_actions"].append(state.legal_actions(player_id))
     observations["current_player"] = state.current_player()
-
     discounts = [0. for _ in range(state.num_players())]
 
     # For gym environments
@@ -76,6 +75,106 @@ def get_time_step(state):
         discounts=discounts,
         step_type=step_type)
 
+
+def qualitative_analysis_get_time_step(state):
+    """Returns a `TimeStep` without updating the environment.
+
+    Returns:
+      A `TimeStep` namedtuple containing:
+        observation: list of dicts containing one observations per player, each
+          corresponding to `observation_spec()`.
+        reward: list of rewards at this timestep, or None if step_type is
+          `StepType.FIRST`.
+        discount: list of discounts in the range [0, 1], or None if step_type is
+          `StepType.FIRST`.
+        step_type: A `StepType` value.
+    """
+    observations = {
+        "info_state": [],
+        "legal_actions": [],
+        "current_player": [],
+        "serialized_state": [], 
+        "global_state": []
+    }
+    rewards = []
+    step_type = StepType.LAST if state.is_terminal() else StepType.MID
+
+    if not state.is_chance_node():
+      cur_rewards = state.rewards()
+    else:
+      cur_rewards = [None for _ in range(state.num_players())]
+
+    for player_id in range(state.num_players()):
+      rewards.append(cur_rewards[player_id])
+      observations["info_state"].append(
+          state.observation_tensor(player_id))
+
+      observations["legal_actions"].append(state.legal_actions(player_id))
+    observations["current_player"] = state.current_player()
+    observations["global_state"].append(state.information_state_tensor(0))
+    reshaped_array = np.array_split(state.information_state_tensor(0), 4)
+    # Sum the elements in the 3rd subarray (index 2)
+    num_apples = np.sum(reshaped_array[2])
+
+    discounts = [0. for _ in range(state.num_players())]
+
+    # For gym environments
+    if hasattr(state, "last_info"):
+      observations["info"] = state.last_info
+
+    return TimeStep(
+        observations=observations,
+        rewards=rewards,
+        discounts=discounts,
+        step_type=step_type), num_apples
+
+def bargaining_qualitative_analysis_get_time_step(state):
+    """Returns a `TimeStep` without updating the environment.
+
+    Returns:
+      A `TimeStep` namedtuple containing:
+        observation: list of dicts containing one observations per player, each
+          corresponding to `observation_spec()`.
+        reward: list of rewards at this timestep, or None if step_type is
+          `StepType.FIRST`.
+        discount: list of discounts in the range [0, 1], or None if step_type is
+          `StepType.FIRST`.
+        step_type: A `StepType` value.
+    """
+    observations = {
+        "info_state": [],
+        "legal_actions": [],
+        "current_player": [],
+        "serialized_state": [], 
+        "global_state": []
+    }
+    rewards = []
+    step_type = StepType.LAST if state.is_terminal() else StepType.MID
+
+    if not state.is_chance_node():
+      cur_rewards = state.rewards()
+    else:
+      cur_rewards = [None for _ in range(state.num_players())]
+
+    for player_id in range(state.num_players()):
+      rewards.append(cur_rewards[player_id])
+      observations["info_state"].append(
+          state.observation_tensor(player_id))
+
+      observations["legal_actions"].append(state.legal_actions(player_id))
+    observations["current_player"] = state.current_player()
+
+    discounts = [0. for _ in range(state.num_players())]
+
+    # For gym environments
+    if hasattr(state, "last_info"):
+      observations["info"] = state.last_info
+
+    return TimeStep(
+        observations=observations,
+        rewards=rewards,
+        discounts=discounts,
+        step_type=step_type)
 
 def _process_string_or_callable(string_or_callable, dictionary):
   """Process a callable or a string representing a callable.
@@ -116,9 +215,9 @@ def sample_episode(state, policies):
     The result of the call to returns() of the final state in the episode.
         Meant to be a win/loss integer.
   """
-
   start = time.time()
   timestep = get_time_step(state)
+  #timestep_summary[1] = num apples in a timestep
   if state.is_terminal():
     return np.array(state.returns(), dtype=np.float32), [timestep], [] # None, None#
 
@@ -148,6 +247,93 @@ def sample_episode(state, policies):
   # We use [applied_action] because we keep consistency that actions are list of actions for each player
   return rets, [timestep] + later_timesteps, [[applied_action]] + later_actions # None, None# 
 
+def qualitative_analysis_sample_episode(state, policies):
+  """Samples an episode using policies, starting from state.
+
+  Args:
+    state: Pyspiel state representing the current state.
+    policies: List of policy representing the policy executed by each player.
+
+  Returns:
+    The result of the call to returns() of the final state in the episode.
+        Meant to be a win/loss integer.
+  """
+  start = time.time()
+  timestep_summary = qualitative_analysis_get_time_step(state)
+  timestep = timestep_summary[0]
+  num_apples = timestep_summary[1]
+  #timestep_summary[1] = num apples in a timestep
+  if state.is_terminal():
+    return np.array(state.returns(), dtype=np.float32), [timestep], [], [num_apples] # None, None#
+
+  if state.is_simultaneous_node():
+    actions = [None] * state.num_players()
+    for player in range(state.num_players()):
+      # calls python.policy.__call__() wheich calls rl_policy.action_probabilities which calls _policy.step (_policy is dqn, imitation etc.)
+      state_policy = policies[player](state, player)  
+      outcomes, probs = zip(*state_policy.items())
+      actions[player] = utils.random_choice(outcomes, probs)
+    state.apply_actions(actions)
+    rets, later_timesteps, later_actions, later_num_apples = qualitative_analysis_sample_episode(state, policies)
+    return rets, [timestep] + later_timesteps, [actions] + later_actions, [num_apples] + later_num_apples # None, None# 
+    # return sample_episode(state, policies)
+
+  # Not implemented
+  if state.is_chance_node():
+    outcomes, probs = zip(*state.chance_outcomes())
+  else:
+    player = state.current_player()
+    state_policy = policies[player](state, player)
+    outcomes, probs = zip(*state_policy.items())
+
+  applied_action = utils.random_choice(outcomes, probs)
+  state.apply_action(applied_action)
+  rets, later_timesteps, later_actions, later_num_apples = qualitative_analysis_sample_episode(state, policies)
+  # We use [applied_action] because we keep consistency that actions are list of actions for each player
+  return rets, [timestep] + later_timesteps, [[applied_action]] + later_actions, [num_apples] + later_num_apples # None, None# 
+
+
+def bargaining_qualitative_analysis_sample_episode(state, policies):
+  """Samples an episode using policies, starting from state.
+
+  Args:
+    state: Pyspiel state representing the current state.
+    policies: List of policy representing the policy executed by each player.
+
+  Returns:
+    The result of the call to returns() of the final state in the episode.
+        Meant to be a win/loss integer.
+  """
+  start = time.time()
+  timestep = bargaining_qualitative_analysis_get_time_step(state)
+  if state.is_terminal():
+    return np.array(state.returns(), dtype=np.float32), [timestep], [] # None, None#
+
+  if state.is_simultaneous_node():
+    actions = [None] * state.num_players()
+    for player in range(state.num_players()):
+      # calls python.policy.__call__() wheich calls rl_policy.action_probabilities which calls _policy.step (_policy is dqn, imitation etc.)
+      state_policy = policies[player](state, player)  
+      outcomes, probs = zip(*state_policy.items())
+      actions[player] = utils.random_choice(outcomes, probs)
+    state.apply_actions(actions)
+    rets, later_timesteps, later_actions = bargaining_qualitative_analysis_sample_episode(state, policies)
+    return rets, [timestep] + later_timesteps, [actions] + later_actions # None, None# 
+    # return sample_episode(state, policies)
+
+  # Not implemented
+  if state.is_chance_node():
+    outcomes, probs = zip(*state.chance_outcomes())
+  else:
+    player = state.current_player()
+    state_policy = policies[player](state, player)
+    outcomes, probs = zip(*state_policy.items())
+
+  applied_action = utils.random_choice(outcomes, probs)
+  state.apply_action(applied_action)
+  rets, later_timesteps, later_actions = bargaining_qualitative_analysis_sample_episode(state, policies)
+  # We use [applied_action] because we keep consistency that actions are list of actions for each player
+  return rets, [timestep] + later_timesteps, [[applied_action]] + later_actions # None, None# 
 
 class AbstractMetaTrainer(object):
   """Abstract class implementing meta trainers.
@@ -284,7 +470,6 @@ class AbstractMetaTrainer(object):
     all_trajectories = []
     all_action_trajectories = []
     all_returns = []
-
     for pol in policies:
       pol._policy.clear_state_tracking()
     
@@ -297,7 +482,6 @@ class AbstractMetaTrainer(object):
       all_returns.append(rets.reshape(-1))
       all_trajectories.append(trajectory)
       all_action_trajectories.append(actions)
-      
     return totals / num_episodes, all_trajectories, all_action_trajectories, all_returns #None, None, None#
 
   def get_meta_strategies(self):
