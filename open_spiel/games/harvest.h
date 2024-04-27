@@ -135,7 +135,7 @@ class HarvestState : public SimMoveState {
   std::pair<int,int> subtractPairs(std::pair<int,int> pair1, std::pair<int,int> pair2) const;
   std::pair<int,int> scalarMultiplyPair(int scale, std::pair<int,int>pair);
 
-  std::vector<float> spawnProbs{0, 0, .01, .025}; // 0, .005, .02, .05
+  std::vector<float> spawnProbs{0, .005, .02, .05}; //  0, 0, .01, .025
 
   void SpawnApples();
   std::vector<int> LaserAction(Player player);
@@ -143,11 +143,11 @@ class HarvestState : public SimMoveState {
   std::vector<std::pair<int, int>> appleCheck;
 
   std::vector<std::string> mapInput_ = {  "WWWWWWWWW",
-                                          "WP     PW",
-                                          "W  AAA  W",
-                                          "W AAAAA W",
-                                          "W  AAA  W", 
-                                          "WP     PW",
+                                          "WPAA  APW",
+                                          "W A  AA W",
+                                          "WAAA AAAW",
+                                          "W AA  A W", 
+                                          "WPA  AAPW",
                                           "WWWWWWWWW"};
   std::vector<std::pair<int, int>> agentLocations_;
   std::vector<std::pair<int, int>> agentDirections_;
