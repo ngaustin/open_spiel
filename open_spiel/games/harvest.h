@@ -143,11 +143,11 @@ class HarvestState : public SimMoveState {
   std::vector<std::pair<int, int>> appleCheck;
 
   std::vector<std::string> mapInput_ = {  "WWWWWWWWW",
-                                          "WPAA  APW",
-                                          "W A  AA W",
+                                          "WPAA A PW",
+                                          "W A A AAW",
                                           "WAAA AAAW",
-                                          "W AA  A W", 
-                                          "WPA  AAPW",
+                                          "WAA A A W", 
+                                          "WP A AAPW",
                                           "WWWWWWWWW"};
   std::vector<std::pair<int, int>> agentLocations_;
   std::vector<std::pair<int, int>> agentDirections_;
