@@ -68,3 +68,8 @@ Package.resolved
 # Visual Studio generated files
 open_spiel/.vs
 /.env
+*.index
+*.meta
+*.data-00000-of-00001
+/open_spiel/python/examples/data/bargaining/99_bargaining/prd/models/0
+/open_spiel/python/examples/data/bargaining/99_bargaining/prd/models

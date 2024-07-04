@@ -1,5 +1,3 @@
-
-
 import numpy as np
 from absl import app
 from absl import flags
@@ -218,7 +216,7 @@ def main(argv):
         for ind in range(len(sim_data[0][0])):
           y.append(np.mean(sim_data_np[:, player_index, ind]))
           stdev.append(np.std(sim_data_np[:, player_index, ind], axis=0))
-        x = [ind + 1 for ind in range(len(sim_data[player_index][0]))]
+        x = [ind for ind in range(len(sim_data[player_index][0]))]
         ax.plot(x, y,
           label= "{}: Player {}: File {}".format(name_of_method, player_index, i))
         ax.fill_between(x, np.array(y) - np.array(stdev), np.array(y) + np.array(stdev), alpha=0.2)
@@ -237,7 +235,7 @@ def main(argv):
     '''
     regret_fig, ax = plt.subplots()
     for player_index in range(len(data)):
-      ax.plot([ind + 1 for ind in range(len(data[player_index]))],
+      ax.plot([ind for ind in range(len(data[player_index]))],
           data[player_index], label= "{}: Player {}".format(name_of_method, player_index))
     ax.set_title("Individual Regret Over Iterations")
     ax.set_xlabel("Iteration")
@@ -261,14 +259,14 @@ def main(argv):
     """
     total_path = data_directory_path + relative_folder_path
     all_files = sorted([f for f in os.listdir(total_path) if os.path.isfile(os.path.join(total_path, f))])
-    print("ALLFILES", all_files)
+    #print("ALLFILES", all_files)
     max_social_welfare_over_iterations = []
     aggregated_kl_values = [[] for _ in range(num_players)]
     expected_payoff_individual_players = [[] for _ in range(num_players)]
     expected_welfare = []
     iterations = len(all_files) if not FLAGS.expsro else 30
     regret_individuals = [[] for _ in range(num_players)]
-    player_profile_history = [[] for _ in range(num_players)]
+    player_profile_history = [[np.array([1])] for _ in range(num_players)]
     trial_graph_path = os.getcwd() + save_graph_path + relative_folder_path + "/"
     for i in range(iterations):
       print("ITERATION {}:".format(i))
@@ -288,12 +286,20 @@ def main(argv):
       # utilities were vstacked at the first dimension for each player as well
       list_of_meta_probabilities = [meta_probabilities[i] for i in range(meta_probabilities.shape[0])]
       for num_player in range(num_players):
+        if i == 0:
+          expected_payoff_individual_players[num_player].append(utilities[num_player][0][0])
         player_profile_history[num_player].append(list_of_meta_probabilities[num_player])
+        #print(utilities[num_player])
+        #input(list_of_meta_probabilities)
         expected_payoff_individual = _partial_multi_dot(utilities[num_player], list_of_meta_probabilities, num_player)
+        # print("current", expected_payoff_individual)
+        # if i == 2:
+        #   input()
+        #expected_payoff_individual = _partial_multi_dot(utilities[num_player][:, :len(player_prof_history_temp[i]) - 1], player_prof_history_temp[i], num_player)
         player_profile = list_of_meta_probabilities[num_player]
-        
         expected_utility_individual = np.dot(player_profile, expected_payoff_individual)
         expected_payoff_individual_players[num_player].append(expected_utility_individual)
+        #print("PAYOFF VECTOR", expected_payoff_individual_players[num_player])
         # ppo_training_data = [kl, entropy, actor-loss, value-loss]
         aggregated_kl_values[num_player].append(ppo_training_data[num_player][0])
 
@@ -310,6 +316,8 @@ def main(argv):
               unregularized_regret_array_list = np.load(npy_file, allow_pickle=True)
             unreg_meta_probabilities, unreg_utilities, _, _, _, _ = unregularized_regret_array_list
             regret_iter_options = len(unreg_meta_probabilities[0])
+          else: 
+            unreg_utilities = utilities
           for j in range(0, iterations):
             #First index in player_profile_history is iteration 1's profile
             prev_player_profile = player_profile_history[num_player][j]
@@ -328,10 +336,12 @@ def main(argv):
                 br_iteration = k
               best_response_expected_payoff = max(np.dot(prev_player_profile, best_response_trunc), best_response_expected_payoff)
             #regret_individuals[num_player].append(max(max(best_response_expected_payoff - expected_payoff_individual_players[num_player][i - 1], pure_br_returns[num_player] - expected_payoff_individual_players[num_player][i - 1]), 0))
+            # input(expected_payoff_individual_players[num_player][j])
             regret_individuals[num_player].append(best_response_expected_payoff - expected_payoff_individual_players[num_player][j])
-            print("DEBUGGING. BR Iteration: ", br_iteration)
+            # print("DEBUGGING. BR Iteration: ", br_iteration)
             TRIAL_REGRET[num_player] = regret_individuals[num_player]
-          print("Individual regret vector: ", regret_individuals[num_player])
+          print("Individual regret vector: ", regret_individuals[num_player], len(regret_individuals[num_player]))
+          input()
 
         #PPO Training Returns
         #KL Divergence not used 
@@ -382,8 +392,8 @@ def main(argv):
       random_profile = [player_profile / np.sum(player_profile) for player_profile in random_nums]
       #prd_dt default = 1e-3 (0.001)
       prd_profile = projected_replicator_dynamics.regularized_replicator_dynamics(
-        meta_games,regret_lambda=0.0001,
-        prd_initial_strategies=random_profile, prd_dt=1e-3, symmetric=is_symmetric)
+        meta_games,regret_lambda=0.01,
+        prd_initial_strategies=random_profile, prd_dt=1e-2, symmetric=is_symmetric)
       max_welfare_profile = []
       max_welfare = 0
       combined_profile = []
