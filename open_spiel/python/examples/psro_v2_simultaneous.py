@@ -573,7 +573,7 @@ def main(argv):
     obs_type = rl_environment.ObservationType.OBSERVATION
   elif FLAGS.game_name=="bargaining":
     game = pyspiel.load_game(FLAGS.game_name, {"discount": 0.95})
-    obs_type = rl_environment.ObservationType.OBSERVATION
+    obs_type = rl_environment.ObservationType.INFORMATION_STATE
   else:
     game = pyspiel.load_game(FLAGS.game_name)  # The iterated prisoners dilemma does not have "players" info type
     obs_type = rl_environment.ObservationType.INFORMATION_STATE

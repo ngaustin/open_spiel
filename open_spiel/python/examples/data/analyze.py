@@ -63,6 +63,54 @@ def _partial_multi_dot(player_payoff_tensor, strategies, index_avoided):
       accumulator = np.dot(accumulator, strategies[i])
   return accumulator
 
+
+def get_color_gradient_for_ex2psro(names):
+  # Returns a list of colors to give to ex2psro lines
+  color_result = [None for _ in names]
+  from matplotlib import cm 
+  colors_used = cm.get_cmap("viridis", len(names)).colors 
+  ex2psro_names = []
+  has_vanilla = False
+  for i, name in enumerate(names):
+    if "vanilla" in name.lower():
+      color_result[i] = colors_used[0]
+      has_vanilla = True 
+    else:
+      ex2psro_names.append(name) 
+  
+  def get_exponent(name):
+    return -int(name.split('-')[1])  # make it negative for sorting purposes. Higher exponent means less regularization
+  
+  def get_weight(name):
+    return int(name.split('e')[0])
+  
+  ex2psro_colors = colors_used[1:] if has_vanilla else colors_used # [1:4]
+
+  # below is when we sort by name
+  sorted_names = sorted(ex2psro_names, key=lambda x: x)
+  
+  # below is when we sort by rrd regularization 
+  # sorted_names = sorted(ex2psro_names, key=lambda x: x[-1])
+
+  # below is when we sort by regularization weight 
+  # sorted_names = sorted(ex2psro_names, key=lambda x: (get_exponent(x), get_weight(x)))
+  
+  display_order = [None for _ in names]
+
+  for i, name in enumerate(names):
+    if name in sorted_names:
+      index_in_sort = sorted_names.index(name)
+      if "ex2psro (maxminwelfare)" == name.lower():
+        color_result[i] = "orangered"  # manually set ex2psro to red
+      else:
+        color_result[i] = ex2psro_colors[index_in_sort]
+      display_order[index_in_sort + (1 if has_vanilla else 0)] = i
+    else:
+      # Vanilla 
+      display_order[0] = i
+  return color_result, display_order
+
+
 def main(argv):
   """ Load and analyze a list of numpy arrays representing:
         [num_players, S] shape matrix of meta_probabilities (where S is the number of policies so far)
@@ -192,11 +240,11 @@ def main(argv):
 
       if FLAGS.expsro:
         ax.plot(x, y, label=names[i], color=line_colors[i], linewidth=2)
-        if FLAGS.with_std:
+        if FLAGS.with_std: # and (names[i] in ["Ex2PSRO (MaxMinWelfare)", "Vanilla", "Ex2PSRO (Uniform)"]):
           ax.fill_between(x, y - stdev, y + stdev, alpha=0.2, color=line_colors[i])
       else:
         ax.plot(x, y, label=names[i], linewidth=2)
-        if FLAGS.with_std:
+        if FLAGS.with_std:# and (names[i] in ["Ex2PSRO (MaxMinWelfare)", "Vanilla", "Ex2PSRO (Uniform)"]):
           ax.fill_between(x, y - stdev, y + stdev, alpha=0.2)
 
     ax.set_title("Expected Welfare Over Iterations: {}".format(FLAGS.game_name))
@@ -225,52 +273,6 @@ def main(argv):
     expected_payoff_fig.savefig(folder_path + "expected_payoff_individual.jpg")
     plt.close()
 
-  def get_color_gradient_for_ex2psro(names):
-    # Returns a list of colors to give to ex2psro lines
-    color_result = [None for _ in names]
-    from matplotlib import cm 
-    colors_used = cm.get_cmap("viridis", len(names)).colors 
-    ex2psro_names = []
-    has_vanilla = False
-    for i, name in enumerate(names):
-      if "vanilla" in name.lower():
-        color_result[i] = colors_used[0]
-        has_vanilla = True 
-      else:
-        ex2psro_names.append(name) 
-    
-    def get_exponent(name):
-      return -int(name.split('-')[1])  # make it negative for sorting purposes. Higher exponent means less regularization
-    
-    def get_weight(name):
-      return int(name.split('e')[0])
-    
-    ex2psro_colors = colors_used[1:] if has_vanilla else colors_used # [1:4]
-
-    # below is when we sort by name
-    sorted_names = sorted(ex2psro_names, key=lambda x: x)
-    
-    # below is when we sort by rrd regularization 
-    # sorted_names = sorted(ex2psro_names, key=lambda x: x[-1])
-
-    # below is when we sort by regularization weight 
-    # sorted_names = sorted(ex2psro_names, key=lambda x: (get_exponent(x), get_weight(x)))
-    
-    display_order = [None for _ in names]
-
-    for i, name in enumerate(names):
-      if name in sorted_names:
-        index_in_sort = sorted_names.index(name)
-        if "ex2" in name.lower():
-          color_result[i] = "orangered"  # manually set ex2psro to red
-        else:
-          color_result[i] = ex2psro_colors[index_in_sort]
-        display_order[index_in_sort + (1 if has_vanilla else 0)] = i
-      else:
-        # Vanilla 
-        display_order[0] = i
-    return color_result, display_order
-
   def graph_regret(data, names, folder_path):
     #Plot the individual regret values for each player on the same plot
     regret_fig, ax = plt.subplots()
@@ -287,16 +289,16 @@ def main(argv):
         x = [ind + 1 for ind in range(len(sim_data[player_index][0]))]
         
         if FLAGS.truncate:
-          x = x[3:]
-          y = y[3:]
-          stdev = stdev[3:]
+          x = x[2:]
+          y = y[2:]
+          stdev = stdev[2:]
         if FLAGS.expsro:
           ax.plot(x, y,label=names[i], color=line_colors[i], linewidth=2)
-          if FLAGS.with_std:
+          if FLAGS.with_std:# and (names[i] in ["Ex2PSRO (MaxMinWelfare)", "Vanilla", "Ex2PSRO (Uniform)"]):
             ax.fill_between(x, np.array(y) - np.array(stdev), np.array(y) + np.array(stdev), alpha=0.2, color=line_colors[i])
         else:
           ax.plot(x, y,label=names[i], linewidth=2)
-          if FLAGS.with_std:
+          if FLAGS.with_std:# and (names[i] in ["Ex2PSRO (MaxMinWelfare)", "Vanilla", "Ex2PSRO (Uniform)"]):
             ax.fill_between(x, np.array(y) - np.array(stdev), np.array(y) + np.array(stdev), alpha=0.2)
     ax.set_title("Regret Over Iterations: {}".format(FLAGS.game_name))
 
@@ -351,12 +353,16 @@ def main(argv):
     for i in range(iterations):
       print("ITERATION {}:".format(i))
       # save_folder_path + specific_string.format(i)
-      save_data_path = [file for file in all_files if "iteration_{}.".format(i) in file][0]  # get the first one (cuz there's some...weird overlap ig right now)
+      save_data_path = [file for file in all_files if "iteration_{}.".format(i) in file]
+      if len(save_data_path) == 0:
+        break
+      save_data_path = save_data_path[0]  # get the first one (cuz there's some...weird overlap ig right now)
       print("FILE", save_data_path)
       save_data_path = data_directory_path + relative_folder_path + "/" + save_data_path
       with open(save_data_path, "rb") as npy_file:
           array_list = np.load(npy_file, allow_pickle=True)
       meta_probabilities, utilities, training_returns, training_regret_returns, ppo_training_data, pure_br_returns = array_list
+
       if graph_mode:
         if training_returns:
           graph_training_returns(training_returns, i, trial_graph_path)
@@ -464,13 +470,13 @@ def main(argv):
       print()
 
     #Graphing
-    if graph_mode:
-      if not os.path.exists(trial_graph_path):
-        os.makedirs(trial_graph_path)
-      #graph_max_welfare(max_social_welfare_over_iterations, trial_graph_path)
-      graph_expected_payoff(expected_payoff_individual_players, trial_graph_path)
-      graph_kl(aggregated_kl_values, trial_graph_path)
-      graph_regret_iter_options(regret_individuals, trial_graph_path)
+    # if graph_mode:
+    #   if not os.path.exists(trial_graph_path):
+    #     os.makedirs(trial_graph_path)
+    #   #graph_max_welfare(max_social_welfare_over_iterations, trial_graph_path)
+    #   graph_expected_payoff(expected_payoff_individual_players, trial_graph_path)
+    #   graph_kl(aggregated_kl_values, trial_graph_path)
+    #   graph_regret_iter_options(regret_individuals, trial_graph_path)
     
     return utilities, meta_probabilities
 
@@ -526,13 +532,13 @@ def main(argv):
       
       # This is my code for analyzing welfare. I've commented it out for you :)
       
-      job_id = int(trial_data_directory.split('_')[1][1:-1]) * 5 + int(trial_data_directory.split('_')[-1])
+      # job_id = int(trial_data_directory.split('_')[1][1:-1]) * 5 + int(trial_data_directory.split('_')[-1])
 
-      print("Length: ", len(utilities[0]), len(indices_of_jobs_needed), job_id)
-      if len(utilities[0]) > 0 and job_id < 120 and job_id >= 0: # < 75: # 
-        print("Length of the EXP_WELFARE: ", len(TRIAL_EXP_WELFARE))
-        print("Ending expected welfare: ", TRIAL_EXP_WELFARE[-1], len(TRIAL_EXP_WELFARE))
-        indices_of_jobs_needed[job_id - 0] = TRIAL_EXP_WELFARE[-1]
+      # print("Length: ", len(utilities[0]), len(indices_of_jobs_needed), job_id)
+      # if len(utilities[0]) > 0 and job_id < 120 and job_id >= 0: #  and "final" in trial_data_directory: # < 75: # 
+      #   print("Length of the EXP_WELFARE: ", len(TRIAL_EXP_WELFARE))
+      #   print("Ending expected welfare: ", TRIAL_EXP_WELFARE[-1], len(TRIAL_EXP_WELFARE))
+      #   indices_of_jobs_needed[job_id - 0] = TRIAL_EXP_WELFARE[-1]
       
       
       SIM_WELFARE.append(TRIAL_EXP_WELFARE)
@@ -543,15 +549,15 @@ def main(argv):
       print("Calculating alternate RRD Welfares")
       start_time = time.time()
       
-      if "vanilla" not in epsiode_data_directory.lower():
-        if True: # job_id not in [75, 76, 77, 78, 79]:
-          continue
-        print("rrd sims for job id: ", job_id)
-        _, max_welfare_sims = _rrd_sims([utilities[0][:30, :30], utilities[1][:30, :30]])
-        # print(_rrd_sims([utilities[0], utilities[1]]))
-        print("Max welfare from sims: ", max_welfare_sims, 2*max_welfare_sims)
-        indices_of_jobs_needed[job_id] = max(indices_of_jobs_needed[job_id], 2*max_welfare_sims)
-        print("Individual rrd runtime in seconds: ", time.time() - start_time)
+      # if "vanilla" not in epsiode_data_directory.lower():
+      #   if True: # job_id not in [75, 76, 77, 78, 79]:
+      #     continue
+      #   print("rrd sims for job id: ", job_id)
+      #   _, max_welfare_sims = _rrd_sims([utilities[0][:30, :30], utilities[1][:30, :30]])
+      #   # print(_rrd_sims([utilities[0], utilities[1]]))
+      #   print("Max welfare from sims: ", max_welfare_sims, 2*max_welfare_sims)
+      #   indices_of_jobs_needed[job_id] = max(indices_of_jobs_needed[job_id], 2*max_welfare_sims)
+      #   print("Individual rrd runtime in seconds: ", time.time() - start_time)
       
     AGGREGATE_WELFARE.append(SIM_WELFARE)
     AGGREGATE_REGRET.append(SIM_REGRET)  

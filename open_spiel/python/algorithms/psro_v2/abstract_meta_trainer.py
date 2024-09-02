@@ -37,16 +37,11 @@ def get_time_step(state):
           corresponding to `observation_spec()`.
         reward: list of rewards at this timestep, or None if step_type is
           `StepType.FIRST`.
-        discount: list of discounts in the range [0, 1], or None if step_type is
-          `StepType.FIRST`.
         step_type: A `StepType` value.
     """
     observations = {
         "info_state": [],
-        "legal_actions": [],
         "current_player": [],
-        "serialized_state": [], 
-        "global_state": []
     }
     rewards = []
     step_type = StepType.LAST if state.is_terminal() else StepType.MID
@@ -59,12 +54,9 @@ def get_time_step(state):
     for player_id in range(state.num_players()):
       rewards.append(cur_rewards[player_id])
       observations["info_state"].append(
-          state.observation_tensor(player_id))
+          state.information_state_tensor(player_id))
 
-      observations["legal_actions"].append(state.legal_actions(player_id))
     observations["current_player"] = state.current_player()
-
-    discounts = [0. for _ in range(state.num_players())]
 
     # For gym environments
     if hasattr(state, "last_info"):
@@ -73,7 +65,7 @@ def get_time_step(state):
     return TimeStep(
         observations=observations,
         rewards=rewards,
-        discounts=discounts,
+        discounts=[],
         step_type=step_type)
 
 

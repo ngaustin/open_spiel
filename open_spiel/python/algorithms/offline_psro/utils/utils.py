@@ -1,28 +1,64 @@
 import collections
 import numpy as np
 import copy 
+import os 
+import pickle
+import tensorflow.compat.v1 as tf
+from absl import logging
 
+############## Context Managers ################
+def get_graphs_and_context_managers(trial_data_path, player_trial_strategy_path, tf_model_manager):
+        # for all of the players, load up the relevant graphs
+        all_frozen_graphs = []
+        all_variable_names = []
+        for path in player_trial_strategy_path:
+            # List files in player_trial_strategy_path
+            full_path = trial_data_path + path
+            file_names = [f for f in os.listdir(full_path) if os.path.isfile(os.path.join(full_path, f))]
+
+            # Then, filter for the ones that end in .pb and contain the word "policy"
+            frozen_policy_files = [f for f in file_names if ("policy" in f) and (".pb" in f)]
+
+            # Sort by index of the policy
+            query_for_index = lambda file_name: ([token for token in file_name.split('_') if token[0].isdigit()][0])
+            sorted_policy_files = sorted(frozen_policy_files, key=query_for_index)
+
+            # Save all graph objects by calling tf_model_manager.load_frozen_graph() and saving to a list
+            all_frozen_graphs.append([tf_model_manager.load_frozen_graph(full_path, policy_file) for policy_file in sorted_policy_files])
+
+            variable_name_files = [f for f in file_names if ("variable" in f) and ".pkl" in f]
+            sorted_variable_name_files = sorted(variable_name_files, key=query_for_index)
+
+            curr_variable_names = []
+            for f in variable_name_files:
+                total_path = trial_data_path + path + f
+                with open(total_path, 'rb') as f:
+                    variable_names = pickle.load(f)
+                    curr_variable_names.append(variable_names)
+            all_variable_names.append(curr_variable_names)
+
+
+        # Load all context managers
+        context_managers = [[tf.Session(graph=g) for g in player_set] for player_set in all_frozen_graphs]
+
+        return all_frozen_graphs, context_managers, all_variable_names
 
 ####### Rollout Generation ###########
 
 Transition = collections.namedtuple(
     "Transition",
-    "info_states actions legal_actions_masks rewards done relevant_players")
+    "info_states actions legal_actions_masks next_info_states rewards done relevant_players global_state next_global_state")
 
 # Relevant_players refers to which players should use this Transition to train their policy (because it indicates some RL Timestep from their point of view)
 
-TransitionForTraining = collections.namedtuple(
-    "TransitionForTraining",
-    "info_state global_state action legal_actions_mask reward next_info_state next_global_state done next_legal_actions_mask between_info_states between_actions between_players"
-)
-# Between_[info_states, actions, players] refers to the info_states and actions of other players between the two points of time in which our player of interest acted
-# This is used to help determine the probability of such a transition by accounting for other players' changing policies (and allowing) other players to take an 
-# arbitrary number of actions between this player's two actions. We include other players at the first endpoint to account for the case where players act simultaneously. 
-
 StateAction = collections.namedtuple(
     "StateAction",
-    "info_states actions legal_actions_masks global_states"
+    "info_states actions legal_actions_masks global_state relevant_players"
 )
+
+Step = collections.namedtuple(
+    "Step",
+    "info_state reward is_terminal halted legal_actions_mask acting_players global_state")
 
 # Not to be edited directly 
 DefaultPolicyInfoDict = {"importance_sampled_return": None, "player_id": None, "policy_id": None, "target_id": None, 
@@ -36,12 +72,17 @@ def get_new_default_policy_evaluation_information(num_players, num_evaluation_po
 def get_new_default_policy_info_dict():
     return DefaultPolicyInfoDict.copy()
 
-def get_agent_action(time_step, player, policies):
+def get_agent_action(time_step, player, policies, env, sessions):
     observation = time_step.observations["info_state"][player]
     legal_actions = time_step.observations["legal_actions"][player]
-    return observation, legal_actions, policies[player].step(observation, legal_actions)
+    step_dummy = Step(info_state=observation, legal_actions_mask=[1 if i in legal_actions else 0 for i in range(env.action_spec()["num_actions"])], 
+                    reward=None, is_terminal=None, halted=False, acting_players=[], global_state=None)
+    return policies[player].step(step_dummy, player, session=sessions[player], is_evaluation=True)[0]
 
-def generate_single_rollout(num_players, env, policies, is_turn_based):
+def get_terminal_state(N, state_size):
+    return np.ones((N, state_size)) * -1
+
+def generate_single_rollout(num_players, env, policies, sessions, is_turn_based, true_state_extractor):
     """
     Generate and return a single trajectory. Each trajectory is a list of Transitions, where each transition describes a step from the perspective of one agent.
     In other words, the info_state and next_info_state are both points in time where at least one of the relevant_players are acting. 
@@ -52,143 +93,106 @@ def generate_single_rollout(num_players, env, policies, is_turn_based):
     return: a list of Transitions
     """
     
-    rollout_for_policy_evaluation = []  # Contains a rollout where each element is a Transition: observations, actions, rewards, next_states, done, legal_actions_masks, players_acting
-    rollouts_for_policy_training = [[] for _ in range(num_players)]  # Contains similar rollouts for each player to train on.
-
+    rollout = []
     prev_state_action = StateAction(info_states=[None for _ in range(num_players)], 
                                     actions=[None for _ in range(num_players)], 
                                     legal_actions_masks=[None for _ in range(num_players)], 
-                                    global_states=[None for _ in range(num_players)])
-
+                                    relevant_players=[],
+                                    global_state=None)
 
     time_step = env.reset()
-
-    all_players_acting = []
-    all_info_states = []
-    all_actions = []
-
+    
     # Rollout generation and tracking
+    obs, legal_actions, actions = [None for _ in range(num_players)], [None for _ in range(num_players)], [None for _ in range(num_players)]
+    ################ For testing/debugging ######################
+    all_obs = []
+    #############################################################
     while not time_step.last():
         players_acting_this_step = [time_step.observations["current_player"]] if is_turn_based else [i for i in range(num_players)]
 
-        obs, legal_actions, actions, global_states = [None for _ in range(num_players)], [None for _ in range(num_players)], [None for _ in range(num_players)], [None for _ in range(num_players)]
-        
-        # all_[] variables are each lists of lists (corresponding to the information at each timestep)
-        all_players_acting.append(players_acting_this_step)
-        all_info_states.append([])
-        all_actions.append([])
-
         # Track observations, actions, and legal actions for all players whose turn it is (could be simultaneous/all players)
-        for player in players_acting_this_step: 
-            curr_obs, curr_legal_actions, curr_action = get_agent_action(time_step, player, policies)
+        for player in range(num_players): 
+            if player in players_acting_this_step:
+                curr_legal_actions = time_step.observations["legal_actions"][player]
+                curr_action = get_agent_action(time_step, player, policies, env, sessions)
+                if curr_action not in curr_legal_actions:
+                    print("Action {} is not one of the legal actions: {}".format(curr_action, curr_legal_actions))
+                    raise Exception
+            else:
+                curr_action = None 
+                curr_legal_actions = []
+            
+            curr_obs = time_step.observations["info_state"][player]
             obs[player], legal_actions[player], actions[player] = curr_obs, curr_legal_actions, curr_action
-            global_states[player] = [item for info_state in time_step.observations["info_state"] for item in info_state]
-
-            all_info_states[-1].append(curr_obs)
-            all_actions[-1].append(curr_action)
         
-        # Adding Transition objects if the criteria is met 
-        acting_players_with_previous_action = [p for p in players_acting_this_step if prev_state_action.actions[p] != None and prev_state_action.info_states[p] != None]
+        global_state = true_state_extractor.to_true_state(time_step.observations["info_state"], env._state)
 
-        if len(acting_players_with_previous_action) > 0:
-            # Add the transition for policy evaluation
-            rollout_for_policy_evaluation.append(Transition(
-                info_states=[s if p in acting_players_with_previous_action else None for p, s in enumerate(prev_state_action.info_states)],
-                actions=[a if p in acting_players_with_previous_action else None for p, a in enumerate(prev_state_action.actions)],
-                legal_actions_masks=[mask if p in acting_players_with_previous_action else None for p, mask in enumerate(prev_state_action.legal_actions_masks)],
+        ############# For testing/debugging ##############
+        # for p_test in players_acting_this_step:
+        #     all_obs.append(time_step.observations["info_state"][p_test])
+        #     guessed_info_state = true_state_extractor.observations_to_info_state(all_obs)
+        #     actual_info_state = env._state.information_state_tensor(p_test)
+
+        #     if not np.all(guessed_info_state == actual_info_state):
+        #         logging.error("Observations_to_info_state method is incorrectly implemented because guessed info state does not match true info state")
+        #         print("Guess: ", guessed_info_state)
+        #         print("Actual: ", actual_info_state)
+        #         raise Exception 
+
+        ##################################################
+
+        if any([a != None for a in prev_state_action.actions]):  # if any actions are not None, then we have a previous timestep
+            # Add the timeStep
+            rollout.append(Transition(
+                info_states=prev_state_action.info_states,
+                actions=prev_state_action.actions,
+                legal_actions_masks=prev_state_action.legal_actions_masks,
                 rewards=time_step.rewards,
+                next_info_states=copy.copy(obs),
                 done=0,
-                relevant_players=acting_players_with_previous_action,
+                relevant_players=prev_state_action.relevant_players,
+                global_state=prev_state_action.global_state,
+                next_global_state=global_state,
             ))
  
-            # Add transitions for policy training (which are separated based on training player)
-            for p in acting_players_with_previous_action:
-                # Find the last TWO times in which this player acted 
-                last_two_times_player_acted = [index for index, acting_player_list in enumerate(all_players_acting) if p in acting_player_list][-2:]
-
-                between_info_states, between_actions, between_acting_players = [], [], []
-
-                # Concatenate all of the info_states not observed by p, corresponding actions, and executing players leading up to that point (including start)
-                for time in range(last_two_times_player_acted[0], last_two_times_player_acted[1]):
-                    curr_players_acting = all_players_acting[time]
-                    for j, player_inner_loop in enumerate(curr_players_acting):
-                        if player_inner_loop != p:
-                            between_info_states.append(all_info_states[time][j])
-                            between_actions.append(all_actions[time][j])
-                            between_acting_players.append(player_inner_loop)
-
-                # Insert TransitionForTraining to respective player p's buffer
-                rollouts_for_policy_training[p].append(TransitionForTraining(
-                    info_state=prev_state_action.info_states[p],
-                    global_state=global_states[p],
-                    action=prev_state_action.actions[p],
-                    legal_actions_mask=prev_state_action.legal_actions_masks[p],
-                    reward=time_step.rewards[p],
-                    next_info_state=obs[p],
-                    next_global_state=global_states[p],
-                    done=0,
-                    next_legal_actions_mask=[1 if i in legal_actions[p] else 0 for i in range(policies[p].num_actions)],
-                    between_info_states=between_info_states,
-                    between_actions=between_actions,
-                    between_players=between_acting_players
-                ))
-
         # Update the previous state_action pairs for each of the players_acting_this_step
-        for player in players_acting_this_step:
-            prev_state_action.info_states[player] = obs[player]
-            prev_state_action.actions[player] = actions[player]
-            prev_state_action.legal_actions_masks[player] = [1 if i in legal_actions[player] else 0 for i in range(policies[player].num_actions)]
-            prev_state_action.global_states[player] = global_states[player]
+        prev_state_action=StateAction(
+            info_states=copy.copy(obs),
+            actions=copy.copy(actions),
+            legal_actions_masks=[[1 if i in legal_actions[player] else 0 for i in range(policies[player]._num_actions)] for player in range(num_players)],
+            relevant_players=players_acting_this_step,
+            global_state=global_state
+        )
 
         # step using the action list (should be length 1 or length num players)
-        action_list = [a for a in actions if a != None]
+        action_list = [a for player, a in enumerate(actions) if player in players_acting_this_step]
         time_step = env.step(action_list)
 
     # Account for the last step. This should be very similar to what we had before
-    # We create one Transition datapoint for each player. That way, we can distinguish between relevant players
-    rollout_for_policy_evaluation.append(Transition(
+    rollout.append(Transition(
         info_states=prev_state_action.info_states,
         actions=prev_state_action.actions,
         legal_actions_masks=prev_state_action.legal_actions_masks,
         rewards=time_step.rewards, 
+        next_info_states=[None for _ in range(num_players)],
         done=1,
-        relevant_players=[i for i in range(num_players)],
+        relevant_players=prev_state_action.relevant_players,
+        global_state=prev_state_action.global_state,
+        next_global_state=None
     ))
 
-    # Add the last transitions for policy training. Note that this is quite different from the additions during the episode!!!
-    for p in range(num_players):
-        # Find the LAST TIME in which this player acted 
-        last_time_player_acted = [index for index, acting_player_list in enumerate(all_players_acting) if p in acting_player_list][-1]
-
-        between_info_states, between_actions, between_acting_players = [], [], []
-
-        # Concatenate all of the info_states not observed by p, corresponding actions, and executing players leading up to that point (including start)
-        assert last_time_player_acted < len(all_players_acting)
-        for i in range(last_time_player_acted, len(all_players_acting)):
-            curr_players_acting = all_players_acting[i]
-            for j, player_inner_loop in enumerate(curr_players_acting):
-                if player_inner_loop != p:
-                    between_info_states.append(all_info_states[i][j])
-                    between_actions.append(all_actions[i][j])
-                    between_acting_players.append(player_inner_loop)
-
-        # Insert TransitionForTraining to respective player p's buffer
-        rollouts_for_policy_training[p].append(TransitionForTraining(
-            info_state=prev_state_action.info_states[p],
-            global_state=global_states[p],
-            action=prev_state_action.actions[p],
-            legal_actions_mask=prev_state_action.legal_actions_masks[p],
-            reward=time_step.rewards[p],
-            next_info_state=time_step.observations["info_state"][p],
-            next_global_state=[item for info_state in time_step.observations["info_state"] for item in info_state],
-            done=1,
-            next_legal_actions_mask=[0 for i in range(policies[p].num_actions)],
-            between_info_states=between_info_states,
-            between_actions=between_actions,
-            between_players=between_acting_players
-        ))
-
-    return rollout_for_policy_evaluation, rollouts_for_policy_training
+    return rollout # , rollouts_for_policy_training, first_steps_for_policy_training
 
 ###### Rollout Generation End ###########
+
+
+##### Hashing for Discrete Policies #####
+
+def compute_hash_string(state):
+    return '_'.join([str(item) for item in state])
+
+def inverse_hash_string(string):
+    return [float(s) for s in string.split('_')]
+
+#### Hashing for Discrete Policies End ##
 

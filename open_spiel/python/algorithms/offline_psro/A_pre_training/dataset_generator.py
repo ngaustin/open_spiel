@@ -9,15 +9,18 @@ import os
 import pyspiel
 import tensorflow.compat.v1 as tf
 import sys
+import itertools
 
 from datetime import datetime
 from absl import app
 from absl import flags
 from absl import logging
 from open_spiel.python import rl_environment
+from open_spiel.python.algorithms.offline_psro.A_pre_training.game_specific_modules.bargaining_true_state_generator import BargainingTrueStateGenerator
+from open_spiel.python.algorithms.offline_psro.A_pre_training.game_specific_modules.leduc_poker_true_state_generator import LeducPokerTrueStateGenerator
 from open_spiel.python.algorithms.offline_psro.B_training.main_components.policy_training.offline_rl_algorithms.uniform_random_policy import UniformRandomPolicy
-from open_spiel.python.algorithms.offline_psro.utils.utils import Transition, StateAction, generate_single_rollout
-
+from open_spiel.python.algorithms.offline_psro.A_pre_training.game_specific_modules.bargaining_smart_random_policy import BargainingUniformRandomPolicy
+from open_spiel.python.algorithms.offline_psro.utils.utils import Transition, StateAction, generate_single_rollout, compute_hash_string
 FLAGS = flags.FLAGS
 
 # Game
@@ -53,11 +56,24 @@ class DatasetGenerator:
         self.behavior_policies = []
 
         # Use pyspiel to load the game_name
-        pyspiel_game = pyspiel.load_game(game_name)
+        if game_name == "bargaining":
+            pyspiel_game = pyspiel.load_game(game_name, {"discount": 0.99})
+        else:
+            pyspiel_game = pyspiel.load_game(game_name)
         logging.info("Loaded game: %s", game_name)
 
+        # Get the game-specific true state extractor 
+        if game_name == "bargaining":
+            self.true_state_extractor = BargainingTrueStateGenerator(game_name, pyspiel_game.information_state_tensor_shape()[0])
+        if game_name == "leduc_poker":
+            self.true_state_extractor = LeducPokerTrueStateGenerator(game_name)
+        
+        self.true_state_extractor.get_set_info_depending_on_game(pyspiel_game)
+        self._pyspiel_game = pyspiel_game
+
         # Use rl_environment as a wrapper and specify the observation type
-        self._env = rl_environment.Environment(pyspiel_game, observation_type=rl_environment.ObservationType.INFORMATION_STATE)
+        # we do OBSERVATION so that we can train State -> Observation mapping. Info_states are created with a sequence of observations later.
+        self._env = rl_environment.Environment(pyspiel_game, observation_type=rl_environment.ObservationType.OBSERVATION)  
 
         # Is this a turn-based game?
         self._is_turn_based = self._env.is_turn_based
@@ -77,6 +93,9 @@ class DatasetGenerator:
         for policy_type in self.behavior_policy_type:
             if policy_type == "UniformRandom":
                 new_policy = UniformRandomPolicy(self._env.action_spec()["num_actions"], self._env.observation_spec()["info_state"])
+            elif policy_type == "BargainingUniformRandom":
+                new_policy = BargainingUniformRandomPolicy(self.true_state_extractor, minimum_acceptance_probability=.1, pyspiel_game=self._pyspiel_game, 
+                                                           num_actions=self._env.action_spec()["num_actions"], state_size=self._env.observation_spec()["info_state"])
             else:
                 raise NotImplementedError
             self.behavior_policies.append(new_policy)
@@ -112,18 +131,42 @@ class DatasetGenerator:
         return: a list of all data. Length can be 1 or self.num_players depending on whether the game is symmetric. Each element in the datasets 
                 can correspond to the transitions or trajectories themselves.
         """
-        data_for_policy_evaluation, data_for_policy_training = [], []
-        while len(data_for_policy_evaluation) < self.num_datapoints:
-            trajectory_for_policy_evaluation, trajectory_for_policy_training = generate_single_rollout(self.num_players, self._env, self.behavior_policies, self._is_turn_based)  # This is a list of size num_players
-            data_for_policy_evaluation.append(trajectory_for_policy_evaluation)
-            data_for_policy_training.append(trajectory_for_policy_training)
-        
+        data = []
+        while len(data) < self.num_datapoints:
+            trajectory = generate_single_rollout(self.num_players, self._env, self.behavior_policies, [None] * FLAGS.num_players, self._is_turn_based, self.true_state_extractor)  # This is a list of size num_players
+            # print("lengths: ", len(trajectory_for_policy_evaluation))
+            if self.is_symmetric_game:
+                # For each possible permutation of range(self._num_players)
+                for new_player_assignment in itertools.permutations(list(range(self.num_players))):
+                    # the i-th element in new_player_assignment refers to player i usurping the role of player new_player_assignment[i]
+                    curr_trajectory = []
+                    # For each of the Transitions in the trajectory
+                    for transition in trajectory:
+                        # Create a new trajectory that switches indices and modifies the current player based on the permutation.
+
+                        # TODO: Mistake is that our global state likely has to account for player permutations as well!
+                        curr_trajectory.append(Transition(
+                            info_states=[transition.info_states[new_player_assignment[i]] for i in range(self.num_players)],
+                            actions=[transition.actions[new_player_assignment[i]] for i in range(self.num_players)],
+                            legal_actions_masks=[transition.legal_actions_masks[new_player_assignment[i]] for i in range(self.num_players)],
+                            rewards=[transition.rewards[new_player_assignment[i]] for i in range(self.num_players)],
+                            next_info_states=[transition.next_info_states[new_player_assignment[i]] for i in range(self.num_players)],
+                            done=transition.done,
+                            relevant_players=sorted([new_player_assignment[player] for player in transition.relevant_players]),
+                            global_state=self.true_state_extractor.true_state_symmetric_permute(transition.global_state, permutation=new_player_assignment),
+                            next_global_state=self.true_state_extractor.true_state_symmetric_permute(transition.next_global_state, permutation=new_player_assignment)
+                        ))
+
+                    data.append(curr_trajectory)
+            else:
+                data.append(trajectory)
+
         logging.info("Finished creating dataset")
-        
+
         if save_data:
-            self._save_data(data_for_policy_evaluation, "policy_evaluation")
-            self._save_data(data_for_policy_training, "policy_training")
-        return data_for_policy_evaluation, data_for_policy_training
+            self._save_data(data, "model_training")
+
+        return data
 
 
 def main(argv):
@@ -135,6 +178,8 @@ def main(argv):
     
     if FLAGS.policy_path:
         raise NotImplementedError
+    elif FLAGS.game_name == "bargaining":
+        behavior_policies = ["BargainingUniformRandom" for _ in range(FLAGS.num_players)]
     else:
         # Initialize a random policy here
         behavior_policies = ["UniformRandom" for _ in range(FLAGS.num_players)]

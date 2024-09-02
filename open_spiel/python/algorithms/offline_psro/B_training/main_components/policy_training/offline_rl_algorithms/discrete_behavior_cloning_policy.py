@@ -32,7 +32,7 @@ class DiscreteBCPolicy(PolicyWrapper):
         else:
             return np.random.choice(legal_actions)
     
-    def train(self, data, players):
+    def train(self, data):
         """
         data: list representing the dataset in trajectory level units
 

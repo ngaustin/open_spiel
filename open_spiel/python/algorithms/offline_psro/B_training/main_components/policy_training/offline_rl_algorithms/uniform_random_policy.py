@@ -13,16 +13,22 @@ class UniformRandomPolicy(PolicyWrapper):
     def __init__(self, num_actions, state_size):
         super().__init__(self, num_actions, state_size) 
 
-    def step(self, state, legal_actions):
+    def step(self, step_object, player, session, is_evaluation=False):
         """
-        state: current state/observation for the agent
-        legal_actions: a list representing the indices of the possible actions at the given state/observation
 
         returns: index of the action chosen
         """
-        return np.random.choice(legal_actions)
+        if step_object.is_terminal: 
+            return None, []
+        
+        legal_actions_mask = np.array(step_object.legal_actions_mask)
+        probs = legal_actions_mask/np.sum(legal_actions_mask)
+        return np.random.choice(range(len(step_object.legal_actions_mask)), p=probs), probs
     
-    def train(self, data, players):
+    def get_graph(self):
+        return None
+    
+    def train(self, data):
         """
         data: list representing the dataset in whatever unit (transition level or trajectory level)
 
@@ -31,7 +37,7 @@ class UniformRandomPolicy(PolicyWrapper):
         logging.info("No training necessary for uniformly random policy. Bypassing. ")
         pass 
 
-    def probabilities(self, state, legal_actions_mask, numpy=False):
+    def probabilities(self, step_object, numpy=False):
         """
         state: a N x state_size matrix representing a bunch of states that we want to query for probabilities 
         legal_actions_mask: a N x num_actions mask where 1 means it is legal whereas 0 means it is illegal
@@ -47,7 +53,7 @@ class UniformRandomPolicy(PolicyWrapper):
             normalizer = tf.reduce_sum(legal_actions_mask, axis=1).reshape((-1, 1))
             return tf.FloatTensor(legal_actions_mask) / normalizer
 
-    def probabilities_with_actions(self, state, action, legal_actions_mask, numpy=False):
+    def probabilities_with_actions(self, step_object, numpy=False):
         """
         state: a N x state_size matrix representing a bunch of states that we want to query for probabilities 
         action: a N x 1 matrix representing the actions we want to query for each of the states 

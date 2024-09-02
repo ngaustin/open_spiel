@@ -33,10 +33,12 @@ class DiscretePerturbedUniformRandomPolicy(PolicyWrapper):
         """
         hash_string = compute_hash_string(state)
         if hash_string in self._state_to_action:
-            action = self._state_to_action 
+            action = self._state_to_action[hash_string]
 
             normalizer = len(legal_actions)
             mask = np.array([1 if a in legal_actions else 0 for a in range(self._num_actions)])
+
+            assert action in legal_actions
 
             uniform_probs = mask / normalizer 
             alpha_probs = np.zeros(len(mask))
@@ -44,13 +46,11 @@ class DiscretePerturbedUniformRandomPolicy(PolicyWrapper):
         
             probs = self._alpha * alpha_probs + (1 - self._alpha) * uniform_probs
             probs = [probs[a] for a in legal_actions] 
-            print("probs perturbed: ", probs)
             return np.random.choice(legal_actions, p=probs)
         else:
-            print("Generating random choice. ")
             return np.random.choice(legal_actions)
     
-    def train(self, data, players):
+    def train(self, data):
         """
         data: list representing the dataset in trajectory level units
 
@@ -62,14 +62,12 @@ class DiscretePerturbedUniformRandomPolicy(PolicyWrapper):
             
         for trajectory in data:
             for transition in trajectory:
-                for p in transition.relevant_players:
-                    if p in players:
-                        info_state = transition.info_states[p]
-                        action = transition.actions[p]
-                        legal_actions_mask = transition.legal_actions_masks[p]
-                        hash_string = compute_hash_string(info_state)
-                        if hash_string not in self._state_to_action:
-                            self._state_to_action[hash_string] = np.random.choice([action for action, is_legal in enumerate(legal_actions_mask) if is_legal])
+                info_state = transition.info_state
+                action = transition.action
+                legal_actions_mask = transition.legal_actions_mask
+                hash_string = compute_hash_string(info_state)
+                if hash_string not in self._state_to_action:
+                    self._state_to_action[hash_string] = np.random.choice([action for action, is_legal in enumerate(legal_actions_mask) if is_legal])
         
         # print("Resulting state_to_action: ", self._state_to_action)
 
@@ -95,7 +93,6 @@ class DiscretePerturbedUniformRandomPolicy(PolicyWrapper):
             uniform_probs = mask / normalizer 
             if hash_string in self._state_to_action:
                 action = self._state_to_action[hash_string]
-                
                 alpha_probs = np.zeros(len(mask))
                 alpha_probs[action] += 1
             

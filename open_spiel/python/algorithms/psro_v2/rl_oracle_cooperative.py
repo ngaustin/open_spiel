@@ -187,6 +187,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
 
         criteria = self.get_criteria_function()
         training_start_time = time.time() 
+        rollouts_saved = 0
 
         while not self._has_terminated(steps_per_oracle):
             """ Note: basically, this while loop cycles through each of the agent's new policies at a time. It will
@@ -202,6 +203,8 @@ class RLOracleCooperative(rl_oracle.RLOracle):
 
             # Store the episode's trajectory and returns and map it to the correct agent + agent's policy we're training
             trajectory, actions, returns = self._rollout(game, agents, **oracle_specific_execution_kwargs)
+            rollouts_saved += 1
+
             # To save space, we get rid of the decentralized observations or the joint observations if not needed for consensus training
             for timestep in trajectory:
                 if self._consensus_kwargs["joint_action"]:
@@ -249,7 +252,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                     # rollout_criteria_values.append(metric)
                 # print("Length of rollout returns: ", len(rollout_returns))
                 ############## This is for space saving on the first iteration ####################
-                if len(rollout_returns) > self.get_num_simulations_to_take(is_symmetric=is_symmetric) and is_symmetric:
+                if rollouts_saved > 500 and is_symmetric: # len(rollout_returns) > (self.get_num_simulations_to_take(is_symmetric=is_symmetric))
 
                     # Pop the first index (because that corresponds to the trajectory with the smallest min return across players)
                     """rollout_trajectories.pop(0)
@@ -259,6 +262,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
                     start_update = time.time()
                     self.update_trajectories(training_parameters, rollout_trajectories, rollout_actions, rollout_returns)
                     print("Updating trajectories took {} seconds ".format(time.time() - start_update))
+                    rollouts_saved = 0
 
                     rollout_trajectories, rollout_actions, rollout_returns = [], [], []
                     cutoff_returns = self.get_cutoff_returns(is_symmetric)
@@ -274,6 +278,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             steps_per_oracle = rl_oracle.update_steps_per_oracles(steps_per_oracle, indexes, len([t for t in trajectory if t.current_player() == indexes[0][0]]) if self._is_turn_based else len(actions))
         
         print("Training response took {} seconds.".format(time.time() - training_start_time))
+        window = 500
 
         for pol in new_policies:
             pol[0]._policy.post_training()

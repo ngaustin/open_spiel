@@ -15,19 +15,7 @@ class PolicyWrapper(ABC):
         PolicyWrapper.total_policies += 1
 
     @abstractmethod
-    def step(self, state, legal_actions):
-        raise NotImplementedError
-
-    @abstractmethod
-    def train(self, data, players):
-        raise NotImplementedError
-
-    @abstractmethod
-    def probabilities(self, state, legal_actions_mask, numpy=False):
-        raise NotImplementedError
-
-    @abstractmethod 
-    def probabilities_with_actions(self, state, action, legal_actions_mask, numpy=False):
+    def step(self, step_object):
         raise NotImplementedError
 
     @property
