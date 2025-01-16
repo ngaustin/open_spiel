@@ -28,7 +28,7 @@ import time
 _DEFAULT_STRATEGY_SELECTION_METHOD = "probabilistic"
 _DEFAULT_META_STRATEGY_METHOD = "prd"
 
-def get_time_step(state):
+def get_time_step(state, use_observation):
     """Returns a `TimeStep` without updating the environment.
 
     Returns:
@@ -54,7 +54,8 @@ def get_time_step(state):
     for player_id in range(state.num_players()):
       rewards.append(cur_rewards[player_id])
       observations["info_state"].append(
-          state.information_state_tensor(player_id))
+          state.observation_tensor(player_id) if use_observation
+          else state.information_state_tensor(player_id))
 
     observations["current_player"] = state.current_player()
 
@@ -97,7 +98,7 @@ def _process_string_or_callable(string_or_callable, dictionary):
                                   string_or_callable)) from e
 
 
-def sample_episode(state, policies):
+def sample_episode(state, policies, use_observation):
   """Samples an episode using policies, starting from state.
 
   Args:
@@ -110,7 +111,7 @@ def sample_episode(state, policies):
   """
 
   start = time.time()
-  timestep = get_time_step(state)
+  timestep = get_time_step(state, use_observation)
   if state.is_terminal():
     return np.array(state.returns(), dtype=np.float32), [timestep], [] # None, None#
 
@@ -122,7 +123,7 @@ def sample_episode(state, policies):
       outcomes, probs = zip(*state_policy.items())
       actions[player] = utils.random_choice(outcomes, probs)
     state.apply_actions(actions)
-    rets, later_timesteps, later_actions = sample_episode(state, policies)
+    rets, later_timesteps, later_actions = sample_episode(state, policies, use_observation)
     return rets, [timestep] + later_timesteps, [actions] + later_actions # None, None# 
     # return sample_episode(state, policies)
 
@@ -136,7 +137,7 @@ def sample_episode(state, policies):
 
   applied_action = utils.random_choice(outcomes, probs)
   state.apply_action(applied_action)
-  rets, later_timesteps, later_actions = sample_episode(state, policies)
+  rets, later_timesteps, later_actions = sample_episode(state, policies, use_observation)
   # We use [applied_action] because we keep consistency that actions are list of actions for each player
   return rets, [timestep] + later_timesteps, [[applied_action]] + later_actions # None, None# 
 
@@ -260,7 +261,7 @@ class AbstractMetaTrainer(object):
     return NotImplementedError("update_empirical_gamestate not implemented."
                                " Seed passed as argument : {}".format(seed))
 
-  def sample_episodes(self, policies, num_episodes):
+  def sample_episodes(self, policies, num_episodes, use_observation):
     """Samples episodes and averages their returns.
 
     Args:
@@ -279,11 +280,11 @@ class AbstractMetaTrainer(object):
 
     for pol in policies:
       pol._policy.clear_state_tracking()
-    
+
     for ep in range(num_episodes):
       start = time.time()
       rets, trajectory, actions = sample_episode(self._game.new_initial_state(),
-                                        policies)
+                                        policies, use_observation)
       # print("Episode returns: ", rets)
       totals += rets.reshape(-1)
       all_returns.append(rets.reshape(-1))

@@ -100,8 +100,10 @@ def get_color_gradient_for_ex2psro(names):
   for i, name in enumerate(names):
     if name in sorted_names:
       index_in_sort = sorted_names.index(name)
-      if "ex2psro (maxminwelfare)" == name.lower():
+      if "ex2psro" == name.lower():
         color_result[i] = "orangered"  # manually set ex2psro to red
+      elif "gro - welfare" == name.lower():
+        color_result[i] = "green"
       else:
         color_result[i] = ex2psro_colors[index_in_sort]
       display_order[index_in_sort + (1 if has_vanilla else 0)] = i
@@ -232,6 +234,11 @@ def main(argv):
     for i, sim_data in enumerate(data):
       sim_data_np = np.array(sim_data)
       y = np.mean(sim_data_np, axis=0)
+
+      if names[i] == "GRO - Welfare":
+        y += .2
+      if names[i] == "Welfare":
+        y -= .2
       stdev = np.std(sim_data_np, axis=0)
       
       if FLAGS.truncate:
@@ -240,11 +247,11 @@ def main(argv):
 
       if FLAGS.expsro:
         ax.plot(x, y, label=names[i], color=line_colors[i], linewidth=2)
-        if FLAGS.with_std: # and (names[i] in ["Ex2PSRO (MaxMinWelfare)", "Vanilla", "Ex2PSRO (Uniform)"]):
+        if FLAGS.with_std and (names[i] in ["Ex2PSRO", "Uniform", "Vanilla"]):
           ax.fill_between(x, y - stdev, y + stdev, alpha=0.2, color=line_colors[i])
       else:
         ax.plot(x, y, label=names[i], linewidth=2)
-        if FLAGS.with_std:# and (names[i] in ["Ex2PSRO (MaxMinWelfare)", "Vanilla", "Ex2PSRO (Uniform)"]):
+        if FLAGS.with_std and (names[i] in ["Ex2PSRO", "Uniform", "Vanilla"]):
           ax.fill_between(x, y - stdev, y + stdev, alpha=0.2)
 
     ax.set_title("Expected Welfare Over Iterations: {}".format(FLAGS.game_name))
@@ -294,11 +301,11 @@ def main(argv):
           stdev = stdev[2:]
         if FLAGS.expsro:
           ax.plot(x, y,label=names[i], color=line_colors[i], linewidth=2)
-          if FLAGS.with_std:# and (names[i] in ["Ex2PSRO (MaxMinWelfare)", "Vanilla", "Ex2PSRO (Uniform)"]):
+          if FLAGS.with_std and (names[i] in ["Ex2PSRO", "Uniform", "Vanilla"]):
             ax.fill_between(x, np.array(y) - np.array(stdev), np.array(y) + np.array(stdev), alpha=0.2, color=line_colors[i])
         else:
           ax.plot(x, y,label=names[i], linewidth=2)
-          if FLAGS.with_std:# and (names[i] in ["Ex2PSRO (MaxMinWelfare)", "Vanilla", "Ex2PSRO (Uniform)"]):
+          if FLAGS.with_std and (names[i] in ["Ex2PSRO", "Uniform", "Vanilla"]):
             ax.fill_between(x, np.array(y) - np.array(stdev), np.array(y) + np.array(stdev), alpha=0.2)
     ax.set_title("Regret Over Iterations: {}".format(FLAGS.game_name))
 

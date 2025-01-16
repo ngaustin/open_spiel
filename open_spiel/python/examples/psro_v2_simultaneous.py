@@ -97,6 +97,7 @@ flags.DEFINE_float("value_clip", .2, "Value function clipping for sac")
 flags.DEFINE_float("alpha", .01, "Entropy temperature for sac")
 flags.DEFINE_integer("sac_batch_size", 64, "Batch size for each sac update")
 flags.DEFINE_integer("sac_update_every", 10, "Sac performs one update every sac_update_every env steps")
+flags.DEFINE_float("gro_alpha_weight", 1, "Generalized Response Objectives weight for welfare")
 
 
 # PPO parameters
@@ -393,7 +394,7 @@ def print_policy_analysis(policies, game, verbose=False):
   return unique_policies
 
 
-def gpsro_looper(env, oracle, agents):
+def gpsro_looper(env, oracle, agents, obs_type):
   """Initializes and executes the GPSRO training loop."""
   sample_from_marginals = True  # TODO(somidshafiei) set False for alpharank
   training_strategy_selector = FLAGS.training_strategy_selector or strategy_selectors.probabilistic
@@ -409,6 +410,7 @@ def gpsro_looper(env, oracle, agents):
       meta_strategy_method=FLAGS.meta_strategy_method,
       prd_iterations=50000,
       prd_gamma=0,  # TODO: CHANGED THIS
+      use_observation=(obs_type == rl_environment.ObservationType.OBSERVATION),
       sample_from_marginals=sample_from_marginals,
       regret_lambda=FLAGS.regret_lambda_init,
       explore_mss=FLAGS.minimum_exploration_init,
@@ -572,13 +574,16 @@ def main(argv):
     game = pyspiel.load_game(FLAGS.game_name, {"rng_seed": FLAGS.seed})
     obs_type = rl_environment.ObservationType.OBSERVATION
   elif FLAGS.game_name=="bargaining":
-    game = pyspiel.load_game(FLAGS.game_name, {"discount": 0.95})
+    game = pyspiel.load_game(FLAGS.game_name, {"discount": 0.99})
     obs_type = rl_environment.ObservationType.INFORMATION_STATE
+  elif FLAGS.game_name=="naive_mdp":
+    game = pyspiel.load_game(FLAGS.game_name, {"max_game_length": 10})
+    obs_type = rl_environment.ObservationType.OBSERVATION
   else:
     game = pyspiel.load_game(FLAGS.game_name)  # The iterated prisoners dilemma does not have "players" info type
     obs_type = rl_environment.ObservationType.INFORMATION_STATE
 
-  env = rl_environment.Environment(game, observation_type=obs_type)
+  env = rl_environment.Environment(game, observation_type=obs_type, gro_weight=FLAGS.gro_alpha_weight)
 
   import os
   num_cpus = os.cpu_count()
@@ -601,7 +606,7 @@ def main(argv):
     elif FLAGS.oracle_type == "TAB_Q":
       oracle, agents = init_tabular_q_responder(sess, env)"""
     sess.run(tf.global_variables_initializer())
-    gpsro_looper(env, oracle, agents)
+    gpsro_looper(env, oracle, agents, obs_type)
   tf.reset_default_graph()
 
 if __name__ == "__main__":

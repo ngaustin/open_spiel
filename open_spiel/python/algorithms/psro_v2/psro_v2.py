@@ -70,6 +70,7 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
                game,
                oracle,
                sims_per_entry,
+               use_observation,
                initial_policies=None,
                rectifier="",
                training_strategy_selector=None,
@@ -135,6 +136,7 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
       **kwargs: kwargs for meta strategy computation and training strategy
         selection.
     """
+    self._use_observation = use_observation
     self._sims_per_entry = sims_per_entry
     print("Using {} sims per entry.".format(sims_per_entry))
 
@@ -508,7 +510,7 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
             prev = time.time()
             print("\nEstimating current strategies: ", tuple(used_index))
             utility_estimates, trajectories, action_trajectories, all_returns = self.sample_episodes(estimated_policies,
-                                                                                self._sims_per_entry)
+                                                                                self._sims_per_entry, self._use_observation)
             print("Current player {} and current strategies {} took {} seconds to finish estimate with resulting utilities: {}".format(current_player, tuple(used_index), round(time.time() - prev, 2), utility_estimates))
           
             if self.consensus_imitation:
@@ -539,7 +541,7 @@ class PSROSolver(abstract_meta_trainer.AbstractMetaTrainer):
             import time
             prev = time.time()
             utility_estimates, _, _, _ = self.sample_episodes(estimated_policies,
-                                                     self._sims_per_entry)
+                                                     self._sims_per_entry, self._use_observation)
             print("Current player {} and current strategies {} took {} seconds to finish estimate".format(current_player, tuple(used_index), round(time.time() - prev, 2)))
             # print('Utility estimates: ', utility_estimates)
             for k in range(self._num_players):

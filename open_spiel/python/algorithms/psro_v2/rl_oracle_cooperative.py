@@ -75,6 +75,7 @@ class RLOracleCooperative(rl_oracle.RLOracle):
         
         self._number_training_steps_if_training = number_training_steps
         self._number_training_steps = number_training_steps
+        self.pure_best_response_returns = []
 
     # Override
     def __call__(self,
@@ -115,13 +116,13 @@ class RLOracleCooperative(rl_oracle.RLOracle):
 
         if self._consensus_kwargs["consensus_imitation"]:
             curr_policy_constraint_weight = self.get_policy_constraint_weight(num_policies_total)
-            if num_policies_total == 1: # The first one will always be BR 
-                train_best_response = True 
-            elif (self._fine_tune_bool and curr_policy_constraint_weight == 0):  # If you are fine tuning and the policy constraint weight is 0, then it will degenerate to always BR 
+            # if num_policies_total == 1: # The first one will always be BR 
+            #     train_best_response = True 
+            if (self._fine_tune_bool and curr_policy_constraint_weight == 0):  # If you are fine tuning and the policy constraint weight is 0, then it will degenerate to always BR 
                 train_best_response = True 
             elif num_policies_total % 2 == 0:  # The even ones will always be some form of consensus policy (whether or not we fine tune is irrelevant)
                 train_best_response = False
-            elif num_policies_total > 1 and self._consensus_kwargs["perturb_all"]:  # If we want to perturb all of the policies after, we will not make BR 
+            elif self._consensus_kwargs["perturb_all"]: # num_policies_total > 1 and self._consensus_kwargs["perturb_all"]:  # If we want to perturb all of the policies after, we will not make BR 
                 train_best_response = False 
             else:
                 train_best_response = True
@@ -517,6 +518,10 @@ class RLOracleCooperative(rl_oracle.RLOracle):
             curr_policy.learn()
 
         return consensus_policies
+    
+        
+    def _rollout(self, game, agents, **oracle_specific_execution_kwargs):
+        return self.sample_episode(None, agents, is_evaluation=False)
 
     def sample_episode(self, unused_time_step, agents, is_evaluation=False):
         time_step = self._env.reset()

@@ -82,7 +82,7 @@ def rl_policy_factory(rl_class):
       # print(state.information_state_tensor(cur_player))
       self._obs["current_player"] = cur_player
       # TODO: This is still wrong. This makes the calculations for the U matrix only account for a single state. No transitions in observations
-      self._obs["info_state"][cur_player] = state.information_state_tensor(cur_player) # if not state.get_game().get_type().provides_information_state_tensor else (
+      self._obs["info_state"][cur_player] = state.observation_tensor(cur_player) if self._env._use_observation else state.information_state_tensor(cur_player) # if not state.get_game().get_type().provides_information_state_tensor else (
           # state.information_state_tensor(cur_player))
       self._obs["legal_actions"]= [state.legal_actions(p) for p in range(self.game.num_players())]# [cur_player] = legal_actions
       self._obs["global_state"] = [state.information_state_tensor(0)] if state.get_game().get_type().provides_information_state_tensor else []

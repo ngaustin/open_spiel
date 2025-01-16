@@ -207,15 +207,14 @@ def projected_replicator_dynamics(payoff_tensors,
 
 def regularized_replicator_dynamics(payoff_tensors,
                                   regret_lambda=.05,
-                                  explore_min=0,
-                                  index_explore=[],
                                   prd_initial_strategies=None,
-                                  prd_iterations=int(1e5),
+                                  prd_iterations=int(2e4),
                                   prd_dt=1e-3,
                                   prd_gamma=1e-6,
                                   average_over_last_n_strategies=None,
                                   use_approx=False,
                                   symmetric=False,
+                                  symmetric_players=[],
                                   **unused_kwargs):
   number_players = len(payoff_tensors)
   # Number of actions available to each player.
@@ -228,20 +227,141 @@ def regularized_replicator_dynamics(payoff_tensors,
   ]
 
   average_over_last_n_strategies = average_over_last_n_strategies or prd_iterations
-
-  meta_strategy_window = []
   for i in range(prd_iterations):
     new_strategies = _projected_replicator_dynamics_step(
       payoff_tensors, new_strategies, prd_dt, prd_gamma, use_approx)
     if symmetric:
-      new_strategies = [np.copy(new_strategies[0]) for _ in range(len(new_strategies))]
+      if len(symmetric_players) == 0:
+        symmetric_players = [list(range(number_players)) ]
+      for grouping in symmetric_players:
+        for player in grouping:
+          new_strategies[player] = np.copy(new_strategies[grouping[0]])
+
     total_regret = np.sum([get_regret(payoff_tensors, new_strategies, j) for j in range(number_players)])
+
     assert total_regret == total_regret  # nan value check
 
     if total_regret < regret_lambda:
-      # print("Exited RRD with total regret {} that was less than regret lambda {} after {} iterations ".format(total_regret, regret_lambda, i))
+      print("Exited RRD with total regret {} that was less than regret lambda {} after {} iterations ".format(total_regret, regret_lambda, i))
       break
   return new_strategies
+
+
+def _robust_replicator_dynamics_step(pessimistic_payoff_tensor, optimistic_payoff_tensor, strategies, dt, gamma,
+                                        use_approx=False):
+  """Does one step of the projected replicator dynamics algorithm.
+
+  Args:
+    payoff_tensors: List of payoff tensors for each player.
+    strategies: List of the strategies used by each player.
+    dt: Update amplitude term.
+    gamma: Minimum exploratory probability term.
+    use_approx: use approximate simplex projection.
+
+  Returns:
+    A list of updated strategies for each player.
+  """
+
+  # TODO(author4): Investigate whether this update could be fully vectorized.
+  new_strategies = []
+  for player in range(len(pessimistic_payoff_tensor)):
+    current_pessimistic_payoff_tensor = pessimistic_payoff_tensor[player]
+    current_strategy = strategies[player]
+    if len(current_strategy) <= 1:
+      new_strategies.append(current_strategy)
+      continue
+
+    pessimistic_values_per_strategy = _partial_multi_dot(current_pessimistic_payoff_tensor, strategies,
+                                             player)
+    
+    # TODO: Average return should be coputed by using the PESSIMISIC estimations
+    # TODO: Get pessimistic values per strategy. Then, multiply by current strategy
+    average_pessimistic_return = np.dot(pessimistic_values_per_strategy, current_strategy)
+
+    # TODO: We should subtract from the OPTIMISTIC estimations
+    # TODO: Get optimistic values per strategy and then subtract by pessimistic_average_return
+    current_optimistic_payoff_tensor = optimistic_payoff_tensor[player]
+    optimistic_values_per_strategy = _partial_multi_dot(current_optimistic_payoff_tensor, strategies, player)
+
+    # Get the best optimistic deviator that does NOT equal the strategy we are deviating to
+    largest_value = np.max(optimistic_values_per_strategy)
+    largest_index = np.argmax(optimistic_values_per_strategy)
+    second_largest = np.partition(optimistic_values_per_strategy.flatten(), -2)[-2] 
+    best_optimistic_deviator = np.zeros(pessimistic_values_per_strategy.shape) + largest_value 
+    best_optimistic_deviator[largest_index] = second_largest
+
+    delta = current_strategy * ((optimistic_values_per_strategy - average_pessimistic_return) - (best_optimistic_deviator - pessimistic_values_per_strategy))
+
+    updated_strategy = current_strategy + dt * delta
+    updated_strategy = (
+        _approx_simplex_projection(updated_strategy, gamma) if use_approx
+        else _simplex_projection(updated_strategy, gamma))
+    new_strategies.append(updated_strategy)
+  return new_strategies
+
+def robust_regularized_replicator_dynamics(pessimistic_payoff_tensor,
+                                           optimistic_payoff_tensor,
+                                  regret_lambda=.05,
+                                  prd_initial_strategies=None,
+                                  prd_iterations=int(2e4),
+                                  prd_dt=1e-3,
+                                  prd_gamma=1e-6,
+                                  use_approx=False,
+                                  symmetric=False,
+                                  symmetric_players=[],
+                                  entropy_calculation_players=[],
+                                  defaults=[],
+                                  **unused_kwargs):
+  number_players = len(pessimistic_payoff_tensor)
+  # Number of actions available to each player.
+  action_space_shapes = pessimistic_payoff_tensor[0].shape
+
+  # If no initial starting position is given, start with uniform probabilities.
+  new_strategies = prd_initial_strategies or [
+      np.ones(action_space_shapes[k]) / action_space_shapes[k]
+      for k in range(number_players)
+  ]
+
+  regret_upper_bound = []
+  for i in range(prd_iterations):
+    new_strategies = _robust_replicator_dynamics_step(
+      pessimistic_payoff_tensor, optimistic_payoff_tensor, new_strategies, prd_dt, 1e-6, use_approx)
+    if symmetric:
+      if len(symmetric_players) == 0:
+        symmetric_players = list(range(number_players)) 
+      for grouping in symmetric_players:
+        for player in grouping:
+          new_strategies[player] = np.copy(new_strategies[grouping[0]])
+    
+    # Replace any default strategies if we want to keep certain player strategies fixed
+    if len(defaults) > 0:
+      for p, default_strategy in enumerate(defaults):
+        if default_strategy != None:
+          new_strategies[p] = default_strategy
+
+    ########### Calculate upper bound regret ########
+    total_upper_bound_regret = 0
+    for j in range(number_players):
+      pess_payoff = pessimistic_payoff_tensor[j]
+      agent_strategy = new_strategies[j]
+
+      vector_pessimistic_payoff = _partial_multi_dot(pess_payoff, new_strategies, j)
+      pessimistic_expected_payoff = np.dot(agent_strategy, vector_pessimistic_payoff)
+
+      opt_payoff = optimistic_payoff_tensor[j]
+      vector_opt_expected_payoff = _partial_multi_dot(opt_payoff, new_strategies, j)
+      max_optimistic = np.max(vector_opt_expected_payoff)
+      total_upper_bound_regret += (max_optimistic - pessimistic_expected_payoff)
+    #################################################
+
+    assert total_upper_bound_regret == total_upper_bound_regret  # nan value check
+
+    if total_upper_bound_regret < regret_lambda:
+      print("Exited RRD with total upper bound regret {} that was less than regret lambda {} after {} iterations ".format(total_upper_bound_regret, regret_lambda, i))
+      break
+    regret_upper_bound.append(total_upper_bound_regret)
+
+  return new_strategies, regret_upper_bound
 
 def get_regret(payoff_tensors, strategies, agent_index):
   payoff = payoff_tensors[agent_index].copy()
