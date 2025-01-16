@@ -10,6 +10,7 @@ import pyspiel
 import tensorflow.compat.v1 as tf
 import sys
 import itertools
+import open_spiel.python.games
 
 from datetime import datetime
 from absl import app
@@ -17,25 +18,25 @@ from absl import flags
 from absl import logging
 from open_spiel.python import rl_environment
 from open_spiel.python.algorithms.offline_psro.A_pre_training.game_specific_modules.bargaining_true_state_generator import BargainingTrueStateGenerator
+from open_spiel.python.algorithms.offline_psro.A_pre_training.game_specific_modules.bargaining_generalized_true_state_generator import BargainingGeneralizedTrueStateGenerator
 from open_spiel.python.algorithms.offline_psro.A_pre_training.game_specific_modules.leduc_poker_true_state_generator import LeducPokerTrueStateGenerator
 from open_spiel.python.algorithms.offline_psro.B_training.main_components.policy_training.offline_rl_algorithms.uniform_random_policy import UniformRandomPolicy
 from open_spiel.python.algorithms.offline_psro.A_pre_training.game_specific_modules.bargaining_smart_random_policy import BargainingUniformRandomPolicy
 from open_spiel.python.algorithms.offline_psro.utils.utils import Transition, StateAction, generate_single_rollout, compute_hash_string
 FLAGS = flags.FLAGS
 
-# Game
-flags.DEFINE_string("game_name", "kuhn_poker", "Game name.")
-flags.DEFINE_integer("num_players", 2, "Number of players in the game")
-flags.DEFINE_bool("is_symmetric_game", True, "Flag determining whether the target game is symmetric")
-flags.DEFINE_integer("seed", 1, "Numpy seed")
+# # Game
+# flags.DEFINE_string("game_name", "kuhn_poker", "Game name.")
+# flags.DEFINE_integer("num_players", 2, "Number of players in the game")
+# flags.DEFINE_bool("is_symmetric_game", True, "Flag determining whether the target game is symmetric")
 
-# Dataset settings
-flags.DEFINE_integer("num_datapoints", 100, "Number of transitions or trajectories to save to the dataset. If symmetric, then datapoints from both players will contribute")
+# # Dataset settings
+# flags.DEFINE_integer("num_datapoints", 100, "Number of transitions or trajectories to save to the dataset. If symmetric, then datapoints from both players will contribute")
 
-# Saving and Loading
-flags.DEFINE_string("save_dataset_path", "./datasets/", "Path to directory to save the resultant dataset.")
-flags.DEFINE_string("policy_path", None, "Path to behavior policies. If None, then initialize to random uniform")
-flags.DEFINE_string("policy_description", "UniformRandom", "Description of the policies used to generate the dataset for saving purposes")
+# # Saving and Loading
+# flags.DEFINE_string("save_dataset_path", "./datasets/", "Path to directory to save the resultant dataset.")
+# flags.DEFINE_string("policy_path", None, "Path to behavior policies. If None, then initialize to random uniform")
+# flags.DEFINE_string("policy_description", "UniformRandom", "Description of the policies used to generate the dataset for saving purposes")
 
 
 
@@ -57,6 +58,8 @@ class DatasetGenerator:
 
         # Use pyspiel to load the game_name
         if game_name == "bargaining":
+            pyspiel_game = pyspiel.load_game(game_name, {"discount": 0.99, "instances_file":"../../../../games/bargaining_instances_symmetric_25pool_25valuations.txt"})
+        elif game_name == "bargaining_generalized":
             pyspiel_game = pyspiel.load_game(game_name, {"discount": 0.99})
         else:
             pyspiel_game = pyspiel.load_game(game_name)
@@ -65,6 +68,8 @@ class DatasetGenerator:
         # Get the game-specific true state extractor 
         if game_name == "bargaining":
             self.true_state_extractor = BargainingTrueStateGenerator(game_name, pyspiel_game.information_state_tensor_shape()[0])
+        if game_name == "bargaining_generalized":
+            self.true_state_extractor = BargainingGeneralizedTrueStateGenerator(game_name, pyspiel_game.information_state_tensor_shape()[0])
         if game_name == "leduc_poker":
             self.true_state_extractor = LeducPokerTrueStateGenerator(game_name)
         
@@ -111,7 +116,7 @@ class DatasetGenerator:
 
         symmetric_string = "symmetric" if FLAGS.is_symmetric_game else "nonsymmetric"
         
-        file_name = "{}_{}_{}_{}_players_{}_points_{}_info_{}.npy".format(str(datetime.now()).replace(' ', '_'), FLAGS.game_name, FLAGS.policy_description, FLAGS.num_players, FLAGS.num_datapoints, symmetric_string, additional_information)
+        file_name = "{}_{}_{}_players_({})_points_{}_info_{}.npy".format(FLAGS.game_name, FLAGS.policy_description, FLAGS.num_players, FLAGS.num_datapoints, symmetric_string, additional_information)
         save_data_path = FLAGS.save_dataset_path + file_name
         self._numpy_save_array_list(data, save_data_path)
 
@@ -131,7 +136,7 @@ class DatasetGenerator:
         return: a list of all data. Length can be 1 or self.num_players depending on whether the game is symmetric. Each element in the datasets 
                 can correspond to the transitions or trajectories themselves.
         """
-        data = []
+        data, rets = [], []
         while len(data) < self.num_datapoints:
             trajectory = generate_single_rollout(self.num_players, self._env, self.behavior_policies, [None] * FLAGS.num_players, self._is_turn_based, self.true_state_extractor)  # This is a list of size num_players
             # print("lengths: ", len(trajectory_for_policy_evaluation))
@@ -158,6 +163,7 @@ class DatasetGenerator:
                         ))
 
                     data.append(curr_trajectory)
+                rets.append(trajectory[-1].rewards[0])
             else:
                 data.append(trajectory)
 
@@ -172,14 +178,13 @@ class DatasetGenerator:
 def main(argv):
     if len(argv) > 1:
         raise app.UsageError("Too many command-line arguments.")
-
-    print("\n\n")
-    np.random.seed(FLAGS.seed)
     
     if FLAGS.policy_path:
         raise NotImplementedError
     elif FLAGS.game_name == "bargaining":
         behavior_policies = ["BargainingUniformRandom" for _ in range(FLAGS.num_players)]
+    elif FLAGS.game_name == "bargaining_generalized":
+        behavior_policies = ["UniformRandom" for _ in range(FLAGS.num_players)]
     else:
         # Initialize a random policy here
         behavior_policies = ["UniformRandom" for _ in range(FLAGS.num_players)]

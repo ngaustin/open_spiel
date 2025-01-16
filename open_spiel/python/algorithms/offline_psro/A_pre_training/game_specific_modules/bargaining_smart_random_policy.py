@@ -21,11 +21,11 @@ class BargainingUniformRandomPolicy(PolicyWrapper):
         self._minimum_acceptance_probability = minimum_acceptance_probability
         self._pyspiel_game = pyspiel_game
 
-        self._all_offers = []
-        for a in range(self._pyspiel_game.num_distinct_actions() - 1): # Accept action is the last action
-            a_string = self._pyspiel_game.action_to_string(0, a)
-            offer = a_string.split(' ')
-            self._all_offers.append([int(num) for num in offer[-3:]])
+        # self._all_offers = []
+        # for a in range(self._pyspiel_game.num_distinct_actions() - 1): # Accept action is the last action
+        #     a_string = self._pyspiel_game.action_to_string(0, a)
+        #     offer = a_string.split(' ')
+        #     self._all_offers.append([int(num) for num in offer[-3:]])
         
         # print("All offers: ", self._all_offers)
 
@@ -66,12 +66,14 @@ class BargainingUniformRandomPolicy(PolicyWrapper):
         legal_actions_mask = step_object.legal_actions_mask
         options = copy.copy(legal_actions_mask)
 
-        for action, is_legal in enumerate(legal_actions_mask):
-            if is_legal and action != len(self._all_offers):  # legal and is not the accept action. Accept is always legal
-                offer = self._all_offers[action]
-                new_utility = sum([value * count for value, count in zip(value_items, offer)])
-                if new_utility <= previous_utility: 
-                    options[action] = 0
+        # Gotten rid of this to enforce uniform action 
+        
+        # for action, is_legal in enumerate(legal_actions_mask):
+        #     if is_legal and action != len(self._all_offers):  # legal and is not the accept action. Accept is always legal
+        #         offer = self._all_offers[action]
+        #         new_utility = sum([value * count for value, count in zip(value_items, offer)])
+        #         if new_utility <= previous_utility: 
+        #             options[action] = 0
         
         options = np.array(options)
         # Use our options as our probs instead of legal_actions_mask

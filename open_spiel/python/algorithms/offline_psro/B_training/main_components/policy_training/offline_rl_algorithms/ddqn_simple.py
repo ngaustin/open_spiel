@@ -51,6 +51,7 @@ class DQN(PolicyWrapper):
                state_representation_size,
                num_actions,
                graph,
+               reward_normalizer=None,
                start_frozen=False,
                double=True,
                symmetric=False,
@@ -76,6 +77,7 @@ class DQN(PolicyWrapper):
     self._kwargs = locals()
     super().__init__(self, num_actions, state_representation_size) 
 
+    ############# Parameter Initializations ############# 
     self._num_actions = num_actions
     if isinstance(hidden_layers_sizes, int):
       hidden_layers_sizes = [hidden_layers_sizes]
@@ -85,13 +87,15 @@ class DQN(PolicyWrapper):
     self._learn_every = learn_every
     self._min_buffer_size_to_learn = min_buffer_size_to_learn
     self._discount_factor = discount_factor
+    self._reward_normalizer = reward_normalizer
 
     self._epsilon_start = epsilon_start
     self._epsilon_end = epsilon_end
     self._epsilon_decay_duration = epsilon_decay_duration
     self._double = double
+    ########### Parameter Initializations End ###########
 
-    # TODO(author6) Allow for optional replay buffer config.
+    # Buffer initializations
     if not isinstance(replay_buffer_capacity, int):
       raise ValueError("Replay buffer capacity not an integer.")
     self._replay_buffer = replay_buffer_class(replay_buffer_capacity)
@@ -137,48 +141,35 @@ class DQN(PolicyWrapper):
         dtype=tf.float32,
         name="legal_actions_mask_ph")
 
-    self._q_network = simple_nets.MLP(state_representation_size,
-                                      self._layer_sizes, num_actions)
+    ############# Network Initializations ############# 
+    self._q_network = simple_nets.MLP(state_representation_size,self._layer_sizes, num_actions)
     self._q_values = self._q_network(self._info_state_ph)
-
-    self._target_q_network = simple_nets.MLP(state_representation_size,
-                                            self._layer_sizes, num_actions)
+    self._target_q_network = simple_nets.MLP(state_representation_size,self._layer_sizes, num_actions)
     self._target_q_values = self._target_q_network(self._next_info_state_ph)
+    ########### Network Initializations End ############
 
-    # Stop gradient to prevent updates to the target network while learning
+    # Target Network Update
     self._target_q_values = tf.stop_gradient(self._target_q_values)
+    self._update_target_network = self._create_target_network_update_op(self._q_network, self._target_q_network)
 
-    self._update_target_network = self._create_target_network_update_op(
-        self._q_network, self._target_q_network)
-
-    # Create the loss operations.
-    # Sum a large negative constant to illegal action logits before taking the
-    # max. This prevents illegal action values from being considered as target.
+    # Illegal Actions Mask
     illegal_actions = 1 - self._legal_actions_mask_ph
     illegal_logits = illegal_actions * ILLEGAL_ACTION_LOGITS_PENALTY
 
-    # NOTE: The following is for DDQN.  
+    ############# Bellman Update ############# 
     if self._double:
       next_q_double = self._q_network(self._next_info_state_ph)
       max_next_a = tf.math.argmax((tf.math.add(tf.stop_gradient(next_q_double), illegal_logits)), axis=-1)
       max_next_q = tf.gather(self._target_q_values, max_next_a, axis=1, batch_dims=1)
     else:
-      max_next_q = tf.reduce_max(
-          tf.math.add(tf.stop_gradient(self._target_q_values), illegal_logits),
-          axis=-1)
+      max_next_q = tf.reduce_max(tf.math.add(tf.stop_gradient(self._target_q_values), illegal_logits),axis=-1)
 
-
-    target = (
-        self._reward_ph +
-        (1 - self._is_final_step_ph) * self._discount_factor * max_next_q)
-
-    action_indices = tf.stack(
-        [tf.range(tf.shape(self._q_values)[0]), self._action_ph], axis=-1)
+    target = (self._reward_ph + (1 - self._is_final_step_ph) * self._discount_factor * max_next_q)
+    action_indices = tf.stack([tf.range(tf.shape(self._q_values)[0]), self._action_ph], axis=-1)
     predictions = tf.gather_nd(self._q_values, action_indices)
+    ########### Bellman Update End ###########
 
-    self._savers = [("q_network", tf.train.Saver(self._q_network.variables)),
-                    ("target_q_network",
-                    tf.train.Saver(self._target_q_network.variables))]
+    self._savers = [("q_network", tf.train.Saver(self._q_network.variables)),("target_q_network", tf.train.Saver(self._target_q_network.variables))]
 
     if loss_str == "mse":
       loss_class = tf.losses.mean_squared_error
@@ -204,6 +195,11 @@ class DQN(PolicyWrapper):
 
   def get_step_counter(self):
     return self._step_counter
+
+
+  def _normalize(self, tensor, normalizer):
+      return (tensor - normalizer.mean) / normalizer.standard_deviation 
+
 
   def step(self, step_object, player, session, is_evaluation=False):
     """Returns the action to be taken and updates the Q-network if needed.
@@ -250,7 +246,11 @@ class DQN(PolicyWrapper):
           self._num_relabeled_non_halted_trajectories += (1-int(step_object.halted))
           for cached_object in self._cache:
             step_to_modify = cached_object[2]
-            cached_object[2] = Step(info_state=step_to_modify.info_state, reward=np.zeros(np.shape(step_to_modify.reward)) + (1 - int(step_object.halted)), 
+            if step_to_modify.is_terminal and (not step_to_modify.halted):
+              new_reward = 1
+            else:
+              new_reward = 0
+            cached_object[2] = Step(info_state=step_to_modify.info_state, reward=np.zeros(np.shape(step_to_modify.reward)) + new_reward, 
                                     is_terminal=step_to_modify.is_terminal, halted=step_to_modify.halted, acting_players=step_to_modify.acting_players, 
                                     global_state=step_to_modify.global_state, legal_actions_mask=step_to_modify.legal_actions_mask)
               
@@ -271,16 +271,12 @@ class DQN(PolicyWrapper):
   def transfer_cache_to_buffer(self):
     for item in self._cache:
       self.add_transition(*item)
+    self._cache = []
 
   def set_deviation_coverage_flag(self, boolean_set):
     self._optimizing_deviation_coverage = boolean_set
 
   def add_transition(self, prev_step, prev_action, step, player):
-    try:
-      test = step.reward[0][player]
-    except TypeError:
-      print("Step reward: ", step.reward)
-
     transition = Transition(
         info_state=prev_step.info_state,
         action=prev_action,
@@ -349,14 +345,14 @@ class DQN(PolicyWrapper):
 
     return action, probs
 
-  def _get_epsilon(self, is_evaluation, power=1.0):
+  def _get_epsilon(self, is_evaluation):
     """Returns the evaluation or decayed epsilon value."""
-    if is_evaluation:
+    if is_evaluation or self._is_frozen:
       return 0.0
     decay_steps = min(self._step_counter, self._epsilon_decay_duration)
     decayed_epsilon = (
         self._epsilon_end + (self._epsilon_start - self._epsilon_end) *
-        (1 - decay_steps / self._epsilon_decay_duration)**power)
+        (1 - decay_steps / self._epsilon_decay_duration))
     return decayed_epsilon
 
   def learn(self, session):
@@ -377,7 +373,7 @@ class DQN(PolicyWrapper):
     transitions = self._replay_buffer.sample(self._batch_size)
     info_states = [t.info_state for t in transitions]
     actions = [t.action for t in transitions]
-    rewards = [t.reward for t in transitions]
+    rewards = [self._normalize(t.reward, self._reward_normalizer) for t in transitions]
     next_info_states = [t.next_info_state for t in transitions]
     are_final_steps = [t.is_final_step for t in transitions]
     legal_actions_mask = [t.legal_actions_mask for t in transitions]
@@ -448,6 +444,7 @@ class DQN(PolicyWrapper):
   def load_variable_names(self, variables):
       self._frozen_input_variables = variables["input"]
       self._frozen_output_variables = variables["output"]
+      self._reward_normalizer = variables.get("reward_normalizer", None)
 
   def get_variable_name_file_name(self, policy_index):
       return "variable_names_policy_{}.pkl".format(policy_index)
@@ -458,7 +455,7 @@ class DQN(PolicyWrapper):
       self._is_frozen = True 
       self._graph = frozen_graph
       self._replay_buffer.reset()
-      save_variables = {"input": self._frozen_input_variables, "output": self._frozen_output_variables}
+      save_variables = {"input": self._frozen_input_variables, "output": self._frozen_output_variables, "reward_normalizer": self._reward_normalizer}
 
       with open(save_path+self.get_variable_name_file_name(self._id), 'wb') as f:
         pickle.dump(save_variables, f)

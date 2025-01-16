@@ -24,14 +24,17 @@ import itertools
 import time
 
 from contextlib import ExitStack 
+from open_spiel.python.algorithms.offline_psro.B_training.main_components.policy_training.offline_rl_algorithms.world_model_deterministic import WorldModelDeterministic
 from open_spiel.python.algorithms.offline_psro.B_training.main_components.policy_training.offline_rl_algorithms.ddqn_simple import DQN
-from open_spiel.python.algorithms.offline_psro.B_training.main_components.offline_psro_wrapper import calculate_expected_regret, get_curr_and_deviation_payoffs
+from open_spiel.python.algorithms.offline_psro.B_training.main_components.policy_training.offline_rl_algorithms.uniform_random_policy import UniformRandomPolicy
 from open_spiel.python.algorithms.offline_psro.B_training.tf_model_management.tf_model_management import TFModelManagement
 from open_spiel.python.rl_environment import StepType
-from open_spiel.python.algorithms.offline_psro.utils.utils import generate_single_rollout, Step, get_graphs_and_context_managers
+from open_spiel.python.algorithms.offline_psro.utils.utils import generate_single_rollout, Step, get_graphs_and_context_managers, Normalizer
 from open_spiel.python.algorithms.offline_psro.A_pre_training.game_specific_modules.bargaining_true_state_generator import BargainingTrueStateGenerator
+from open_spiel.python.algorithms.offline_psro.A_pre_training.game_specific_modules.bargaining_generalized_true_state_generator import BargainingGeneralizedTrueStateGenerator
 from open_spiel.python.algorithms.offline_psro.A_pre_training.game_specific_modules.leduc_poker_true_state_generator import LeducPokerTrueStateGenerator
 from open_spiel.python import rl_environment
+from scipy import stats 
 
 from open_spiel.python.algorithms import projected_replicator_dynamics
 
@@ -40,18 +43,25 @@ FLAGS = flags.FLAGS
 # Simulation related
 flags.DEFINE_bool("symmetric", False, "Is the game symmetric?")
 flags.DEFINE_integer("num_players", 2, "Number of players in the game")
-flags.DEFINE_string("save_path", "random_runs/", "Folder to save all models and data")
+flags.DEFINE_string("save_path", "random_runs/", "Folder to where all saved models and data live")
+flags.DEFINE_string("save_graph_path", "random_runs/", "Folder to save all NEW models and data")
 flags.DEFINE_integer('num_simulations', 1000, "Number of simulations to estimate normal-form game entries")
 flags.DEFINE_integer("num_bootstrapped_samples", 1000, "Number of bootstrapped samples when estimating expected regret")
 flags.DEFINE_string("evaluation_strategy_path", "", "Folder to save or load any evaluation set strategies")
-flags.DEFINE_integer("training_steps", int(2e5), "Number of training steps for true game strategies")
 flags.DEFINE_string("game_name", "", "Name of game")
 flags.DEFINE_bool("eval_regret_with_final_profiles", False, "Whether to use the extracted final profiles at each iteration to calculate regret, not the MSS used during the trial")
+flags.DEFINE_string("dataset_path", "", "Path to file to load the offline dataset")
 
 flags.DEFINE_string("evaluation_name", "evaluate_regret", "Whether to train a new evaluation strategy or evaluate reget of a trial")
 
 # Misc
 flags.DEFINE_integer("seed", 1, "Seed for random")
+
+def get_manual_chance_actions(game, count):
+    if game == "bargaining":
+        return list(np.random.choice(31250, count))
+    else:
+        return []
 
 
 class TrueGameRegretEvaluationModule:
@@ -76,14 +86,13 @@ class TrueGameRegretEvaluationModule:
             profile_respond_to = pickle.load(f)
         return profile_respond_to
 
-    def train_true_game_best_response(self, trial_data_path, player_trial_strategy_path, profile_file_name, training_player, training_steps, response_parameters):
+    def train_true_game_best_response(self, trial_data_path, player_trial_strategy_path, profile_file_name, training_player, training_steps_total, response_parameters):
         """
         trial_data_path: path to folder containing empirical game and profile information at each iteration of a trial
         player_trial_strategy_path: a list containing paths to folders of each player's strategies created during that trial 
         profile_file_name: the name of the particular file in trial_data_path containing the profile we want to respond to
         """
         # NOTE: trial_data_path contains information on profiles. player_trial_strategy_path describes the folder containing player-specific policies.
-
         if self._symmetric:
             assert len(player_trial_strategy_path) == 1
         else:
@@ -91,6 +100,7 @@ class TrueGameRegretEvaluationModule:
 
         # Load the profile we are responding to 
         profile_respond_to = self.load_profile(trial_data_path, profile_file_name)
+        print("\nResponding to profile: ", profile_respond_to, "  \n")
 
         all_frozen_graphs, context_managers, variable_names = get_graphs_and_context_managers(trial_data_path, player_trial_strategy_path, self._tf_model_manager)
 
@@ -110,12 +120,21 @@ class TrueGameRegretEvaluationModule:
                     curr_policy_list.append(curr_policy)
                 all_policies.append(curr_policy_list)
 
+                
+            # TODO: Add initial strategies here
+            for p in range(len(context_managers)):
+                all_policies[p].insert(0, UniformRandomPolicy(state_size=self._env._game.information_state_tensor_shape()[0], 
+                                                            num_actions=self._env.action_spec()["num_actions"]))
+                sessions[p].insert(0, None)
+
+                assert len(all_policies[p]) >= len(profile_respond_to[p])
+
             # Create a new computational graph for our new policy
             new_rl_training_session = stack.enter_context(tf.Session(graph=tf.Graph()))
             sessions[training_player].append(new_rl_training_session)
 
             # Initialize new policy and append
-            new_policy = DQN(new_rl_training_session, graph=new_rl_training_session.graph, **response_parameters)
+            new_policy = DQN(new_rl_training_session, graph=new_rl_training_session.graph, reward_normalizer=all_policies[0][-1]._reward_normalizer, **response_parameters)
 
             # If symmetric, then all players share policies
             if FLAGS.symmetric and len(all_policies) == 1:
@@ -125,7 +144,8 @@ class TrueGameRegretEvaluationModule:
             # Training loop. Use an rl_environment and manual step creations to provide learning to the currently training response
             aggregate_rewards = []
             num_training_steps = 0
-            while num_training_steps < FLAGS.training_steps:
+
+            while num_training_steps < training_steps_total:
                 # Sample from profile and then create the current sessions being used by the respective players
                 curr_sessions = []
                 policies = []
@@ -137,16 +157,18 @@ class TrueGameRegretEvaluationModule:
                     else:
                         curr_sessions.append(new_rl_training_session)
                         policies.append(new_policy)
-
+                
                 timestep = self._env.reset()
                 if self._env.is_turn_based:
                     curr_player = timestep.observations["current_player"]
-                    curr_step = Step(info_state=timestep.observations["info_state"][curr_player], reward=None, is_terminal=False, halted=False,
+                    curr_step = Step(info_state=timestep.observations["info_state"][curr_player], reward=None, is_terminal=False, 
                                     legal_actions_mask=[1 if a in timestep.observations["legal_actions"][curr_player] else 0 for a in range(self._env.action_spec()["num_actions"])],
                                     acting_players=[curr_player], global_state=None)
+                else:
+                    raise NotImplemented
                 
-                done = False
-                returns = 0
+                done, returns = False, 0
+                
                 while not done:
                     if self._env.is_turn_based:
                         # Get agent actions
@@ -168,7 +190,7 @@ class TrueGameRegretEvaluationModule:
                         # Convert timestep to Step
                         if not done:
                             curr_player = timestep.observations["current_player"]
-                            curr_step = Step(info_state=timestep.observations["info_state"][curr_player], reward=[timestep.rewards], is_terminal=done, halted=False,
+                            curr_step = Step(info_state=timestep.observations["info_state"][curr_player], reward=[timestep.rewards], is_terminal=done,
                                             legal_actions_mask=[1 if a in timestep.observations["legal_actions"][curr_player] else 0 for a in range(self._env.action_spec()["num_actions"]) ],
                                             acting_players=[curr_player], global_state=None)
                     else:
@@ -176,13 +198,12 @@ class TrueGameRegretEvaluationModule:
                 
                 # Last time step to account for terminal state
                 for p in range(self._num_players):
-                    curr_step = Step(info_state=timestep.observations["info_state"][p], reward=[timestep.rewards], is_terminal=done, halted=False,
+                    curr_step = Step(info_state=timestep.observations["info_state"][p], reward=[timestep.rewards], is_terminal=done,
                                             legal_actions_mask=[1 if a in timestep.observations["legal_actions"][p] else 0 for a in range(self._env.action_spec()["num_actions"]) ],
                                             acting_players=[p], global_state=None)
                     policies[p].step(curr_step, p, curr_sessions[p], is_evaluation=False)  
                 aggregate_rewards.append(returns)
 
-            # print("Aggregate rewards for trained policy: ", aggregate_rewards)
             window = 200
             averaged_over = [sum(aggregate_rewards[i:i+window]) / window for i in range(len(aggregate_rewards) - window + 1)]
             plt.plot(list(range(len(averaged_over))), averaged_over)
@@ -212,10 +233,10 @@ class TrueGameRegretEvaluationModule:
 
         num_strategies_each_player = []
         for player_path in player_trial_strategy_path:
-            num_strategies = len([f for f in os.listdir(trial_data_path + player_path) if ("policy" in f) and (".pb" in f)])
+            num_strategies = len([f for f in os.listdir(trial_data_path + player_path) if ("policy" in f) and (".pb" in f)]) + 1
             num_eval_strategies = len([f for f in os.listdir(self._evaluation_strategy_path + player_path) if "policy" in f and ".pb" in f])
             num_strategies_each_player.append(num_strategies + num_eval_strategies)
-
+        
         if self._symmetric:
             num_strategies_each_player = num_strategies_each_player * self._num_players
 
@@ -224,7 +245,6 @@ class TrueGameRegretEvaluationModule:
 
         # Combine the policies in trial_data_path/player_trial_strategy_path and self._evaluation_strategy_set. This will be our aggregate evaluation set
         evaluation_graphs, evaluation_context_managers, evaluation_variable_names = get_graphs_and_context_managers(trial_data_path, player_trial_strategy_path, self._tf_model_manager)
-
         additional_graphs, additional_context_managers, additional_variable_names = get_graphs_and_context_managers(self._evaluation_strategy_path, player_trial_strategy_path, self._tf_model_manager)
         
         for i in range(len(additional_graphs)):
@@ -246,6 +266,11 @@ class TrueGameRegretEvaluationModule:
                                         num_actions=self._env.action_spec()["num_actions"],)
                     curr_policy.load_variable_names(evaluation_variable_names[p][s])
                     curr_policy_list.append(curr_policy)
+                # Insert uniformActionPolicy here
+                curr_policy_list.insert(0, UniformRandomPolicy(state_size=self._env._game.information_state_tensor_shape()[0], 
+                                                            num_actions=self._env.action_spec()["num_actions"]))
+                sessions[p].insert(0, None)
+
                 all_policies.append(curr_policy_list)
             
             if self._symmetric:
@@ -265,7 +290,8 @@ class TrueGameRegretEvaluationModule:
                     policy_sessions = [sessions[i][j] for i, j in enumerate(chosen_strategies)]
 
                     # Simulation loop
-                    start = time.time()
+                    start = time.time() 
+
                     for _ in range(self._num_simulations):
                         rollout = generate_single_rollout(self._num_players, self._env, policies, policy_sessions, self._env.is_turn_based, true_state_extractor=self._true_state_extractor)
                         returns = 0
@@ -297,12 +323,17 @@ class TrueGameRegretEvaluationModule:
         for f in all_profile_files:
             with open(trial_data_path+f, 'rb') as f:
                 all_profiles.append(pickle.load(f))
+        
+        print("Profile 1: ", all_profiles)
+
+        all_profiles.insert(0, [np.array([1]) for p in range(self._num_players)])
 
         regret_values = [[] for _ in range(self._num_players)]
 
         for profile in all_profiles:
             # This is a minute but important point: we take [1:] of the player profile because we don't save the initial, singleton policy in PSRO
-            profile = [np.pad(player_profile[1:], (0, num_strategies_each_player[player] - player_profile[1:].shape[0])) for player, player_profile in enumerate(profile)]
+            profile = [np.array(player_profile) for player_profile in profile]
+            profile = [np.pad(player_profile, (0, num_strategies_each_player[player] - player_profile.shape[0])) for player, player_profile in enumerate(profile)]
 
             for player, player_meta_strategy in enumerate(profile):
                 deviating_payoffs = np.zeros(num_strategies_each_player[player])
@@ -315,7 +346,8 @@ class TrueGameRegretEvaluationModule:
 
                     curr_payoff += prob * payoff
                     deviating_payoffs[player_strategy] += prob_others * payoff
-
+                
+                print("Best deviating strategy: ", np.argmax(deviating_payoffs))
                 player_regret = np.max(deviating_payoffs) - curr_payoff
                 regret_values[player].append(player_regret)
         
@@ -335,127 +367,282 @@ class TrueGameRegretEvaluationModule:
 
         return empirical_game, regret_values
 
-    def extract_final_solution(self, trial_data_path, solution_concept, symmetric):
-        """
-        Given the meta-game that was found during a PSRO run, extract the final profile that would be outputted as if 
-        the PSRO were to terminate at that iteration. Then, save the profile. This is done so that we appropriately evaluate
-        strategy exploration and stay consistent in how we evaluate the quality of strategy sets across iterations.
-
-        trial_data_path: relative path containing data of the meta-games we want to extract our final solution out of
-        solution_concept: dictionary describing the operation we apply on our meta-game to extract a profile 
-        symmetric: symmetric game(?) and profile(?)
-
-        solution_concept fields:
-        evaluation_halt_type: string specifying which HALT distribution to use when evaluating each entry in the meta-game
-        evaluation_criteria: string describing how we determine the quality of a particular profile 
-        meta_strategy_solver: string describing the meta-strategy solver to be used after the meta-game is created
-        num_iterations: integer determining how many times we run the meta_strategy_solver before extracting profile with best evaluation_criteria score
-        """
-
-        meta_game_files = [f for f in os.listdir(trial_data_path) if "meta_game" in f]
-        meta_game_files = sorted(meta_game_files, key=lambda s: int([token for token in (s.split('.')[0]).split('_') if token.isdigit()][0]))
+    def evaluate_trajectory_level_reward_uncertainty_correlations(self, pyspiel_game, trial_data_path, player_trial_strategy_path, true_state_extractor, save_graph_path, response_parameters):
         
-        for iteration, meta_game_file in enumerate(meta_game_files):
-            total_path = trial_data_path + meta_game_file
-            with open(total_path, 'rb') as f:
-                meta_game = pickle.load(f)
-            print("Extracting solution from profile at iteration {} file name {}.".format(iteration, meta_game_file))
+        with open(FLAGS.dataset_path, "rb") as npy_file:
+            trajectories = np.load(npy_file, allow_pickle=True)
+        data = []
 
-            # Reconstruct the meta game using evaluation_halt_type distribution
-            num_players = len(list(meta_game.keys())[0])
-            empirical_game_shape = [0 for _ in range(num_players)]
-            for strategy in meta_game.keys():
-                for p in range(num_players):
-                    empirical_game_shape[p] = max(empirical_game_shape[p], strategy[p] + 1)
+        for rollout in trajectories:
+            data.extend(rollout)
+        
+        env = rl_environment.Environment(pyspiel_game, observation_type=rl_environment.ObservationType.OBSERVATION)
+
+        action_size = 1 if env.is_turn_based else FLAGS.num_players
+
+        # Get the model graph
+        tf_model_management_module = TFModelManagement()
+        model_graph = tf_model_management_module.load_frozen_graph(trial_data_path, WorldModelDeterministic.frozen_graph_model_name)
+        
+        # Load the dynamics model along with the graphs 
+        # Dynamics model parameters
+        with open(trial_data_path + WorldModelDeterministic.model_arg_name, 'rb') as f:
+            model_args = pickle.load(f)
+            model_args["data"] = None 
+            model_args["session"] = None
+
+        model = WorldModelDeterministic(state_size=len(data[0].global_state), action_size=action_size, model_args=model_args,graph=model_graph, start_frozen=True)
+        with open(trial_data_path + model.get_variable_name_file_name(), 'rb') as f:
+            model_variables = pickle.load(f)
+        
+        model.load_variable_names(model_variables)
+
+        # Initializations 
+        model_context = tf.Session(graph=model.get_frozen_graph())
+
+        # For each of entries in our empirical game, run the joint pure strategy in the real game 
+        # Get the strategies from our directory 
+        evaluation_graphs, evaluation_context_managers, evaluation_variable_names = get_graphs_and_context_managers(trial_data_path, player_trial_strategy_path, self._tf_model_manager)
+        with ExitStack() as stack: 
+            all_policy_sessions = [[stack.enter_context(cm) if cm != None else None for cm in cm_list] for cm_list in evaluation_context_managers]
+            model_session = stack.enter_context(model_context)
+
+            all_policies = []
+            for p in range(len(all_policy_sessions)):
+                curr_policy_list = []
+                for s in range(len(all_policy_sessions[p])):
+                    curr_policy = DQN(all_policy_sessions[p][s], graph=evaluation_graphs[p][s], start_frozen=True, **response_parameters)
+                    curr_policy.load_variable_names(evaluation_variable_names[p][s])
+                    curr_policy_list.append(curr_policy)
+                all_policies.append(curr_policy_list)
+
+            for p in range(len(all_policy_sessions)):
+                all_policy_sessions[p].insert(0, None)
+                all_policies[p].insert(0, UniformRandomPolicy(state_size=env._game.information_state_tensor_shape()[0],num_actions=env.action_spec()["num_actions"]))
             
-            meta_game_matrix = np.empty(empirical_game_shape + [num_players])
-            meta_game_matrix[:] = np.nan 
+            
+             # If symmetric, then all players share policies
+            if FLAGS.symmetric and len(all_policies) == 1:
+                all_policies = [all_policies[0] for _ in range(FLAGS.num_players)]
+                all_policy_sessions = [all_policy_sessions[0] for _ in range(FLAGS.num_players)]
 
-            for strategy, utility_dictionary in meta_game.items():
-                if solution_concept["evaluation_halt_type"] == "fixed":
-                    meta_game_matrix[strategy] = utility_dictionary["fixed"].expected_value
-                elif solution_concept["evaluation_halt_type"] == "optimistic":
-                    meta_game_matrix[strategy] = utility_dictionary["fixed"].expected_value
-                else:
-                    raise NotImplementedError
+            all_discrepancies, all_reward_errors, all_utility_errors = {}, [], {}
 
-            meta_game_matrix_transposed = np.transpose(meta_game_matrix, [len(np.array(meta_game_matrix).shape) - 1] + list(range(0, len(np.array(meta_game_matrix).shape) - 1)))
+            all_pure_strategies = itertools.product(*[list(range(len(policy_list))) for policy_list in all_policies])
 
-            if solution_concept["evaluation_criteria"] == "expected_regret":
-                def expected_regret(profile):
-                    average_sumRegret = 0
-                    for _ in range(solution_concept["num_bootstrapped_samples"]):
-                        sumRegret = 0
-                        optimistic_meta_game_matrix = np.empty(empirical_game_shape + [num_players])
-                        optimistic_meta_game_matrix[:] = np.nan
+            for pure_strategy in all_pure_strategies:
+                if not all([len(all_policies[p]) > pure_strategy[p] for p in range(self._num_players)]):
+                    continue 
+                num_trajectories = int(1e4)
+                terminal_reward_errors = []
+                discrepancy_reward_predictions = []
+                all_true_terminal_rewards, all_model_terminal_rewards = [], []
+                policies = [all_policies[p][strategy] for p, strategy in enumerate(pure_strategy)]
+                policy_sessions = [all_policy_sessions[p][strategy] for p, strategy in enumerate(pure_strategy)]
 
-                        for strategy, utility_dictionary in meta_game.items():
-                            if solution_concept["evaluation_halt_type"] == "fixed":
-                                optimistic_meta_game_matrix[strategy] = utility_dictionary["fixed"].expected_value
-                            elif solution_concept["evaluation_halt_type"] == "optimistic":
-                                if all([s == 0 for s in strategy]):
-                                    optimistic_meta_game_matrix[strategy] = utility_dictionary["fixed"].expected_value
-                                else:
-                                    optimistic_meta_game_matrix[strategy] = utility_dictionary["optimistic"].sample()
+                start = time.time()
+                # manual_samples = get_manual_chance_actions(FLAGS.game_name, num_trajectories)
 
-                        for p in range(num_players):
-                            # deviation_payoffs, curr_payoff = get_curr_and_deviation_payoffs(meta_game.keys(), meta_game_matrix, profile, p)
-                            deviation_payoffs, curr_payoff = get_curr_and_deviation_payoffs(meta_game.keys(), optimistic_meta_game_matrix, profile, p)
-                            sumRegret += max(max(deviation_payoffs) - curr_payoff, 0)
-                        average_sumRegret += sumRegret
-                    average_sumRegret = average_sumRegret / solution_concept["num_bootstrapped_samples"]
-                    return average_sumRegret
-                evaluation_criteria = expected_regret
-            elif solution_concept["evaluation_criteria"] == "deviation_coverage":
-                def deviation_coverage(profile):
+                for traj_index in range(num_trajectories):
+                    sample = None # manual_samples[traj_index]
                     
-                    non_halt_proportion_meta_game = np.empty(empirical_game_shape + [num_players])
-                    non_halt_proportion_meta_game[:] = np.nan 
-                    for strategy, utility_dictionary in meta_game.items():
-                        non_halt_proportion_meta_game[strategy] = np.array([utility_dictionary["non_halt_proportion"] for _ in range(num_players)])
-                    
-                    profile_coverage, average_deviation_coverage = 0, 0
-                    for p in range(num_players):
-                        deviation_coverage, curr_coverage = get_curr_and_deviation_payoffs(meta_game.keys(), non_halt_proportion_meta_game, profile, p)
-                        average_deviation_coverage += np.mean(deviation_coverage)
-                        profile_coverage += curr_coverage
-                    
-                    profile_coverage = profile_coverage / num_players
-                    average_deviation_coverage = average_deviation_coverage / num_players
-                    return solution_concept["weight_deviation_coverage"] * average_deviation_coverage + (1 - solution_concept["weight_deviation_coverage"]) * profile_coverage 
+                    traj = generate_single_rollout(FLAGS.num_players, env, policies, policy_sessions, env.is_turn_based, true_state_extractor, manually_create_info_states_from_observations=True, start_action=sample)
 
-                evaluation_criteria = deviation_coverage
-            else:
-                raise NotImplementedError
+                    for transition in traj[-1:]:
+                        # Only look at the terminal reward for now
+                        if transition.done:
+                            _, reward, _, _, _, _, max_prediction_discrepancy = model.get_next_step(transition.global_state, [a for a in transition.actions if a != None], halt_threshold=10, frozen_session=model_session)
 
-            best_profile, best_criteria = None, -np.inf
-            for _ in range(solution_concept["num_iterations"]):
-                # Apply the MSS specificed by meta_strategy_solver
-                if self._symmetric:
-                    initial_strategies = [np.random.choice(range(1, 11)) for _ in range(meta_game_matrix[0].shape[0])]
-                    initial_strategies = [initial_strategies for _ in range(num_players)]
-                else:
-                    initial_strategies = [[np.random.choice(range(1,11)) for _ in range(empirical_game_shape[k])] for k in range(num_players)]
-                initial_strategies = [np.array(mixture) / np.sum(mixture) for mixture in initial_strategies]
+                            curr_reward_error = np.sum(np.abs(np.array(transition.rewards) - np.array(reward[0])))
+                            
+                            if transition.done:
+                                terminal_reward_errors.append(curr_reward_error)
+                                discrepancy_reward_predictions.append(max_prediction_discrepancy)
 
-                if solution_concept["meta_strategy_solver"] == 'rd':
-                    result = projected_replicator_dynamics.regularized_replicator_dynamics(
-                        meta_game_matrix_transposed, prd_initial_strategies=initial_strategies, regret_lambda=1e-4, symmetric=symmetric, unused_kwargs={}, prd_iterations=int(1e5)) 
-                else:
-                    raise NotImplementedError
+                                all_true_terminal_rewards.append(transition.rewards)
+                                all_model_terminal_rewards.append(reward[0])
+                simulation_time = time.time() - start 
 
-                criteria_value = evaluation_criteria(result)
+                start = time.time() 
+                # Calculate correlation coefficient 
+                r = stats.pearsonr(terminal_reward_errors, discrepancy_reward_predictions)
+                analysis_time = time.time() - start
+                all_discrepancies[pure_strategy] = sum(discrepancy_reward_predictions) / len(discrepancy_reward_predictions)
+                all_reward_errors.append(sum(terminal_reward_errors) / len(terminal_reward_errors))
+                utility_error = np.mean(np.abs(np.mean(np.array(all_true_terminal_rewards), axis=0) - np.mean(np.array(all_model_terminal_rewards), axis=0)))
+                all_utility_errors[pure_strategy] = utility_error
                 
-                if criteria_value > best_criteria:
-                    best_profile = result
-                    best_criteria = criteria_value
+                print("Pure strategy: {}    R: {}   Simulation time: {}     Analysis time: {}   Error: {}   Discrepancy: {}     Utility Error: {}   True Utility: {}".format(pure_strategy, r, simulation_time, analysis_time, sum(terminal_reward_errors) / len(terminal_reward_errors), sum(discrepancy_reward_predictions) / len(discrepancy_reward_predictions), utility_error, np.mean(np.array(all_true_terminal_rewards), axis=0)))
 
-            print("Found best profile {} with criteria value {}.".format(best_profile, best_criteria))
+                if not os.path.exists(save_graph_path):
+                    os.makedirs(save_graph_path)
+                plt.scatter(terminal_reward_errors, discrepancy_reward_predictions, s=1)
+                plt.title("reward errors and discrepancies trajectory level")
+                plt.savefig(save_graph_path+"reward_errors_discrepancy_strategy_{}.jpg".format(pure_strategy))
+                plt.clf()
+
+                plt.hist(terminal_reward_errors, bins=np.arange(160)/4.0)
+                plt.title("reward error frequencies")
+                plt.savefig(save_graph_path+"reward_errors_histogram_strategy_{}.jpg".format(pure_strategy))
+                plt.clf()
+
+            print("Average discrepancy across all pure strategies: {}".format(sum(all_discrepancies.values()) / len(all_discrepancies)))
+            print("Average reward errors across all pure strategies: {}".format(sum(all_reward_errors) / len(all_reward_errors)))
+            print("Average utility error across all pure strategies: {}".format(sum(all_utility_errors.values()) / len(all_utility_errors)))
+
+        reward_error_information = {"all_reward_errors": all_reward_errors, "all_discrepancies": all_discrepancies, "all_utility_errors": all_utility_errors}
+        with open(trial_data_path+"reward_error_information.pkl", 'wb') as f:
+            pickle.dump(reward_error_information, f)
+
+        return 
+    
+    def analyze_deviation_coverage_by_iteration(self, num_players, trial_data_path, iteration_profiles):
+
+        with open(trial_data_path+"reward_error_information.pkl", 'rb') as f:
+            reward_error_information = pickle.load(f)
+        
+        all_discrepancies = reward_error_information["all_discrepancies"]
+        all_utility_errors = reward_error_information["all_utility_errors"]
+
+        all_profile_utility_errors = []
+        all_deviation_coverage_metrics = []
+        
+        num_strategies_per_player = []
+        for p in range(num_players):
+            num_strategies_per_player.append(max([s[p] + 1 for s in all_discrepancies.keys()]))
+        
+        for profile_name in iteration_profiles:
+            with open(trial_data_path + profile_name, 'rb') as f:
+                current_profile = pickle.load(f)
+
+            print("Analyzing profile: ", current_profile)
+
+            # current_profile is a length num_player vector, where each element is a list describing player's meta-strategy
+
+            # Get the cartesian product of each of the range(len(meta_strategy))
+            all_pure_strategies_of_curr_profile = itertools.product(*[list(range(len(profile))) for p, profile in enumerate(current_profile)])
+
+            # Then, for each possible pure strategy, get the probability 
+            profile_utility_error = 0 
+            profile_deviation_coverage_metric = 0
+            deviations_accounted_for = 0
+            for pure_strategy in all_pure_strategies_of_curr_profile:
+                probability_of_pure_strategy = np.prod([current_profile[player][s] for player, s in enumerate(pure_strategy)])
+
+                # CALCULATING UTILITY ERROR OF PROFILE
+                profile_utility_error += all_utility_errors[pure_strategy] * probability_of_pure_strategy
+
+            # CALCULATING UTILITY ERRORS OF DEVIATING STRATEGIES
+            # Repeat for all players 
+            for deviating_player in range(num_players):
+                num_possible_deviations = num_strategies_per_player[deviating_player]
+
+                for deviating_strategy in range(num_possible_deviations):
+                    # Calculate the expected amount of utility error given everyone else plays according to the current profile 
+                    # In essence, let's iterate through all possible pure strategies
+                    # Only account for the ones with the corresponding deviation strategy
+                    # Weight each contribution by the probability that all other players play such strategy
+                    curr_dev_strategy_expected_error = 0
+                    print("Calculating: dev player {} and dev strategy {}".format(deviating_player, deviating_strategy))
+
+                    all_pure_strategies_in_full_game = itertools.product(*[list(range(num_strategies)) for num_strategies in num_strategies_per_player])
+                    for pure_strategy in all_pure_strategies_in_full_game:
+                        # print("Pure: ", pure_strategy, "  deviating_player: ", deviating_player, "  deviating_strategy: ", deviating_strategy)
+                        if pure_strategy[deviating_player] != deviating_strategy:
+                            continue 
+
+                        # print([len(current_profile[p]) for p in range(num_players) if p != deviating_player])
+                        if not all([pure_strategy[p] < len(current_profile[p]) for p in range(num_players) if p != deviating_player]):
+                            continue
+
+                        probability_of_other_players = np.prod([current_profile[p][pure_strategy[p]] for p in range(FLAGS.num_players) if p != deviating_player])
+                        # print("in: ", pure_strategy, probability_of_other_players, all_utility_errors[pure_strategy])
+                        curr_dev_strategy_expected_error += all_utility_errors[pure_strategy] * probability_of_other_players
+
+                    print("Calculated: ", curr_dev_strategy_expected_error)
+                    profile_deviation_coverage_metric += curr_dev_strategy_expected_error
+                    deviations_accounted_for += 1
+
+            profile_deviation_coverage_metric /= deviations_accounted_for
+
+            all_profile_utility_errors.append(profile_utility_error)
+            all_deviation_coverage_metrics.append(profile_deviation_coverage_metric)
+        
+        if not os.path.exists(FLAGS.save_graph_path):
+            os.makedirs(FLAGS.save_graph_path)
+        
+        plt.plot(range(len(all_profile_utility_errors)), all_profile_utility_errors)
+        plt.title("Utility Errors of Intermediate Final Profiles")
+        plt.savefig(FLAGS.save_graph_path + "utility_errors_over_iterations.jpg")
+        plt.clf()
+
+        plt.plot(range(len(all_deviation_coverage_metrics)), all_deviation_coverage_metrics)
+        plt.title("Deviation Coverage Metric of Intermediate Final Profiles")
+        plt.savefig(FLAGS.save_graph_path + "deviation_coverage_metric_over_iterations.jpg")
+        plt.clf()
+
+        print("Utility Errors: ", all_profile_utility_errors)
+        print("Deviation Coverages: ", all_deviation_coverage_metrics)
+
+
+    # def extract_final_solution(self, pyspiel_game, trial_data_path, profile_files, solution="nash"):
+    #     with open(trial_data_path + "model_meta_game.pkl", 'rb') as f:
+    #         model_meta_game = pickle.load(f)
+
+    #     # Construct the empirical game as desired by projectedReplicatorDynamics 
+
+    #     ###################### Matrix Representation Reconstruction ###################################
+    #     meta_game_shape = [max([pure_strategy[p] + 1 for pure_strategy in model_meta_game]) for p in range(FLAGS.num_players+1)]
+    #     meta_games = []
+
+    #     # Populate the metagame matrix with Nan values
+    #     for _ in range(FLAGS.num_players+1):
+    #         curr_player_meta_game = np.empty(meta_game_shape)
+    #         curr_player_meta_game[:] = np.nan
+    #         meta_games.append(curr_player_meta_game)
+    #     #################### Matrix Representation Reconstruction End #################################
+        
+    #     #################### Populating Meta Game with Utilities #################################
+    #     for pure_strategy, utilities_distribution in model_meta_game.items():
+    #         expected_utilities = utilities_distribution["fixed"].expected_value
+    #         for p in range(FLAGS.num_players+1):
+    #             meta_games[p][pure_strategy] = expected_utilities[p]     
+    #     ################## Populating Meta Game with Utilities End ###############################
+    #     num_solutions = meta_game_shape[0] - 1
+    #     print("With meta-game shape of {}, we assume that there are {} solutions to extract.".format(meta_game_shape, num_solutions))
+    #     for j in range(num_solutions):
+
+    #         # Extract relevant subgame
+    #         # If statement takes care of env player. The else statement is for actual players
+    #         # indices = [slice(0, meta_game_shape[p], 1) if p == FLAGS.num_players else slice(0, j+1) for p in range(FLAGS.num_players+1)]
+
+    #         # NOTE: only valid for two player games
+    #         subgames = [meta_games[p][0:j+2, 0:j+2, 0:meta_game_shape[2]] for p in range(FLAGS.num_players+1)]
+
+    #         print("Loading profile from: ", trial_data_path+profile_files[j])
+    #         with open(trial_data_path+profile_files[j], 'rb') as f:
+    #             initial_profiles = pickle.load(f)
+
+    #         if len(initial_profiles) == 2:
+    #             env_profile = [1.0 / meta_game_shape[2]] * meta_game_shape[2]
+    #             initial_profiles.append(env_profile)
+
+    #         if solution.lower() == "nash":
+    #             result = projected_replicator_dynamics.regularized_replicator_dynamics(
+    #                 subgames, regret_lambda=0, symmetric=FLAGS.symmetric, prd_initial_strategies=initial_profiles, symmetric_players=[[i for i in range(FLAGS.num_players)]], unused_kwargs={}) 
+    #         else:
+    #             raise NotImplementedError
             
-            with open(trial_data_path+"final_solution_iteration_{}.pkl".format(iteration), 'wb') as f:
-                pickle.dump(best_profile, f)
-            
-            print("Saved best profile to {}".format(trial_data_path+"final_solution_iteration_{}.pkl".format(iteration)))
+    #         if len(result) > FLAGS.num_players:
+    #             result = result[:FLAGS.num_players]
+
+    #         with open(trial_data_path+"final_solution_iteration_{}.pkl".format(j), 'wb') as f:
+    #             pickle.dump(result, f)
+    #         print("Using subgame: ", subgames)
+    #         print("Saved new profile at ", trial_data_path+"final_solution_iteration_{}.pkl".format(j), ": ", result)
+    #         print("Previous profile: ", initial_profiles[0])
+    #         print("\n")
+
 
 def main(argv):
     if len(argv) > 1:
@@ -466,9 +653,11 @@ def main(argv):
 
     # Get the game-specific true state extractor 
     if FLAGS.game_name == "bargaining":
-        pyspiel_game = pyspiel.load_game(FLAGS.game_name, {"discount": 0.99})
+        pyspiel_game = pyspiel.load_game(FLAGS.game_name, {"discount": 0.99 , "instances_file":"../../../../games/bargaining_instances_symmetric_25pool_25valuations.txt"})
         true_state_extractor = BargainingTrueStateGenerator(FLAGS.game_name, pyspiel_game.information_state_tensor_shape()[0])
-        max_episode_length = pyspiel_game.max_game_length()
+    if FLAGS.game_name == "bargaining_generalized":
+        pyspiel_game = pyspiel.load_game(FLAGS.game_name, {"discount": 0.99})
+        true_state_extractor = BargainingGeneralizedTrueStateGenerator(FLAGS.game_name, pyspiel_game.information_state_tensor_shape()[0])
     if FLAGS.game_name == "leduc_poker":
         true_state_extractor = LeducPokerTrueStateGenerator(FLAGS.game_name)
         pyspiel_game = pyspiel.load_game(FLAGS.game_name)
@@ -485,17 +674,17 @@ def main(argv):
         "state_representation_size": env._game.information_state_tensor_shape()[0], 
         "num_actions": env.action_spec()["num_actions"],
         "double": True, 
-        "hidden_layers_sizes": [50] * 2, 
-        "replay_buffer_capacity": int(2e4), 
+        "hidden_layers_sizes": [200] * 2, 
+        "replay_buffer_capacity": int(5e4), 
         "batch_size": 64, 
-        "learning_rate": 3e-5,
+        "learning_rate": 1e-4,
         "update_target_network_every": 1000, 
-        "learn_every": 5, 
+        "learn_every": 2, 
         "discount_factor": .99, 
-        "min_buffer_size_to_learn": 1000, 
-        "epsilon_start": .8, 
+        "min_buffer_size_to_learn": int(2e4), 
+        "epsilon_start": 1.0, 
         "epsilon_end": .02, 
-        "epsilon_decay_duration": int(1e5) 
+        "epsilon_decay_duration": int(2e5),
     }
 
     final = FLAGS.eval_regret_with_final_profiles
@@ -505,18 +694,40 @@ def main(argv):
     if FLAGS.evaluation_name == "add_evaluation_strategy":
         for profile_file_name in all_profile_files[::]:
             start = time.time()
-            evaluation_module.train_true_game_best_response(FLAGS.save_path, ["player_0/"], profile_file_name, training_player=0, training_steps=FLAGS.training_steps, response_parameters=response_parameters)
+            evaluation_module.train_true_game_best_response(FLAGS.save_path, ["player_0/"], profile_file_name, training_player=0, training_steps_total=int(2e5), response_parameters=response_parameters)
             print("Finished training true game best response to {} in {} seconds.".format(profile_file_name, time.time() - start))
     elif FLAGS.evaluation_name == "evaluate_regret":
         evaluation_module.evaluate_regret(FLAGS.save_path, ["player_0/"], final=FLAGS.eval_regret_with_final_profiles)
-    elif FLAGS.evaluation_name == "get_final_profiles":
-        solution_concept = {"evaluation_halt_type": "optimistic",
-                            "evaluation_criteria": "deviation_coverage",
-                            "meta_strategy_solver": "rd",
-                            "num_iterations": 200, 
-                            "num_bootstrapped_samples": FLAGS.num_bootstrapped_samples,
-                            "weight_deviation_coverage": .5}
-        evaluation_module.extract_final_solution(FLAGS.save_path, solution_concept, FLAGS.symmetric)
+    elif FLAGS.evaluation_name == "evaluate_utility_error":
+        evaluation_module.evaluate_trajectory_level_reward_uncertainty_correlations(pyspiel_game, FLAGS.save_path, ["player_0/"], true_state_extractor, FLAGS.save_graph_path, response_parameters)
+    # elif FLAGS.evaluation_name == "extract_final_solution":
+    #     evaluation_module.extract_final_solution(pyspiel_game, FLAGS.save_path)
+    elif FLAGS.evaluation_name == "full_evaluation_pipeline":
+        # Extract final solution for each PSRO iteration 
+        # Get the in-algorithm solutions
+        # all_profile_files = [f for f in os.listdir(FLAGS.save_path) if (("profile" in f)) and (".pkl" in f) and ("final" not in f)]
+        # all_profile_files = sorted(all_profile_files, key=lambda s: int(s.split('_')[-1].split('.')[0]))
+        # evaluation_module.extract_final_solution(pyspiel_game, FLAGS.save_path, all_profile_files)
+
+        # Get the final solutions
+        all_profile_files = [f for f in os.listdir(FLAGS.save_path) if ("solution" in f) and (".pkl" in f) and ("final" in f)]
+        all_profile_files = sorted(all_profile_files, key=lambda s: int(s.split('_')[-1].split('.')[0]))
+
+        # Train true game best responses by adding evaluation strategy 
+        for profile_file_name in all_profile_files[::]:
+            start = time.time()
+            evaluation_module.train_true_game_best_response(FLAGS.save_path, ["player_0/"], profile_file_name, training_player=0, training_steps_total=int(2e5), response_parameters=response_parameters)
+            print("Finished training true game best response to {} in {} seconds.".format(profile_file_name, time.time() - start))
+        
+        # Evaluate regret 
+        evaluation_module.evaluate_regret(FLAGS.save_path, ["player_0/"], final=True)
+    elif FLAGS.evaluation_name == "analyze_deviation_coverage":
+        # Get the final solutions
+        all_profile_files = [f for f in os.listdir(FLAGS.save_path) if ("solution" in f) and (".pkl" in f) and ("final" in f)]
+        all_profile_files = sorted(all_profile_files, key=lambda s: int(s.split('_')[-1].split('.')[0]))
+
+        evaluation_module.analyze_deviation_coverage_by_iteration(FLAGS.num_players, FLAGS.save_path, all_profile_files)
+
     print("Experiment done.")
 
 if __name__ == "__main__":

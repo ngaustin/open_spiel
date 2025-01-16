@@ -22,8 +22,8 @@ class UniformRandomPolicy(PolicyWrapper):
             return None, []
         
         legal_actions_mask = np.array(step_object.legal_actions_mask)
-        probs = legal_actions_mask/np.sum(legal_actions_mask)
-        return np.random.choice(range(len(step_object.legal_actions_mask)), p=probs), probs
+        integers = np.where(legal_actions_mask == 1)[0]
+        return np.random.choice(integers), None
     
     def get_graph(self):
         return None
@@ -68,4 +68,7 @@ class UniformRandomPolicy(PolicyWrapper):
             return np.take_along_axis(probabilities, np.array(action), axis=1)
         else: 
             return tf.gather(probabilities, action, axis=1, batch_dims=1)
+
+    def load_variable_names(self, variable_names):
+        return 
 

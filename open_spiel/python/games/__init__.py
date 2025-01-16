@@ -26,11 +26,13 @@ pyspiel.register_game(_GAME_TYPE, KuhnPokerGame)
 ```
 """
 
+from open_spiel.python.games import bargaining_generalized
 from open_spiel.python.games import block_dominoes
 from open_spiel.python.games import dynamic_routing
 from open_spiel.python.games import iterated_prisoners_dilemma
 from open_spiel.python.games import kuhn_poker
 from open_spiel.python.games import liars_poker
+from open_spiel.python.games import naive_mdp
 from open_spiel.python.games import tic_tac_toe
 from open_spiel.python.games import simple_box_pushing
 from open_spiel.python.games import simple_iterated_game

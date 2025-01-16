@@ -6,13 +6,11 @@ generation and offline policy training (part of components A and B), which is wh
 from abc import ABC, abstractmethod
 
 class PolicyWrapper(ABC):
-    total_policies = 0
 
     def __init__(self, policy, num_actions, state_size):
         self._num_actions = num_actions
         self._state_size = state_size
-        self._id = PolicyWrapper.total_policies
-        PolicyWrapper.total_policies += 1
+        self._id = None
 
     @abstractmethod
     def step(self, step_object):
@@ -29,4 +27,7 @@ class PolicyWrapper(ABC):
     @property
     def id(self):
         return self._id
+
+    def set_id(self, id):
+        self._id = id
         

@@ -49,7 +49,7 @@ import collections
 import enum
 from absl import logging
 import numpy as np
-
+import time
 import pyspiel
 
 SIMULTANEOUS_PLAYER_ID = pyspiel.PlayerId.SIMULTANEOUS
@@ -127,10 +127,14 @@ class ChanceEventSampler(object):
   def seed(self, seed=None):
     self._rng = np.random.RandomState(seed)
 
-  def __call__(self, state):
+  def __call__(self, state, action=None):
     """Sample a chance event in the given state."""
-    actions, probs = zip(*state.chance_outcomes())
-    return self._rng.choice(actions, p=probs)
+    if action:
+      return action 
+    else:
+      actions, probs = zip(*state.chance_outcomes())
+      choice = self._rng.choice(actions, p=probs)
+      return choice
 
 
 class ObservationType(enum.Enum):
@@ -151,6 +155,7 @@ class Environment(object):
                mfg_distribution=None,
                mfg_population=None,
                enable_legality_check=False,
+               gro_weight=1,
                **kwargs):
     """Constructor.
 
@@ -174,6 +179,7 @@ class Environment(object):
     self._mfg_distribution = mfg_distribution
     self._mfg_population = mfg_population
     self._enable_legality_check = enable_legality_check
+    self._gro_weight = gro_weight
 
     if isinstance(game, str):
       if kwargs:
@@ -233,6 +239,7 @@ class Environment(object):
     """
     observations = {
         "info_state": [],
+        # "observation": [],
         "legal_actions": [],
         "current_player": [],
         "serialized_state": [], 
@@ -244,10 +251,14 @@ class Environment(object):
 
     cur_rewards = self._state.rewards()
     for player_id in range(self.num_players):
-      rewards.append(cur_rewards[player_id])
+      if self._gro_weight < 1:
+        rewards.append(self._gro_weight * cur_rewards[player_id] + (1 - self._gro_weight) * sum([r for p, r in enumerate(cur_rewards) if p != player_id]))
+      else:
+        rewards.append(cur_rewards[player_id]) 
       observations["info_state"].append(
           self._state.observation_tensor(player_id) if self._use_observation
           else self._state.information_state_tensor(player_id))
+      # observations["observation"].append(self._state.observation_tensor(player_id))
 
       # print("Player {}".format(player_id), self._state.observation_tensor(player_id))
 
@@ -331,7 +342,7 @@ class Environment(object):
 
     return self.get_time_step()
 
-  def reset(self):
+  def reset(self, manual_sample=None):
     """Starts a new sequence and returns the first `TimeStep` of this sequence.
 
     Returns:
@@ -351,20 +362,25 @@ class Environment(object):
           self._mfg_population)
     else:
       self._state = self._game.new_initial_state()
-    self._sample_external_events()
+
+    self._sample_external_events(manual_sample)
 
     observations = {
         "info_state": [],
+        # "observation": [],
         "legal_actions": [],
         "current_player": [],
         "serialized_state": [], 
         "global_state": []
     }
+
     for player_id in range(self.num_players):
       observations["info_state"].append(
           self._state.observation_tensor(player_id) if self._use_observation
           else self._state.information_state_tensor(player_id))
+      # observations["observation"].append(self._state.observation_tensor(player_id))
       observations["legal_actions"].append(self._state.legal_actions(player_id))
+
     observations["current_player"] = self._state.current_player()
 
     if self._game.get_type().provides_information_state_tensor:
@@ -380,12 +396,12 @@ class Environment(object):
         discounts=None,
         step_type=StepType.FIRST)
 
-  def _sample_external_events(self):
+  def _sample_external_events(self, manual_sample=None):
     """Sample chance events until we get to a decision node."""
     while self._state.is_chance_node() or (self._state.current_player()
                                            == pyspiel.PlayerId.MEAN_FIELD):
       if self._state.is_chance_node():
-        outcome = self._chance_event_sampler(self._state)
+        outcome = self._chance_event_sampler(self._state, manual_sample)
         self._state.apply_action(outcome)
       if self._state.current_player() == pyspiel.PlayerId.MEAN_FIELD:
         dist_to_register = self._state.distribution_support()
